@@ -1,7 +1,7 @@
 "use client";
 
-import { useMemo, useState } from "react";
-import { usePrefs, useTimeZone, useToday } from "@/lib/browser";
+import { useEffect, useMemo, useRef, useState } from "react";
+import { usePrefs, useReducedMotion, useTimeZone, useToday } from "@/lib/browser";
 import { DEMO_DAYS, DEMO_END, DEMO_PEOPLE, DEMO_START } from "@/lib/demo-data";
 import { buildSlots } from "@/lib/schedule";
 import { overlapSummary } from "@/lib/sentence";
@@ -22,11 +22,17 @@ function nextWeekdays(today: string, count: number): string[] {
   return dates;
 }
 
+const FIRST_ANSWER_MS = 250;
+const NEXT_ANSWER_MS = 450;
+
 export function Demo() {
   const today = useToday();
   const timeZone = useTimeZone();
   const prefs = usePrefs();
+  const reducedMotion = useReducedMotion();
   const [mine, setMine] = useState<string[]>([]);
+  const [answered, setAnswered] = useState(0);
+  const gridRef = useRef<HTMLDivElement>(null);
 
   const demo = useMemo(() => {
     if (!today || !timeZone) return null;
@@ -40,10 +46,46 @@ export function Demo() {
     return { slots, voters };
   }, [today, timeZone]);
 
-  const voters = useMemo(
-    () => (demo ? (mine.length > 0 ? [...demo.voters, { name: "You", slots: mine }] : demo.voters) : []),
-    [demo, mine],
-  );
+  const ready = demo !== null && prefs !== null;
+  const animate = reducedMotion === false && typeof IntersectionObserver === "function";
+  const shown = animate ? answered : DEMO_PEOPLE.length;
+  const filling = shown < DEMO_PEOPLE.length;
+
+  useEffect(() => {
+    const grid = gridRef.current;
+    if (!ready || !animate || !grid) return;
+    let timer: ReturnType<typeof setTimeout> | undefined;
+    let count = 0;
+    const next = () => {
+      count += 1;
+      setAnswered((current) => Math.max(current, count));
+      if (count < DEMO_PEOPLE.length) timer = setTimeout(next, NEXT_ANSWER_MS);
+    };
+    const observer = new IntersectionObserver(
+      (entries) => {
+        if (!entries.some((entry) => entry.isIntersecting)) return;
+        observer.disconnect();
+        timer = setTimeout(next, FIRST_ANSWER_MS);
+      },
+      { threshold: 0.6 },
+    );
+    observer.observe(grid);
+    return () => {
+      observer.disconnect();
+      clearTimeout(timer);
+    };
+  }, [ready, animate]);
+
+  const voters = useMemo(() => {
+    if (!demo) return [];
+    const others = demo.voters.slice(0, shown);
+    return mine.length > 0 ? [...others, { name: "You", slots: mine }] : others;
+  }, [demo, mine, shown]);
+
+  function changeMine(next: string[]) {
+    setAnswered(DEMO_PEOPLE.length);
+    setMine(next);
+  }
 
   if (!demo || !timeZone || !prefs) return <div className="h-[30rem] w-full max-w-md" aria-hidden="true" />;
 
@@ -53,11 +95,11 @@ export function Demo() {
         <p className="text-sm font-medium">Team retro</p>
         <p className="text-xs text-muted">Example</p>
       </div>
-      <p className="mt-2 min-h-12 text-sm leading-6 text-balance" aria-live="polite">
+      <p className="mt-2 min-h-12 text-sm leading-6 text-balance" aria-live={filling ? "off" : "polite"}>
         <SummaryText summary={overlapSummary({ slots: demo.slots, votes: voters, timeZone, clock: prefs.clock })} />
       </p>
-      <div className="mt-4">
-        <PollGrid slots={demo.slots} voters={voters} selected={mine} readOnly={false} onChange={setMine} />
+      <div ref={gridRef} className="mt-4">
+        <PollGrid slots={demo.slots} voters={voters} selected={mine} readOnly={false} onChange={changeMine} />
       </div>
       <figcaption className="mt-4 flex items-baseline justify-between gap-4 text-xs text-muted">
         <span>Drag across the grid to add yourself. Nothing here is saved.</span>

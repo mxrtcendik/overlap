@@ -169,6 +169,7 @@ body {
     border: 1px solid var(--line);
     background: color-mix(in oklab, var(--accent) var(--heat, 0%), var(--paper));
     transition:
+      background-color 240ms ease-out,
       border-color 120ms ease-out,
       opacity 160ms ease-out;
   }

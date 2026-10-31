@@ -76,6 +76,18 @@ export function useIsClient(): boolean {
   return useSyncExternalStore(subscribe, () => true, () => false);
 }
 
+const REDUCED_MOTION = "(prefers-reduced-motion: reduce)";
+
+function subscribeMotion(listener: () => void) {
+  const query = window.matchMedia(REDUCED_MOTION);
+  query.addEventListener("change", listener);
+  return () => query.removeEventListener("change", listener);
+}
+
+export function useReducedMotion(): boolean | null {
+  return useSyncExternalStore(subscribeMotion, () => window.matchMedia(REDUCED_MOTION).matches, () => null);
+}
+
 export function useCanShare(): boolean {
   return useSyncExternalStore(subscribe, () => typeof navigator.share === "function", () => false);
 }
