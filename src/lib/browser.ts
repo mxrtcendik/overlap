@@ -19,10 +19,14 @@ export function useIsClient(): boolean {
   return useSyncExternalStore(subscribe, () => true, () => false);
 }
 
+export function useCanShare(): boolean {
+  return useSyncExternalStore(subscribe, () => typeof navigator.share === "function", () => false);
+}
+
 let locationSnapshot: { origin: string; href: string } | null = null;
 
 function readLocation() {
-  const href = window.location.href;
+  const href = window.location.origin + window.location.pathname;
   if (!locationSnapshot || locationSnapshot.href !== href) {
     locationSnapshot = { origin: window.location.origin, href };
   }
@@ -31,6 +35,47 @@ function readLocation() {
 
 export function usePageLocation(): { origin: string; href: string } | null {
   return useSyncExternalStore(subscribe, readLocation, () => null);
+}
+
+const CREATED_KEY = "overlap:created";
+const createdListeners = new Set<() => void>();
+let createdFromHash: string | null = null;
+
+export function markCreated(token: string): boolean {
+  try {
+    window.sessionStorage.setItem(CREATED_KEY, token);
+    return true;
+  } catch {
+    return false;
+  }
+}
+
+function readCreated(): string | null {
+  if (window.location.hash === "#created") createdFromHash = window.location.pathname.split("/")[2] ?? null;
+  try {
+    return window.sessionStorage.getItem(CREATED_KEY) ?? createdFromHash;
+  } catch {
+    return createdFromHash;
+  }
+}
+
+function subscribeCreated(listener: () => void) {
+  createdListeners.add(listener);
+  return () => createdListeners.delete(listener);
+}
+
+export function dismissCreated() {
+  createdFromHash = null;
+  try {
+    window.sessionStorage.removeItem(CREATED_KEY);
+  } catch {
+  }
+  for (const listener of createdListeners) listener();
+}
+
+export function useJustCreated(token: string | null): boolean {
+  const created = useSyncExternalStore(subscribeCreated, readCreated, () => null);
+  return token !== null && created === token;
 }
 
 let todaySnapshot: string | null = null;

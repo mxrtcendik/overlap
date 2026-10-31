@@ -1,16 +1,18 @@
 "use client";
 
-import { useMemo, useState, type FormEvent } from "react";
+import { useEffect, useMemo, useState, type FormEvent } from "react";
 import { useRouter } from "next/navigation";
 import { slotsIn } from "@/lib/availability";
-import { useIsClient, usePageLocation, usePrefs, useTimeZone } from "@/lib/browser";
+import { dismissCreated, useIsClient, useJustCreated, usePageLocation, usePrefs, useTimeZone } from "@/lib/browser";
 import { MAX_TITLE, SLOT_MS } from "@/lib/constants";
 import { buildSlots, inferSchedule } from "@/lib/schedule";
 import { rangeLabel, type Clock } from "@/lib/format";
+import { expiresAtFor, forgetPoll, rememberPoll, useMyPolls } from "@/lib/my-polls";
 import { json, messageOf, request } from "@/lib/request";
 import { parseFinal } from "@/lib/slots";
 import type { PollView } from "@/lib/types";
 import { CopyLink } from "./copy-link";
+import { CreatedNotice } from "./created-notice";
 import { Availability } from "./availability";
 import { FinalTime } from "./final-time";
 import { SentenceBlock } from "./poll-summary";
@@ -26,6 +28,13 @@ export function OwnerView({ poll, hasResponses }: { poll: PollView; hasResponses
   const [pending, setPending] = useState(false);
   const [confirming, setConfirming] = useState(false);
   const [deleted, setDeleted] = useState(false);
+  const justCreated = useJustCreated(location ? (new URL(location.href).pathname.split("/")[2] ?? null) : null);
+  const savedOnDevice = useMyPolls().some((saved) => saved.id === poll.id);
+
+  useEffect(() => {
+    const token = window.location.pathname.split("/")[2];
+    if (token) rememberPoll({ id: poll.id, token, title: poll.title, expiresAt: expiresAtFor(poll.slots) });
+  }, [poll.id, poll.title, poll.slots]);
   const [draft, setDraft] = useState<string[]>([]);
 
   const finalOutline = useMemo(
@@ -96,6 +105,7 @@ export function OwnerView({ poll, hasResponses }: { poll: PollView; hasResponses
     setError(null);
     try {
       await send("DELETE");
+      forgetPoll({ id: poll.id });
       setDeleted(true);
     } catch (caught) {
       setError({ at: "settings", message: messageOf(caught) });
@@ -114,6 +124,14 @@ export function OwnerView({ poll, hasResponses }: { poll: PollView; hasResponses
 
   return (
     <>
+      {justCreated && location ? (
+        <CreatedNotice
+          title={poll.title}
+          publicUrl={`${location.origin}/p/${poll.id}`}
+          savedOnDevice={savedOnDevice}
+          onDone={dismissCreated}
+        />
+      ) : null}
       <p className="inline-flex items-center gap-2 text-xs text-muted">
         <span className="inline-block size-1.5 rounded-full bg-danger" aria-hidden="true" />
         Owner view. Don’t share this link.

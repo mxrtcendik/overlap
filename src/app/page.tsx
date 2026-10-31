@@ -1,5 +1,6 @@
 import { CreateForm } from "@/components/create-form";
 import { Demo } from "@/components/demo";
+import { MyPolls } from "@/components/my-polls";
 import { Shell } from "@/components/shell";
 
 const STEPS = [
@@ -35,6 +36,8 @@ export default function Home() {
         </div>
         <Demo />
       </section>
+
+      <MyPolls />
 
       <section aria-labelledby="how-heading" className="mt-24 border-t border-line pt-10">
         <h2 id="how-heading" className="text-sm text-muted">
