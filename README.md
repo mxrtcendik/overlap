@@ -1,8 +1,12 @@
 Overlap is a scheduling poll. You pick a few days and a range of hours, and you get two links. The public link is where each person types a name and marks the slots they can do. The secret link is the only way to edit or delete the poll. If you lose the secret link, ownership is gone. The database keeps only a SHA-256 hash of the secret link, so a copy of the data cannot be used to edit or delete polls.
 
-Each person sees the grid in their own timezone. The page states the overlap in one sentence. A reload shows new answers. The poll closes when the last slot has ended, and it is deleted 30 days after that.
+Creating a poll takes you straight to its secret link, with the public link ready to copy, so a reload or a closed tab cannot lose it. Polls you create or open as owner are also remembered in your browser and listed on the home page. That list never leaves the device.
+
+Each person sees the grid in their own timezone, with a 12- or 24-hour clock and a first day of the week that follow their browser, and a switch in the footer to change the clock. The page states the overlap in one sentence. A reload shows new answers. The poll closes when the last slot has ended, and it is deleted 30 days after that.
 
 On the secret link, the owner can settle on a final time, either one of the best times or any unbroken stretch dragged on the grid. Everyone with the public link then sees it in their own timezone and can add it to a calendar, as an `.ics` file or through Google Calendar. The `.ics` file keeps one event ID per poll, so importing it again after the time changes updates the event instead of adding a second one.
+
+Pasting a public link in a chat shows a preview with the title, how many people answered and a small heatmap of the poll. The preview has no clock times, because it is drawn without knowing the reader's timezone. Poll pages are never indexed by search engines.
 
 ## Run it
 
@@ -14,15 +18,21 @@ npx wrangler d1 migrations apply overlap --local
 npm run dev
 ```
 
-Open http://localhost:3000. The local database is D1, stored by Wrangler on this machine. `npm test` checks the slot rules, the overlap sentence, the best-time ranking, the final time and the calendar export.
+Open http://localhost:3000. The local database is D1, stored by Wrangler on this machine. `npm test` checks the slot rules, the overlap sentence, the best-time ranking, the final time, the calendar export and the date and time formatting.
 
-To deploy, create a D1 database named overlap, put its id in `wrangler.jsonc`, apply the migrations with `--remote`, and run `npm run deploy`.
+`npm run preview` builds the Worker and runs it locally in workerd, the same runtime as production.
+
+## Deploy
+
+Create a D1 database named overlap, put its id in `wrangler.jsonc`, apply the migrations with `--remote`, and run `npm run deploy`. Set `SITE_URL` to the public address, such as `https://overlap.example.com`, when building, so the home page's link preview uses absolute URLs. Poll pages use the address of each request instead.
 
 The Worker entry point is `worker.ts`. It serves the Next.js app that OpenNext builds and adds an hourly Cron Trigger that deletes expired polls and old rate-limit counters. Deleting a poll removes its answers through foreign keys.
 
+Every response carries a Content Security Policy, HSTS in production, and headers that stop the site from being framed or sniffed. Poll routes add `X-Robots-Tag: noindex`.
+
 ## Caps
 
-The title can be 80 characters. A poll can cover 14 days, and the hours on those days can span at most 12 hours. Slots are 30 minutes. A name can be 40 characters. A poll can have 40 names.
+The title can be 80 characters. A poll can cover 14 days, and the hours on those days can span at most 12 hours. Slots are 30 minutes. A name can be 40 characters. A poll can have 40 names. At least one slot must still be ahead when the poll is created or its days change.
 
 The days and hours can change until the first answer. Changing them clears the final time. The title can change until the poll is deleted. Voting stops when the last slot ends. The grid stays visible and becomes read-only. The poll is deleted 30 days after that.
 
