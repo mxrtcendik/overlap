@@ -38,6 +38,6 @@ Every response carries a Content Security Policy, HSTS in production, and header
 
 The title can be 80 characters. A poll can cover 14 days, and the hours on those days can span at most 12 hours. Slots are 30 minutes. A name can be 40 characters. A poll can have 40 names. At least one slot must still be ahead when the poll is created or its days change.
 
-The days and hours can change until the first answer. Changing them clears the final time. The title can change until the poll is deleted. Voting stops when the last slot ends. The grid stays visible and becomes read-only. The poll is deleted 30 days after that.
+People can remove their own answer until voting ends. The owner can remove any answer at any time; the owner page names answers by a hash of the voter id, because the id itself is the voter’s cookie. The days and hours can change while the poll has no answers. Changing them clears the final time. The title can change until the poll is deleted. Voting stops when the last slot ends. The grid stays visible and becomes read-only. The poll is deleted 30 days after that.
 
 Writes are rate limited per network: 30 new polls per hour, 120 vote saves per 10 minutes, and 60 owner saves per 10 minutes.

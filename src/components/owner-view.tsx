@@ -10,7 +10,7 @@ import { rangeLabel, type Clock } from "@/lib/format";
 import { expiresAtFor, forgetPoll, rememberPoll, useMyPolls } from "@/lib/my-polls";
 import { json, messageOf, request } from "@/lib/request";
 import { parseFinal } from "@/lib/slots";
-import type { PollView } from "@/lib/types";
+import type { PollView, VoterView } from "@/lib/types";
 import { useLiveUpdates } from "@/lib/use-live-updates";
 import { CopyLink } from "./copy-link";
 import { CreatedNotice } from "./created-notice";
@@ -31,7 +31,7 @@ export function OwnerView({ poll, hasResponses }: { poll: PollView; hasResponses
     setTitle(null);
   }
   const title = titleDraft ?? poll.title;
-  const [error, setError] = useState<{ at: "final" | "settings"; message: string } | null>(null);
+  const [error, setError] = useState<{ at: "final" | "answers" | "settings"; message: string } | null>(null);
   const [pending, setPending] = useState(false);
   const [confirming, setConfirming] = useState(false);
   const [deleted, setDeleted] = useState(false);
@@ -56,8 +56,8 @@ export function OwnerView({ poll, hasResponses }: { poll: PollView; hasResponses
     [poll.final, poll.slots],
   );
 
-  async function send(method: "PATCH" | "DELETE", body?: unknown) {
-    const path = `${window.location.pathname.replace(/\/$/, "")}/edit`;
+  async function send(method: "PATCH" | "DELETE", body?: unknown, route = "edit") {
+    const path = `${window.location.pathname.replace(/\/$/, "")}/${route}`;
     await request(path, { method, ...(body === undefined ? {} : json(body)) });
   }
 
@@ -103,6 +103,19 @@ export function OwnerView({ poll, hasResponses }: { poll: PollView; hasResponses
       router.refresh();
     } catch (caught) {
       setError({ at: "final", message: messageOf(caught) });
+    } finally {
+      setPending(false);
+    }
+  }
+
+  async function onRemove(ref: string) {
+    setPending(true);
+    setError(null);
+    try {
+      await send("DELETE", undefined, `answers/${ref}`);
+      router.refresh();
+    } catch (caught) {
+      setError({ at: "answers", message: messageOf(caught) });
     } finally {
       setPending(false);
     }
@@ -212,6 +225,15 @@ export function OwnerView({ poll, hasResponses }: { poll: PollView; hasResponses
         </section>
       ) : null}
 
+      {poll.voters.length > 0 ? (
+        <Answers
+          voters={poll.voters}
+          pending={pending}
+          error={error?.at === "answers" ? error.message : null}
+          onRemove={(ref) => void onRemove(ref)}
+        />
+      ) : null}
+
       <section aria-labelledby="settings-heading" className="mt-16 border-t border-line pt-10">
         <h2 id="settings-heading" className="text-sm text-muted">
           Poll settings
@@ -234,7 +256,7 @@ export function OwnerView({ poll, hasResponses }: { poll: PollView; hasResponses
 
       <div className="mt-10 max-w-xl">
         {hasResponses ? (
-          <p className="text-sm text-muted">Days can’t change after the first answer.</p>
+          <p className="text-sm text-muted">Days can’t change once people have answered. Removing every answer unlocks them.</p>
         ) : (
           <>
             {poll.final ? <p className="mb-4 text-sm text-muted">Saving new days clears the final time.</p> : null}
@@ -270,6 +292,76 @@ export function OwnerView({ poll, hasResponses }: { poll: PollView; hasResponses
       </div>
       </section>
     </>
+  );
+}
+
+function Answers({
+  voters,
+  pending,
+  error,
+  onRemove,
+}: {
+  voters: VoterView[];
+  pending: boolean;
+  error: string | null;
+  onRemove: (ref: string) => void;
+}) {
+  const [confirming, setConfirming] = useState<string | null>(null);
+
+  return (
+    <section aria-labelledby="answers-heading" className="mt-16 border-t border-line pt-10">
+      <h2 id="answers-heading" className="text-sm text-muted">
+        Answers
+      </h2>
+      <p className="mt-2 max-w-xl text-sm text-muted">
+        Remove an answer that’s a duplicate or doesn’t belong. The person can still answer again.
+      </p>
+      <ul className="mt-5 max-w-xl border-t border-line">
+        {voters.map((voter, index) => {
+          const ref = voter.ref;
+          const times = voter.slots.length;
+          return (
+            <li key={ref ?? index} className="border-b border-line py-2.5">
+              {ref && confirming === ref ? (
+                <div className="flex flex-wrap items-center gap-x-5 gap-y-2">
+                  <p className="text-sm">Remove {voter.name}’s answer?</p>
+                  <button type="button" disabled={pending} onClick={() => onRemove(ref)} className="btn btn-danger">
+                    Remove
+                  </button>
+                  <button type="button" onClick={() => setConfirming(null)} className="link-quiet">
+                    Cancel
+                  </button>
+                </div>
+              ) : (
+                <div className="flex items-baseline justify-between gap-4">
+                  <span className="min-w-0 truncate text-sm">{voter.name}</span>
+                  <span className="flex shrink-0 items-baseline gap-5">
+                    <span className="font-mono text-xs text-muted tabular-nums">
+                      {times === 0 ? "No times" : times === 1 ? "1 time" : `${times} times`}
+                    </span>
+                    {ref ? (
+                      <button
+                        type="button"
+                        className="link-quiet link-danger"
+                        aria-label={`Remove ${voter.name}’s answer`}
+                        onClick={() => setConfirming(ref)}
+                      >
+                        Remove
+                      </button>
+                    ) : null}
+                  </span>
+                </div>
+              )}
+            </li>
+          );
+        })}
+      </ul>
+      {error ? (
+        <p className="mt-4 text-sm text-danger" role="alert">
+          {error}
+        </p>
+      ) : null}
+    </section>
   );
 }
 

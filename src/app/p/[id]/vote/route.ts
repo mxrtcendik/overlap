@@ -3,7 +3,7 @@ import { NextResponse } from "next/server";
 import { announceChange } from "@/lib/announce";
 import { getDb } from "@/lib/db";
 import { jsonError, readJson } from "@/lib/http";
-import { saveVote } from "@/lib/polls";
+import { deleteOwnVote, saveVote } from "@/lib/polls";
 import { allowWrite } from "@/lib/rate";
 import { isToken } from "@/lib/tokens";
 
@@ -32,5 +32,31 @@ export async function POST(request: Request, { params }: Params) {
   } catch (error) {
     console.error(JSON.stringify({ event: "vote_failed", message: error instanceof Error ? error.message : "error" }));
     return jsonError("Something went wrong while saving. Try again.", 500);
+  }
+}
+
+export async function DELETE(request: Request, { params }: Params) {
+  const { id } = await params;
+  if (!isToken(id)) return jsonError("This poll doesn’t exist.", 404);
+  try {
+    const db = await getDb();
+    if (!(await allowWrite(db, request, "vote"))) {
+      return jsonError("You’re saving too quickly. Try again in a few minutes.", 429);
+    }
+    const jar = await cookies();
+    const result = await deleteOwnVote(id, jar.get("voter")?.value ?? null);
+    if (!result.ok) return jsonError(result.error, result.status);
+    jar.set("voter", "", {
+      httpOnly: true,
+      sameSite: "lax",
+      secure: process.env.NODE_ENV === "production",
+      path: `/p/${id}`,
+      maxAge: 0,
+    });
+    await announceChange(id);
+    return NextResponse.json({ ok: true });
+  } catch (error) {
+    console.error(JSON.stringify({ event: "vote_delete_failed", message: error instanceof Error ? error.message : "error" }));
+    return jsonError("Something went wrong while removing your answer. Try again.", 500);
   }
 }

@@ -24,6 +24,7 @@ export function PollView({ poll }: { poll: PollViewData }) {
   const [saved, setSaved] = useState(Boolean(you));
   const [error, setError] = useState<string | null>(null);
   const [pending, setPending] = useState(false);
+  const [confirmingRemove, setConfirmingRemove] = useState(false);
   const nameRef = useRef(you?.name ?? "");
   const selectedRef = useRef<string[]>(you?.slots ?? []);
   const inflight = useRef(false);
@@ -98,6 +99,27 @@ export function PollView({ poll }: { poll: PollViewData }) {
     void flush();
   }
 
+  async function removeAnswer() {
+    if (inflight.current) return;
+    inflight.current = true;
+    queued.current = null;
+    setPending(true);
+    setError(null);
+    try {
+      await request(`/p/${poll.id}/vote`, { method: "DELETE" });
+      setYou(null);
+      setSaved(false);
+      selectedRef.current = [];
+      setSelected([]);
+      setConfirmingRemove(false);
+    } catch (caught) {
+      setError(messageOf(caught));
+    } finally {
+      inflight.current = false;
+      setPending(false);
+    }
+  }
+
   const nameChanged = Boolean(you) && name.trim() !== you?.name;
 
   return (
@@ -133,11 +155,34 @@ export function PollView({ poll }: { poll: PollViewData }) {
           {!pending && saved && !error ? <Status state="saved" /> : null}
         </form>
       )}
-      {poll.closed ? null : (
-        <p className="mt-3 text-sm text-muted">
-          {saved
-            ? "Your answer saves as you change it."
-            : "Enter your name, drag across the times you can make, then save your answer."}
+      {poll.closed ? null : confirmingRemove ? (
+        <div className="mt-4 max-w-xl border-l-2 border-danger pl-4">
+          <p className="text-sm">Remove your answer? Your name and times are deleted from this poll.</p>
+          <div className="mt-3 flex items-center gap-5">
+            <button type="button" disabled={pending} onClick={() => void removeAnswer()} className="btn btn-danger">
+              Remove answer
+            </button>
+            <button type="button" onClick={() => setConfirmingRemove(false)} className="link-quiet">
+              Cancel
+            </button>
+          </div>
+        </div>
+      ) : (
+        <p className="mt-3 flex flex-wrap items-baseline gap-x-4 gap-y-1 text-sm text-muted">
+          {saved ? (
+            <>
+              <span>Your answer saves as you change it.</span>
+              <button
+                type="button"
+                className="link-quiet link-danger decoration-line-strong hover:decoration-current"
+                onClick={() => setConfirmingRemove(true)}
+              >
+                Remove my answer
+              </button>
+            </>
+          ) : (
+            "Enter your name, drag across the times you can make, then save your answer."
+          )}
         </p>
       )}
       {error ? (

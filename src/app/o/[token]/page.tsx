@@ -26,7 +26,7 @@ export default async function OwnerPage({ params }: Params) {
   if (!poll) notFound();
   return (
     <Shell wide>
-      <OwnerView poll={toPollView(poll, null)} hasResponses={poll.voters.length > 0} />
+      <OwnerView poll={toPollView(poll, null, { refs: true })} hasResponses={poll.voters.length > 0} />
     </Shell>
   );
 }

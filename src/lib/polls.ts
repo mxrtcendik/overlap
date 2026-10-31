@@ -9,7 +9,7 @@ import type { FinalTime, PollView, VoterView } from "./types";
 
 export type { FinalTime, PollView, VoterView };
 
-export type StoredVoter = { id: string; name: string; slots: string[] };
+export type StoredVoter = { id: string; ref: string; name: string; slots: string[] };
 
 export type StoredPoll = {
   id: string;
@@ -36,11 +36,13 @@ const NOT_FOUND: Failure = { ok: false, status: 404, error: "This poll doesn’t
 
 const ownerHash = (token: string) => sha256(token);
 
+const voterRef = async (voterId: string) => (await sha256(`voter:${voterId}`)).slice(0, 16);
+
 const INSERT_MARKS = `INSERT INTO marks (voter_id, slot)
   SELECT ?, value FROM json_each(?)
   WHERE EXISTS (SELECT 1 FROM voters WHERE id = ?)`;
 
-export function toPollView(poll: StoredPoll, voterId: string | null): PollView {
+export function toPollView(poll: StoredPoll, voterId: string | null, options: { refs?: boolean } = {}): PollView {
   return {
     id: poll.id,
     title: poll.title,
@@ -51,6 +53,7 @@ export function toPollView(poll: StoredPoll, voterId: string | null): PollView {
       name: voter.name,
       slots: voter.slots,
       yours: voterId !== null && voter.id === voterId,
+      ...(options.refs ? { ref: voter.ref } : {}),
     })),
   };
 }
@@ -97,11 +100,14 @@ export const getPoll = cache(async (id: string): Promise<StoredPoll | null> => {
       poll.final_start !== null && poll.final_end !== null
         ? { start: new Date(poll.final_start).toISOString(), end: new Date(poll.final_end).toISOString() }
         : null,
-    voters: (voters.results as { id: string; name: string }[]).map((voter) => ({
-      id: voter.id,
-      name: voter.name,
-      slots: marksByVoter.get(voter.id) ?? [],
-    })),
+    voters: await Promise.all(
+      (voters.results as { id: string; name: string }[]).map(async (voter) => ({
+        id: voter.id,
+        ref: await voterRef(voter.id),
+        name: voter.name,
+        slots: marksByVoter.get(voter.id) ?? [],
+      })),
+    ),
   };
 });
 
@@ -247,7 +253,7 @@ export async function updateSlots(token: string, slotsInput: unknown): Promise<D
 
   const existing = await db.prepare("SELECT 1 FROM polls WHERE owner_hash = ?").bind(hash).first();
   if (!existing) return NOT_FOUND;
-  return { ok: false, status: 409, error: "Days can’t change after the first answer." };
+  return { ok: false, status: 409, error: "Days can’t change once people have answered." };
 }
 
 export async function updateFinal(token: string, input: unknown): Promise<Done | Failure> {
@@ -271,4 +277,23 @@ export async function deleteOwned(token: string): Promise<Done | Failure> {
     .first<{ id: string }>();
   if (!deleted) return NOT_FOUND;
   return { ok: true, id: deleted.id };
+}
+
+export async function deleteOwnVote(pollId: string, voterId: string | null): Promise<Done | Failure> {
+  const poll = await getPoll(pollId);
+  if (!poll) return NOT_FOUND;
+  if (poll.closed) return { ok: false, status: 403, error: "Voting has ended, so answers can’t change." };
+  const known = voterId ? poll.voters.find((voter) => voter.id === voterId) : undefined;
+  if (!known) return { ok: false, status: 404, error: "There’s no answer from you on this poll." };
+  await (await getDb()).prepare("DELETE FROM voters WHERE id = ? AND poll_id = ?").bind(known.id, poll.id).run();
+  return { ok: true, id: poll.id };
+}
+
+export async function removeAnswer(token: string, ref: string): Promise<Done | Failure> {
+  const poll = await getPollByOwnerToken(token);
+  if (!poll) return NOT_FOUND;
+  const voter = poll.voters.find((candidate) => candidate.ref === ref);
+  if (!voter) return { ok: false, status: 404, error: "That answer has already been removed." };
+  await (await getDb()).prepare("DELETE FROM voters WHERE id = ? AND poll_id = ?").bind(voter.id, poll.id).run();
+  return { ok: true, id: poll.id };
 }

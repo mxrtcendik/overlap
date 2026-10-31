@@ -1,4 +1,9 @@
-export type VoterView = { name: string; slots: string[]; yours: boolean };
+export type VoterView = {
+  name: string;
+  slots: string[];
+  yours: boolean;
+  ref?: string;
+};
 
 export type FinalTime = { start: string; end: string };
 
