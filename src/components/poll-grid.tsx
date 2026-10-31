@@ -111,6 +111,22 @@ export function PollGrid({
   const [active, setActive] = useState<Pos | null>(null);
   const [drag, setDrag] = useState<{ anchor: Pos; current: Pos; add: boolean } | null>(null);
   const cellRefs = useRef(new Map<string, HTMLButtonElement>());
+  const scrollerRef = useRef<HTMLDivElement>(null);
+  const [moreRight, setMoreRight] = useState(false);
+
+  useEffect(() => {
+    const scroller = scrollerRef.current;
+    if (!scroller) return;
+    const measure = () => setMoreRight(scroller.scrollWidth - scroller.clientWidth - scroller.scrollLeft > 1);
+    const resize = new ResizeObserver(measure);
+    resize.observe(scroller);
+    if (scroller.firstElementChild) resize.observe(scroller.firstElementChild);
+    scroller.addEventListener("scroll", measure, { passive: true });
+    return () => {
+      resize.disconnect();
+      scroller.removeEventListener("scroll", measure);
+    };
+  }, [layout]);
 
   const selectedSet = useMemo(() => new Set(selected), [selected]);
   const maybeSet = useMemo(() => new Set(maybe), [maybe]);
@@ -234,7 +250,9 @@ export function PollGrid({
   return (
     <div>
       <div
-        className="overflow-x-auto pb-1"
+        ref={scrollerRef}
+        className="grid-scroll overflow-x-auto pb-1"
+        data-more-right={moreRight ? "true" : undefined}
         onPointerLeave={() => onInspect?.(null)}
         onBlur={(event) => {
           if (!event.currentTarget.contains(event.relatedTarget as Node | null)) onInspect?.(null);
@@ -253,7 +271,7 @@ export function PollGrid({
               {layout.columns.map((column) => (
                 <th key={column.key} scope="col" className="px-1 pb-2 text-center text-xs font-normal">
                   <div className="text-muted">{column.weekday}</div>
-                  <div className="mt-0.5 font-mono tabular-nums">
+                  <div className="mt-0.5 font-mono whitespace-nowrap tabular-nums">
                     {column.month} {column.day}
                   </div>
                 </th>

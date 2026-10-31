@@ -209,6 +209,10 @@ body {
     transform: scale(1);
   }
 
+  .grid-scroll[data-more-right="true"] {
+    mask-image: linear-gradient(to right, #000 calc(100% - 3rem), transparent);
+  }
+
   .hatch {
     background-color: var(--paper);
     background-image: repeating-linear-gradient(
