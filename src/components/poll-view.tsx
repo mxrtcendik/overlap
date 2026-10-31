@@ -1,11 +1,13 @@
 "use client";
 
-import { useRef, useState, type FormEvent } from "react";
+import { useMemo, useRef, useState, type FormEvent } from "react";
+import { slotsIn } from "@/lib/availability";
 import { useTimeZone } from "@/lib/browser";
 import { MAX_NAME } from "@/lib/constants";
 import { overlapSentence } from "@/lib/sentence";
 import type { PollView as PollViewData } from "@/lib/types";
 import { Availability } from "./availability";
+import { FinalTime } from "./final-time";
 import { SentenceBlock, Status } from "./poll-summary";
 
 export function PollView({ poll }: { poll: PollViewData }) {
@@ -26,6 +28,17 @@ export function PollView({ poll }: { poll: PollViewData }) {
     nameRef.current = value;
     setName(value);
   }
+
+  const finalOutline = useMemo(
+    () =>
+      poll.final
+        ? {
+            slots: new Set(slotsIn(poll.slots, Date.parse(poll.final.start), Date.parse(poll.final.end))),
+            label: "Final time",
+          }
+        : null,
+    [poll.final, poll.slots],
+  );
 
   const sentence = timeZone
     ? overlapSentence({
@@ -103,6 +116,7 @@ export function PollView({ poll }: { poll: PollViewData }) {
   return (
     <>
       <h1 className="text-[1.75rem] leading-9 tracking-[-0.02em] text-balance">{poll.title}</h1>
+      {poll.final ? <FinalTime pollId={poll.id} title={poll.title} final={poll.final} /> : null}
       <SentenceBlock sentence={sentence} timeZone={timeZone} closed={poll.closed} />
 
       {poll.closed ? null : (
@@ -139,6 +153,7 @@ export function PollView({ poll }: { poll: PollViewData }) {
           voters={voters}
           selected={selected}
           readOnly={poll.closed}
+          outline={finalOutline}
           onChange={change}
         />
       </div>

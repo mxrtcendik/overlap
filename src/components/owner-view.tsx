@@ -1,14 +1,17 @@
 "use client";
 
-import { useState, type FormEvent } from "react";
+import { useMemo, useState, type FormEvent } from "react";
 import { useRouter } from "next/navigation";
+import { slotsIn } from "@/lib/availability";
 import { useIsClient, usePageLocation, useTimeZone } from "@/lib/browser";
-import { MAX_TITLE } from "@/lib/constants";
+import { MAX_TITLE, SLOT_MS } from "@/lib/constants";
 import { buildSlots, inferSchedule } from "@/lib/schedule";
-import { overlapSentence } from "@/lib/sentence";
+import { overlapSentence, rangeLabel } from "@/lib/sentence";
+import { parseFinal } from "@/lib/slots";
 import type { PollView } from "@/lib/types";
 import { CopyLink } from "./copy-link";
 import { Availability } from "./availability";
+import { FinalTime } from "./final-time";
 import { SentenceBlock } from "./poll-summary";
 import { ScheduleFields } from "./schedule-fields";
 
@@ -21,6 +24,18 @@ export function OwnerView({ poll, hasResponses }: { poll: PollView; hasResponses
   const [pending, setPending] = useState(false);
   const [confirming, setConfirming] = useState(false);
   const [deleted, setDeleted] = useState(false);
+  const [draft, setDraft] = useState<string[]>([]);
+
+  const finalOutline = useMemo(
+    () =>
+      poll.final
+        ? {
+            slots: new Set(slotsIn(poll.slots, Date.parse(poll.final.start), Date.parse(poll.final.end))),
+            label: "Final time",
+          }
+        : null,
+    [poll.final, poll.slots],
+  );
 
   const sentence = timeZone
     ? overlapSentence({
@@ -72,6 +87,22 @@ export function OwnerView({ poll, hasResponses }: { poll: PollView; hasResponses
     }
   }
 
+  async function setFinal(final: { start: number; end: number } | null) {
+    setPending(true);
+    setError(null);
+    try {
+      await send("PATCH", {
+        final: final ? { start: new Date(final.start).toISOString(), end: new Date(final.end).toISOString() } : null,
+      });
+      setDraft([]);
+      router.refresh();
+    } catch (caught) {
+      setError(caught instanceof Error ? caught.message : "Could not save.");
+    } finally {
+      setPending(false);
+    }
+  }
+
   async function onDelete() {
     setPending(true);
     setError(null);
@@ -100,10 +131,43 @@ export function OwnerView({ poll, hasResponses }: { poll: PollView; hasResponses
         Secret link. Only you should have it.
       </p>
       <h1 className="mt-3 text-[1.75rem] leading-9 tracking-[-0.02em] text-balance">{poll.title}</h1>
+      {poll.final ? (
+        <FinalTime
+          pollId={poll.id}
+          title={poll.title}
+          final={poll.final}
+          pending={pending}
+          onClear={() => void setFinal(null)}
+        />
+      ) : null}
       <SentenceBlock sentence={sentence} timeZone={timeZone} closed={poll.closed} />
-      <div className="mt-8">
-        <Availability slots={poll.slots} voters={poll.voters} readOnly />
+      <p className="mt-8 max-w-2xl text-sm text-muted">
+        {poll.final ? "To change the final time" : "To set the final time"}, drag down one day on the grid
+        {poll.voters.length > 1 ? " or pick one of the best times" : ""}. Everyone with the public link will see it.
+      </p>
+      <div className="mt-6">
+        <Availability
+          slots={poll.slots}
+          voters={poll.voters}
+          readOnly={false}
+          mode="range"
+          selected={draft}
+          selectLabel="Your pick"
+          outline={finalOutline}
+          onChange={setDraft}
+          onPick={(segment) => void setFinal({ start: segment.start, end: segment.end })}
+        />
       </div>
+      {draft.length > 0 && timeZone ? (
+        <DraftBar
+          slots={poll.slots}
+          draft={draft}
+          timeZone={timeZone}
+          pending={pending}
+          onConfirm={(final) => void setFinal(final)}
+          onCancel={() => setDraft([])}
+        />
+      ) : null}
       {location ? <CopyLink label="Public link" href={`${location.origin}/p/${poll.id}`} /> : null}
       {location ? <CopyLink label="Secret link" href={location.href} /> : null}
 
@@ -127,7 +191,10 @@ export function OwnerView({ poll, hasResponses }: { poll: PollView; hasResponses
         {hasResponses ? (
           <p className="text-sm text-muted">The days are fixed once someone has answered.</p>
         ) : (
-          <DaysEditor key={poll.slots.join("|")} slots={poll.slots} pending={pending} onSave={onDays} />
+          <>
+            {poll.final ? <p className="mb-4 text-sm text-muted">Saving new days clears the final time.</p> : null}
+            <DaysEditor key={poll.slots.join("|")} slots={poll.slots} pending={pending} onSave={onDays} />
+          </>
         )}
       </div>
 
@@ -157,6 +224,50 @@ export function OwnerView({ poll, hasResponses }: { poll: PollView; hasResponses
         )}
       </div>
     </>
+  );
+}
+
+function DraftBar({
+  slots,
+  draft,
+  timeZone,
+  pending,
+  onConfirm,
+  onCancel,
+}: {
+  slots: string[];
+  draft: string[];
+  timeZone: string;
+  pending: boolean;
+  onConfirm: (final: { start: number; end: number }) => void;
+  onCancel: () => void;
+}) {
+  const times = draft.map((slot) => Date.parse(slot)).sort((a, b) => a - b);
+  const range = { start: times[0], end: times[times.length - 1] + SLOT_MS };
+  const valid = parseFinal(slots, {
+    start: new Date(range.start).toISOString(),
+    end: new Date(range.end).toISOString(),
+  });
+  const label = rangeLabel(range.start, range.end, timeZone);
+
+  return (
+    <div className="sticky bottom-0 z-30 -mx-4 mt-6 flex flex-wrap items-center gap-x-5 gap-y-3 border-t border-line bg-background px-4 py-3 sm:mx-0 sm:px-0">
+      <span aria-hidden="true" className="inline-block size-1.5 rounded-full bg-foreground" />
+      <p className="text-sm">
+        {label.day} <span className="text-muted">·</span>{" "}
+        <span className="font-mono tabular-nums">{label.time}</span>
+      </p>
+      {valid.ok ? (
+        <button type="button" className="btn" disabled={pending} onClick={() => onConfirm(range)}>
+          Set as final time
+        </button>
+      ) : (
+        <p className="text-sm text-danger">{valid.error}</p>
+      )}
+      <button type="button" className="link-quiet" onClick={onCancel}>
+        Cancel
+      </button>
+    </div>
   );
 }
 

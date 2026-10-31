@@ -2,6 +2,8 @@ Overlap is a scheduling poll. You pick a few days and a range of hours, and you 
 
 Each person sees the grid in their own timezone. The page states the overlap in one sentence. A reload shows new answers. The poll closes when the last slot has ended, and it is deleted 30 days after that.
 
+On the secret link, the owner can settle on a final time, either one of the best times or any unbroken stretch dragged on the grid. Everyone with the public link then sees it in their own timezone and can add it to a calendar, as an `.ics` file or through Google Calendar. The `.ics` file keeps one event ID per poll, so importing it again after the time changes updates the event instead of adding a second one.
+
 ## Run it
 
 Install dependencies, apply the local database migrations, and start the app.
@@ -12,7 +14,7 @@ npx wrangler d1 migrations apply overlap --local
 npm run dev
 ```
 
-Open http://localhost:3000. The local database is D1, stored by Wrangler on this machine. `npm test` checks the slot rules and the overlap sentence.
+Open http://localhost:3000. The local database is D1, stored by Wrangler on this machine. `npm test` checks the slot rules, the overlap sentence, the best-time ranking, the final time and the calendar export.
 
 To deploy, create a D1 database named overlap, put its id in `wrangler.jsonc`, apply the migrations with `--remote`, and run `npm run deploy`.
 
@@ -22,6 +24,6 @@ The Worker entry point is `worker.ts`. It serves the Next.js app that OpenNext b
 
 The title can be 80 characters. A poll can cover 14 days, and the hours on those days can span at most 12 hours. Slots are 30 minutes. A name can be 40 characters. A poll can have 40 names.
 
-The days and hours can change until the first answer. The title can change until the poll is deleted. Voting stops when the last slot ends. The grid stays visible and becomes read-only. The poll is deleted 30 days after that.
+The days and hours can change until the first answer. Changing them clears the final time. The title can change until the poll is deleted. Voting stops when the last slot ends. The grid stays visible and becomes read-only. The poll is deleted 30 days after that.
 
 Writes are rate limited per network: 30 new polls per hour, 120 vote saves per 10 minutes, and 60 owner saves per 10 minutes.

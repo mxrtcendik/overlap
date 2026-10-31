@@ -4,7 +4,7 @@ import { useMemo, useState } from "react";
 import { topSegments, type Segment } from "@/lib/availability";
 import { useTimeZone } from "@/lib/browser";
 import { SLOT_MS } from "@/lib/constants";
-import { describeRun, localParts } from "@/lib/sentence";
+import { describeRun, rangeLabel } from "@/lib/sentence";
 import type { VoterView } from "@/lib/types";
 import { PollGrid } from "./poll-grid";
 
@@ -15,13 +15,21 @@ export function Availability({
   voters,
   selected = [],
   readOnly,
+  mode,
+  outline,
+  selectLabel,
   onChange,
+  onPick,
 }: {
   slots: string[];
   voters: Voter[];
   selected?: string[];
   readOnly: boolean;
+  mode?: "toggle" | "range";
+  outline?: { slots: Set<string>; label: string } | null;
+  selectLabel?: string;
   onChange?: (next: string[]) => void;
+  onPick?: (segment: Segment) => void;
 }) {
   const timeZone = useTimeZone();
   const [inspected, setInspected] = useState<string | null>(null);
@@ -37,23 +45,30 @@ export function Availability({
           selected={selected}
           readOnly={readOnly}
           highlight={highlight}
+          mode={mode}
+          outline={outline}
+          selectLabel={selectLabel}
           onChange={onChange}
           onInspect={setInspected}
         />
       </div>
       {voters.length > 0 && timeZone ? (
         <aside className="w-full shrink-0 lg:sticky lg:top-8 lg:w-72">
-          {inspected ? (
-            <SlotDetail iso={inspected} voters={voters} timeZone={timeZone} />
-          ) : (
-            <BestTimes
-              segments={segments}
-              slots={slots}
-              voters={voters}
-              timeZone={timeZone}
-              onHighlight={setHighlight}
-            />
-          )}
+          <div className="grid">
+            <div className={`[grid-area:1/1] ${inspected ? "invisible" : ""}`}>
+              <BestTimes
+                segments={segments}
+                slots={slots}
+                voters={voters}
+                timeZone={timeZone}
+                onHighlight={setHighlight}
+                onPick={onPick}
+              />
+            </div>
+            <div className={`[grid-area:1/1] ${inspected ? "" : "invisible"}`}>
+              <SlotDetail iso={inspected ?? slots[0]} voters={voters} timeZone={timeZone} />
+            </div>
+          </div>
           <People voters={voters} onHighlight={setHighlight} />
         </aside>
       ) : null}
@@ -67,12 +82,14 @@ function BestTimes({
   voters,
   timeZone,
   onHighlight,
+  onPick,
 }: {
   segments: Segment[];
   slots: string[];
   voters: Voter[];
   timeZone: string;
   onHighlight: (slots: Set<string> | null) => void;
+  onPick?: (segment: Segment) => void;
 }) {
   return (
     <section aria-labelledby="best-times-heading">
@@ -93,11 +110,18 @@ function BestTimes({
                 {segment.people.length}/{voters.length}
               </span>
             </div>
-            <p className="mt-0.5 truncate text-xs text-muted">
-              {segment.people.length === voters.length
-                ? "Everyone"
-                : segment.people.map((index) => voters[index].name).join(", ")}
-            </p>
+            <div className="mt-0.5 flex items-baseline justify-between gap-4">
+              <p className="truncate text-xs text-muted">
+                {segment.people.length === voters.length
+                  ? "Everyone"
+                  : segment.people.map((index) => voters[index].name).join(", ")}
+              </p>
+              {onPick ? (
+                <button type="button" className="link-quiet shrink-0 text-xs" onClick={() => onPick(segment)}>
+                  Pick
+                </button>
+              ) : null}
+            </div>
           </li>
         ))}
       </ol>
@@ -108,49 +132,33 @@ function BestTimes({
 
 function SlotDetail({ iso, voters, timeZone }: { iso: string; voters: Voter[]; timeZone: string }) {
   const start = Date.parse(iso);
-  const from = localParts(start, timeZone);
-  const to = localParts(start + SLOT_MS, timeZone);
-  const range =
-    from.dayPeriod === to.dayPeriod
-      ? `${from.hour}:${from.minute}–${to.hour}:${to.minute} ${to.dayPeriod}`
-      : `${from.hour}:${from.minute} ${from.dayPeriod}–${to.hour}:${to.minute} ${to.dayPeriod}`;
-  const free = voters.filter((voter) => voter.slots.includes(iso));
-  const busy = voters.filter((voter) => !voter.slots.includes(iso));
+  const label = rangeLabel(start, start + SLOT_MS, timeZone);
+  const freeCount = voters.filter((voter) => voter.slots.includes(iso)).length;
 
   return (
     <section aria-label="Selected slot">
-      <h2 className="text-sm text-muted">
-        {from.weekday}, {from.month} {from.day}
-      </h2>
-      <p className="mt-1 font-mono text-sm tabular-nums">{range}</p>
+      <h2 className="text-sm text-muted">{label.day}</h2>
+      <p className="mt-1 font-mono text-sm tabular-nums">{label.time}</p>
       <p className="mt-4 text-sm">
-        {free.length} of {voters.length} free
+        {freeCount} of {voters.length} free
       </p>
-      <NameList voters={free} free />
-      {busy.length > 0 ? (
-        <>
-          <p className="mt-4 text-xs text-muted">Not free</p>
-          <NameList voters={busy} free={false} />
-        </>
-      ) : null}
+      <ul className="mt-2 space-y-1 text-sm">
+        {voters.map((voter, index) => {
+          const free = voter.slots.includes(iso);
+          return (
+            <li key={`${voter.name}-${index}`} className={`flex items-center gap-2 ${free ? "" : "text-muted"}`}>
+              <span
+                aria-hidden="true"
+                className={`inline-block size-1.5 rounded-full ${free ? "bg-accent" : "bg-line-strong"}`}
+              />
+              <span className={free ? undefined : "line-through decoration-line-strong"}>{voter.name}</span>
+              {voter.yours ? <span className="text-muted">· you</span> : null}
+              <span className="sr-only">{free ? "free" : "not free"}</span>
+            </li>
+          );
+        })}
+      </ul>
     </section>
-  );
-}
-
-function NameList({ voters, free }: { voters: Voter[]; free: boolean }) {
-  return (
-    <ul className="mt-2 space-y-1 text-sm">
-      {voters.map((voter, index) => (
-        <li key={`${voter.name}-${index}`} className={`flex items-center gap-2 ${free ? "" : "text-muted"}`}>
-          <span
-            aria-hidden="true"
-            className={`inline-block size-1.5 rounded-full ${free ? "bg-accent" : "bg-line-strong"}`}
-          />
-          {voter.name}
-          {voter.yours ? <span className="text-muted">· you</span> : null}
-        </li>
-      ))}
-    </ul>
   );
 }
 

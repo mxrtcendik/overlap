@@ -85,6 +85,9 @@ export function PollGrid({
   selected,
   readOnly,
   highlight = null,
+  mode = "toggle",
+  outline = null,
+  selectLabel = "You",
   onChange,
   onInspect,
 }: {
@@ -93,6 +96,9 @@ export function PollGrid({
   selected: string[];
   readOnly: boolean;
   highlight?: Set<string> | null;
+  mode?: "toggle" | "range";
+  outline?: { slots: Set<string>; label: string } | null;
+  selectLabel?: string;
   onChange?: (next: string[]) => void;
   onInspect?: (iso: string | null) => void;
 }) {
@@ -106,8 +112,8 @@ export function PollGrid({
 
   const preview = useMemo(() => {
     if (!drag || !layout) return null;
-    const next = new Set(selected);
-    const [c0, c1] = [drag.anchor.c, drag.current.c].sort((a, b) => a - b);
+    const next = mode === "range" ? new Set<string>() : new Set(selected);
+    const [c0, c1] = mode === "range" ? [drag.anchor.c, drag.anchor.c] : [drag.anchor.c, drag.current.c].sort((a, b) => a - b);
     const [r0, r1] = [drag.anchor.r, drag.current.r].sort((a, b) => a - b);
     for (let c = c0; c <= c1; c++) {
       for (let r = r0; r <= r1; r++) {
@@ -118,7 +124,7 @@ export function PollGrid({
       }
     }
     return next;
-  }, [drag, layout, selected]);
+  }, [drag, layout, selected, mode]);
 
   useEffect(() => {
     if (!drag) return;
@@ -140,8 +146,9 @@ export function PollGrid({
   const counts = countSlots(slots, voters);
   const people = Math.max(voters.length, 1);
 
-  const best = new Set<string>();
-  const run = voters.length > 1 ? bestRun(slots, counts) : null;
+  const best = new Set<string>(outline?.slots);
+  const outlineLabel = outline?.label ?? "Best time";
+  const run = !outline && voters.length > 1 ? bestRun(slots, counts) : null;
   if (run) {
     for (const slot of slots) {
       const time = Date.parse(slot);
@@ -158,7 +165,7 @@ export function PollGrid({
       event.currentTarget.releasePointerCapture(event.pointerId);
     }
     setActive(pos);
-    setDrag({ anchor: pos, current: pos, add: !selectedSet.has(iso) });
+    setDrag({ anchor: pos, current: pos, add: mode === "range" || !selectedSet.has(iso) });
   }
 
   function onPointerEnter(pos: Pos, iso: string) {
@@ -243,7 +250,7 @@ export function PollGrid({
                         tabIndex={focusPos.c === c && focusPos.r === r ? 0 : -1}
                         aria-disabled={readOnly || undefined}
                         aria-pressed={readOnly ? undefined : on}
-                        aria-label={`${column.weekday}, ${column.month} ${column.day}, ${row.label}. ${count} of ${voters.length} free${isBest ? ", best time" : ""}.`}
+                        aria-label={`${column.weekday}, ${column.month} ${column.day}, ${row.label}. ${count} of ${voters.length} free${isBest ? `, ${outlineLabel.toLowerCase()}` : ""}.`}
                         onPointerDown={(event) => onPointerDown(event, pos, iso)}
                         onPointerEnter={() => onPointerEnter(pos, iso)}
                         onFocus={() => {
@@ -253,7 +260,13 @@ export function PollGrid({
                         onKeyDown={(event) => onKeyDown(event, pos)}
                         onClick={(event) => {
                           if (readOnly || event.detail !== 0) return;
-                          onChange?.(on ? selected.filter((slot) => slot !== iso) : slots.filter((slot) => slot === iso || selectedSet.has(slot)));
+                          if (mode === "range") onChange?.([iso]);
+                          else
+                            onChange?.(
+                              on
+                                ? selected.filter((slot) => slot !== iso)
+                                : slots.filter((slot) => slot === iso || selectedSet.has(slot)),
+                            );
                         }}
                         className="slot"
                         data-best={isBest ? "true" : undefined}
@@ -275,12 +288,12 @@ export function PollGrid({
           </tbody>
         </table>
       </div>
-      <Legend showYou={!readOnly} showBest={best.size > 0} />
+      <Legend selectLabel={readOnly ? null : selectLabel} outlineLabel={best.size > 0 ? outlineLabel : null} />
     </div>
   );
 }
 
-function Legend({ showYou, showBest }: { showYou: boolean; showBest: boolean }) {
+function Legend({ selectLabel, outlineLabel }: { selectLabel: string | null; outlineLabel: string | null }) {
   const steps = [16, 44, 72, 100];
   return (
     <div className="mt-4 flex flex-wrap items-center gap-x-6 gap-y-2 text-xs text-muted" aria-hidden="true">
@@ -293,16 +306,16 @@ function Legend({ showYou, showBest }: { showYou: boolean; showBest: boolean }) 
         </span>
         More
       </span>
-      {showYou ? (
+      {selectLabel ? (
         <span className="inline-flex items-center gap-2">
           <span className="inline-block size-3 rounded-[2px] bg-foreground" />
-          You
+          {selectLabel}
         </span>
       ) : null}
-      {showBest ? (
+      {outlineLabel ? (
         <span className="inline-flex items-center gap-2">
           <span className="inline-block h-3 w-4 border border-foreground bg-paper" />
-          Best time
+          {outlineLabel}
         </span>
       ) : null}
     </div>
