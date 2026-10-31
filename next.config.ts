@@ -1,8 +1,7 @@
 import type { NextConfig } from "next";
+import { initOpenNextCloudflareForDev } from "@opennextjs/cloudflare";
 
 const nextConfig: NextConfig = {
-  cacheComponents: true,
-  partialPrefetching: true,
   turbopack: {
     rules: {
       "*.css": {
@@ -11,6 +10,21 @@ const nextConfig: NextConfig = {
       },
     },
   },
+  headers: async () => [
+    {
+      source: "/p/:path*",
+      headers: [{ key: "Cache-Control", value: "private, no-store" }],
+    },
+    {
+      source: "/o/:path*",
+      headers: [
+        { key: "Cache-Control", value: "private, no-store" },
+        { key: "Referrer-Policy", value: "no-referrer" },
+      ],
+    },
+  ],
 };
 
 export default nextConfig;
+
+initOpenNextCloudflareForDev();
