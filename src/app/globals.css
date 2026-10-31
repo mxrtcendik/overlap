@@ -1,26 +1,192 @@
 @import "tailwindcss";
 
 :root {
-  --background: #ffffff;
-  --foreground: #171717;
+  --background: #f4f3ef;
+  --paper: #fffcf7;
+  --foreground: #221f1b;
+  --muted: #6d675f;
+  --line: #ddd8cf;
+  --line-strong: #c4bdb1;
+  --accent: #3f6f52;
+  --on-accent: #fffcf7;
+  --danger: #8a3a2a;
+  color-scheme: light;
+}
+
+@media (prefers-color-scheme: dark) {
+  :root {
+    --background: #161513;
+    --paper: #1e1c19;
+    --foreground: #ebe6de;
+    --muted: #9a948a;
+    --line: #34312c;
+    --line-strong: #4b4740;
+    --accent: #7cae8c;
+    --on-accent: #161513;
+    --danger: #e3977f;
+    color-scheme: dark;
+  }
 }
 
 @theme inline {
   --color-background: var(--background);
   --color-foreground: var(--foreground);
-  --font-sans: var(--font-geist-sans);
-  --font-mono: var(--font-geist-mono);
-}
-
-@media (prefers-color-scheme: dark) {
-  :root {
-    --background: #0a0a0a;
-    --foreground: #ededed;
-  }
+  --color-muted: var(--muted);
+  --color-line: var(--line);
+  --color-line-strong: var(--line-strong);
+  --color-paper: var(--paper);
+  --color-accent: var(--accent);
+  --color-on-accent: var(--on-accent);
+  --color-danger: var(--danger);
+  --font-sans: var(--font-geist-sans), ui-sans-serif, system-ui, sans-serif;
+  --font-mono: var(--font-geist-mono), ui-monospace, monospace;
 }
 
 body {
   background: var(--background);
   color: var(--foreground);
-  font-family: Arial, Helvetica, sans-serif;
+  font-family: var(--font-sans);
+}
+
+::selection {
+  background: color-mix(in oklab, var(--accent) 28%, transparent);
+}
+
+:focus-visible {
+  outline: 2px solid var(--foreground);
+  outline-offset: 2px;
+}
+
+@layer components {
+  .field {
+    display: block;
+    width: 100%;
+    border: 1px solid var(--line);
+    background: var(--paper);
+    padding: 0.5rem 0.75rem;
+    color: var(--foreground);
+    transition: border-color 120ms ease-out;
+  }
+
+  .field:hover {
+    border-color: var(--line-strong);
+  }
+
+  .field:focus-visible {
+    border-color: var(--foreground);
+    outline: 1px solid var(--foreground);
+    outline-offset: 0;
+  }
+
+  .btn {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.5rem;
+    background: var(--foreground);
+    padding: 0.5rem 0.875rem;
+    font-size: 0.875rem;
+    line-height: 1.25rem;
+    color: var(--background);
+    transition:
+      opacity 120ms ease-out,
+      transform 120ms ease-out;
+  }
+
+  .btn:hover:not(:disabled) {
+    opacity: 0.86;
+  }
+
+  .btn:active:not(:disabled) {
+    transform: scale(0.98);
+  }
+
+  .btn-danger {
+    background: var(--danger);
+  }
+
+  .btn:disabled {
+    opacity: 0.5;
+    cursor: not-allowed;
+  }
+
+  .link-quiet {
+    font-size: 0.875rem;
+    color: var(--muted);
+    text-decoration-line: underline;
+    text-decoration-color: transparent;
+    text-underline-offset: 4px;
+    transition:
+      color 120ms ease-out,
+      text-decoration-color 120ms ease-out;
+  }
+
+  .link-quiet:hover:not(:disabled) {
+    color: var(--foreground);
+    text-decoration-color: var(--line-strong);
+  }
+
+  .link-quiet:disabled {
+    opacity: 0.5;
+  }
+
+  .link-danger:hover:not(:disabled) {
+    color: var(--danger);
+    text-decoration-color: currentColor;
+  }
+
+  .slot {
+    display: block;
+    position: relative;
+    height: 2rem;
+    width: 2.5rem;
+    border: 1px solid var(--line);
+    background: color-mix(in oklab, var(--accent) var(--heat, 0%), var(--paper));
+    transition:
+      border-color 120ms ease-out,
+      opacity 160ms ease-out;
+  }
+
+  button.slot:not([aria-disabled="true"]) {
+    cursor: pointer;
+    touch-action: none;
+  }
+
+  button.slot:hover:not([aria-disabled="true"]) {
+    border-color: var(--line-strong);
+  }
+
+  .slot[data-dim="true"] {
+    opacity: 0.28;
+  }
+
+  .slot[data-best="true"] {
+    border-color: var(--foreground);
+  }
+
+  .slot-fill {
+    position: absolute;
+    inset: 3px;
+    border-radius: 2px;
+    background: var(--foreground);
+    opacity: 0;
+    transform: scale(0.92);
+    pointer-events: none;
+    transition:
+      transform 160ms ease-out,
+      opacity 160ms ease-out;
+  }
+
+  .slot-fill[data-on="true"] {
+    opacity: 1;
+    transform: scale(1);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .slot-fill,
+  .btn,
+  .field,
+  .slot {
+    transition: none;
+  }
 }
