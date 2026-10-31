@@ -1,0 +1,41 @@
+import { slotsIn } from "@/lib/availability";
+import { SLOT_MS } from "@/lib/constants";
+import { ogImage, OG_SIZE, type OgCell } from "@/lib/og-image";
+import { getPoll } from "@/lib/polls";
+import { pollDescription } from "@/lib/poll-meta";
+import { bestRun, countSlots } from "@/lib/sentence";
+
+export const alt = "A overlap poll with a grid of who is free when.";
+export const size = OG_SIZE;
+export const contentType = "image/png";
+export const dynamic = "force-dynamic";
+
+type Params = { params: Promise<{ id: string }> };
+
+export default async function Image({ params }: Params) {
+  const { id } = await params;
+  const poll = await getPoll(id);
+  if (!poll) {
+    return ogImage({ title: "This poll doesn’t exist", line: "It may have been deleted or expired.", columns: [], people: 0 });
+  }
+
+  const counts = countSlots(poll.slots, poll.voters);
+  const outlined = new Set<string>();
+  if (poll.final) {
+    for (const slot of slotsIn(poll.slots, Date.parse(poll.final.start), Date.parse(poll.final.end))) outlined.add(slot);
+  } else if (poll.voters.length > 1) {
+    const run = bestRun(poll.slots, counts);
+    if (run) for (const slot of slotsIn(poll.slots, run.start, run.end)) outlined.add(slot);
+  }
+
+  const columns: OgCell[][] = [];
+  let previous = -Infinity;
+  for (const slot of [...poll.slots].sort()) {
+    const time = Date.parse(slot);
+    if (time - previous !== SLOT_MS) columns.push([]);
+    columns[columns.length - 1].push({ count: counts.get(slot) ?? 0, outlined: outlined.has(slot) });
+    previous = time;
+  }
+
+  return ogImage({ title: poll.title, line: pollDescription(poll), columns, people: poll.voters.length });
+}

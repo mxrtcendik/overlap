@@ -13,8 +13,9 @@ export async function generateMetadata({ params }: Params): Promise<Metadata> {
   const { token } = await params;
   const poll = await getPollByOwnerToken(token);
   return {
-    title: poll?.title ?? "overlap",
+    title: poll ? `${poll.title} (owner)` : "Poll not found",
     referrer: "no-referrer",
+    robots: { index: false, follow: false },
   };
 }
 

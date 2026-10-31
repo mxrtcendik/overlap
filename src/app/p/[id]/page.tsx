@@ -4,6 +4,7 @@ import type { Metadata } from "next";
 import { notFound } from "next/navigation";
 import { PollView } from "@/components/poll-view";
 import { Shell } from "@/components/shell";
+import { pollDescription, requestOrigin } from "@/lib/poll-meta";
 import { getPoll, toPollView } from "@/lib/polls";
 
 export const dynamic = "force-dynamic";
@@ -13,8 +14,17 @@ type Params = { params: Promise<{ id: string }> };
 export async function generateMetadata({ params }: Params): Promise<Metadata> {
   const { id } = await params;
   const poll = await getPoll(id);
-  if (!poll) return { title: "overlap" };
-  return { title: poll.title };
+  const robots = { index: false, follow: false };
+  if (!poll) return { title: "Poll not found", robots };
+  const description = pollDescription(poll);
+  return {
+    metadataBase: await requestOrigin(),
+    title: poll.title,
+    description,
+    robots,
+    openGraph: { type: "website", siteName: "overlap", title: poll.title, description, url: `/p/${poll.id}` },
+    twitter: { card: "summary_large_image", title: poll.title, description },
+  };
 }
 
 export default async function PublicPollPage({ params }: Params) {

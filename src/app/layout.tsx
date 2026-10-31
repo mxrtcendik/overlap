@@ -12,9 +12,14 @@ const geistMono = Geist_Mono({
   subsets: ["latin"],
 });
 
+const description = "Find a time that works for everyone. Send one link, see the overlap in your own timezone. No accounts.";
+
 export const metadata: Metadata = {
+  metadataBase: new URL(process.env.SITE_URL ?? "http://localhost:3000"),
   title: { default: "overlap", template: "%s · overlap" },
-  description: "Find a time that works for everyone. Send one link, see the overlap in your own timezone. No accounts.",
+  description,
+  openGraph: { type: "website", siteName: "overlap", title: "overlap", description },
+  twitter: { card: "summary_large_image", title: "overlap", description },
 };
 
 export const viewport: Viewport = {

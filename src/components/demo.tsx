@@ -2,21 +2,11 @@
 
 import { useMemo, useState } from "react";
 import { usePrefs, useTimeZone, useToday } from "@/lib/browser";
+import { DEMO_DAYS, DEMO_END, DEMO_PEOPLE, DEMO_START } from "@/lib/demo-data";
 import { buildSlots } from "@/lib/schedule";
 import { overlapSummary } from "@/lib/sentence";
 import { PollGrid } from "./poll-grid";
 import { SummaryText } from "./poll-summary";
-
-const START = 9 * 60;
-const END = 13 * 60;
-const DAYS = 4;
-
-const PEOPLE: { name: string; free: [day: number, from: number, to: number][] }[] = [
-  { name: "Mina", free: [[0, 0, 4], [1, 2, 8], [2, 0, 6]] },
-  { name: "Jonas", free: [[1, 3, 6], [2, 2, 8], [3, 0, 3]] },
-  { name: "Priya", free: [[0, 2, 5], [2, 3, 7], [3, 4, 8]] },
-  { name: "Theo", free: [[0, 0, 2], [1, 4, 8], [2, 4, 6]] },
-];
 
 function nextWeekdays(today: string, count: number): string[] {
   const [year, month, day] = today.split("-").map(Number);
@@ -40,10 +30,10 @@ export function Demo() {
 
   const demo = useMemo(() => {
     if (!today) return null;
-    const dates = nextWeekdays(today, DAYS);
-    const perDay = (END - START) / 30;
-    const slots = buildSlots(dates, START, END);
-    const voters = PEOPLE.map((person) => ({
+    const dates = nextWeekdays(today, DEMO_DAYS);
+    const perDay = (DEMO_END - DEMO_START) / 30;
+    const slots = buildSlots(dates, DEMO_START, DEMO_END);
+    const voters = DEMO_PEOPLE.map((person) => ({
       name: person.name,
       slots: person.free.flatMap(([day, from, to]) => slots.slice(day * perDay + from, day * perDay + to)),
     }));
