@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, type FormEvent } from "react";
+import { useEffect, useRef, useState, type FormEvent } from "react";
 import { MAX_TITLE } from "@/lib/constants";
 import { buildSlots } from "@/lib/schedule";
 import { CopyLink } from "./copy-link";
@@ -14,6 +14,11 @@ export function CreateForm() {
   const [error, setError] = useState<string | null>(null);
   const [pending, setPending] = useState(false);
   const [links, setLinks] = useState<{ publicUrl: string; secretUrl: string } | null>(null);
+  const linksHeading = useRef<HTMLHeadingElement>(null);
+
+  useEffect(() => {
+    if (links) linksHeading.current?.focus();
+  }, [links]);
 
   async function onSubmit(event: FormEvent) {
     event.preventDefault();
@@ -48,7 +53,13 @@ export function CreateForm() {
   if (links) {
     return (
       <>
-        <h1 className="text-[1.75rem] leading-9 tracking-[-0.02em] text-balance">Save both links</h1>
+        <h2
+          ref={linksHeading}
+          tabIndex={-1}
+          className="scroll-mt-10 text-[1.75rem] leading-9 tracking-[-0.02em] text-balance outline-none"
+        >
+          Save both links
+        </h2>
         <p className="mt-4 text-sm leading-6">
           This screen shows them together once. Anyone with the public link can answer. The secret link is the only way
           to edit or delete the poll. If you lose it, you cannot get it back.
@@ -72,7 +83,7 @@ export function CreateForm() {
 
   return (
     <form onSubmit={onSubmit}>
-      <h1 className="text-[1.75rem] leading-9 tracking-[-0.02em] text-balance">New poll</h1>
+      <h2 className="text-[1.75rem] leading-9 tracking-[-0.02em] text-balance">New poll</h2>
       <label className="mt-8 block text-sm text-muted">
         Title
         <input

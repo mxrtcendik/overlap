@@ -42,6 +42,12 @@
   --font-mono: var(--font-geist-mono), ui-monospace, monospace;
 }
 
+@media (prefers-reduced-motion: no-preference) {
+  html {
+    scroll-behavior: smooth;
+  }
+}
+
 body {
   background: var(--background);
   color: var(--foreground);
@@ -127,6 +133,27 @@ body {
 
   .link-quiet:disabled {
     opacity: 0.5;
+  }
+
+  .month-nav {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 1.75rem;
+    height: 1.75rem;
+    border: 1px solid var(--line);
+    color: var(--foreground);
+    transition:
+      border-color 120ms ease-out,
+      opacity 120ms ease-out;
+  }
+
+  .month-nav:hover:not(:disabled) {
+    border-color: var(--line-strong);
+  }
+
+  .month-nav:disabled {
+    opacity: 0.35;
   }
 
   .link-danger:hover:not(:disabled) {
