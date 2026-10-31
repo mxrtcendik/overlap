@@ -4,14 +4,21 @@ import { useMemo, useRef, useState, type FormEvent } from "react";
 import { slotsIn } from "@/lib/availability";
 import { MAX_NAME } from "@/lib/constants";
 import { json, messageOf, request, UserFacingError } from "@/lib/request";
-import type { PollView as PollViewData } from "@/lib/types";
+import type { PollView as PollViewData, VoterView } from "@/lib/types";
+import { useLiveUpdates } from "@/lib/use-live-updates";
 import { Availability } from "./availability";
 import { FinalTime } from "./final-time";
 import { SentenceBlock, Status } from "./poll-summary";
 
 export function PollView({ poll }: { poll: PollViewData }) {
-  const [voters, setVoters] = useState(poll.voters);
-  const you = voters.find((voter) => voter.yours) ?? null;
+  useLiveUpdates(poll.id);
+  const [you, setYou] = useState<VoterView | null>(() => poll.voters.find((voter) => voter.yours) ?? null);
+  const voters = useMemo(() => {
+    if (!you) return poll.voters.filter((voter) => !voter.yours);
+    const listed = poll.voters.some((voter) => voter.yours);
+    const merged = poll.voters.map((voter) => (voter.yours ? you : voter));
+    return listed ? merged : [...merged, you];
+  }, [poll.voters, you]);
   const [name, setName] = useState(you?.name ?? "");
   const [selected, setSelected] = useState<string[]>(you?.slots ?? []);
   const [saved, setSaved] = useState(Boolean(you));
@@ -39,12 +46,7 @@ export function PollView({ poll }: { poll: PollViewData }) {
   );
 
   function applyYou(nextName: string, nextSlots: string[]) {
-    setVoters((current) => {
-      if (current.some((voter) => voter.yours)) {
-        return current.map((voter) => (voter.yours ? { ...voter, name: nextName, slots: nextSlots } : voter));
-      }
-      return [...current, { name: nextName, slots: nextSlots, yours: true }];
-    });
+    setYou({ name: nextName, slots: nextSlots, yours: true });
   }
 
   async function flush() {
@@ -83,7 +85,7 @@ export function PollView({ poll }: { poll: PollViewData }) {
     setSelected(next);
     if (saved) {
       queued.current = next;
-      setVoters((people) => people.map((voter) => (voter.yours ? { ...voter, slots: next } : voter)));
+      setYou((current) => (current ? { ...current, slots: next } : current));
       void flush();
     }
   }
@@ -91,7 +93,8 @@ export function PollView({ poll }: { poll: PollViewData }) {
   function onSubmit(event: FormEvent) {
     event.preventDefault();
     if (poll.closed) return;
-    queued.current = selectedRef.current;
+    const current = new Set(poll.slots);
+    queued.current = selectedRef.current.filter((slot) => current.has(slot));
     void flush();
   }
 

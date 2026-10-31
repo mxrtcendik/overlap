@@ -11,6 +11,7 @@ import { expiresAtFor, forgetPoll, rememberPoll, useMyPolls } from "@/lib/my-pol
 import { json, messageOf, request } from "@/lib/request";
 import { parseFinal } from "@/lib/slots";
 import type { PollView } from "@/lib/types";
+import { useLiveUpdates } from "@/lib/use-live-updates";
 import { CopyLink } from "./copy-link";
 import { CreatedNotice } from "./created-notice";
 import { Availability } from "./availability";
@@ -23,11 +24,18 @@ export function OwnerView({ poll, hasResponses }: { poll: PollView; hasResponses
   const location = usePageLocation();
   const timeZone = useTimeZone();
   const prefs = usePrefs();
-  const [title, setTitle] = useState(poll.title);
+  const [titleDraft, setTitle] = useState<string | null>(null);
+  const [savedTitle, setSavedTitle] = useState(poll.title);
+  if (savedTitle !== poll.title) {
+    setSavedTitle(poll.title);
+    setTitle(null);
+  }
+  const title = titleDraft ?? poll.title;
   const [error, setError] = useState<{ at: "final" | "settings"; message: string } | null>(null);
   const [pending, setPending] = useState(false);
   const [confirming, setConfirming] = useState(false);
   const [deleted, setDeleted] = useState(false);
+  useLiveUpdates(poll.id, !deleted);
   const justCreated = useJustCreated(location ? (new URL(location.href).pathname.split("/")[2] ?? null) : null);
   const savedOnDevice = useMyPolls().some((saved) => saved.id === poll.id);
 

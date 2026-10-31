@@ -2,7 +2,7 @@ Overlap is a scheduling poll. You pick a few days and a range of hours, and you 
 
 Creating a poll takes you straight to its secret link, with the public link ready to copy, so a reload or a closed tab cannot lose it. Polls you create or open as owner are also remembered in your browser and listed on the home page. That list never leaves the device.
 
-Each person sees the grid in their own timezone, with a 12- or 24-hour clock and a first day of the week that follow their browser, and a switch in the footer to change the clock. The page states the overlap in one sentence. A reload shows new answers. The poll closes when the last slot has ended, and it is deleted 30 days after that.
+Each person sees the grid in their own timezone, with a 12- or 24-hour clock and a first day of the week that follow their browser, and a switch in the footer to change the clock. The page states the overlap in one sentence. New answers and the owner’s changes appear on every open page without a reload. The poll closes when the last slot has ended, and it is deleted 30 days after that.
 
 On the secret link, the owner can settle on a final time, either one of the best times or any unbroken stretch dragged on the grid. Everyone with the public link then sees it in their own timezone and can add it to a calendar, as an `.ics` file or through Google Calendar. The `.ics` file keeps one event ID per poll, so importing it again after the time changes updates the event instead of adding a second one.
 
@@ -22,11 +22,15 @@ Open http://localhost:3000. The local database is D1, stored by Wrangler on this
 
 `npm run preview` builds the Worker and runs it locally in workerd, the same runtime as production.
 
+Live updates need a Durable Object, which `next dev` can’t run, so under `npm run dev` open pages check for changes every 20 seconds instead. Wrangler warns about this when the dev server starts. `npm run preview` has the real thing.
+
 ## Deploy
 
 Create a D1 database named overlap, put its id in `wrangler.jsonc`, apply the migrations with `--remote`, and run `npm run deploy`. Set `SITE_URL` to the public address, such as `https://overlap.example.com`, when building, so the home page's link preview uses absolute URLs. Poll pages use the address of each request instead.
 
 The Worker entry point is `worker.ts`. It serves the Next.js app that OpenNext builds and adds an hourly Cron Trigger that deletes expired polls and old rate-limit counters. Deleting a poll removes its answers through foreign keys.
+
+Each poll has a Durable Object, `PollRoom`, that holds the WebSockets of the pages open on it. After a vote or an owner edit is saved, the route tells the room, and the room sends each page a message that only says “changed”. The page then renders again on the server, so the room never holds poll data and each person still gets their own view. Sockets use the hibernation API, and keepalive pings are answered without waking the object, so an idle poll costs nothing. `worker.ts` accepts a socket only from the site’s own origin and only for a poll that exists. While a socket is down, a visible page checks every 20 seconds and reconnects with backoff. The first deploy creates the Durable Object class from the migration in `wrangler.jsonc`.
 
 Every response carries a Content Security Policy, HSTS in production, and headers that stop the site from being framed or sniffed. Poll routes add `X-Robots-Tag: noindex`.
 
