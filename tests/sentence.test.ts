@@ -1,6 +1,6 @@
 import assert from "node:assert/strict";
 import { describe, it } from "node:test";
-import { overlapSentence, overlapSummary, type Vote } from "../src/lib/sentence";
+import { overlapSentence, overlapSummary, tallySlots, type Vote } from "../src/lib/sentence";
 
 const zone = "UTC";
 const four = "2026-01-06T16:00:00.000Z";
@@ -148,6 +148,53 @@ describe("overlap sentence", () => {
       votes: votes([[four], [four]], ["Ada", "Bea"]),
       timeZone: zone,
     });
-    assert.deepEqual(summary, { kind: "all", when: "Tue 4:00–4:30 PM" });
+    assert.deepEqual(summary, { kind: "all", when: "Tue 4:00–4:30 PM", maybe: 0 });
+  });
+});
+
+describe("if needed", () => {
+  const ada = (slots: string[], maybe: string[] = []): Vote => ({ name: "Ada", slots, maybe });
+  const bea = (slots: string[], maybe: string[] = []): Vote => ({ name: "Bea", slots, maybe });
+
+  it("counts people who can make it only if needed, and says how many", () => {
+    assert.equal(
+      overlapSentence({ slots: [four], votes: [ada([four]), bea([], [four])], timeZone: zone }),
+      "Tue 4:00–4:30 PM works for everyone, 1 if needed.",
+    );
+  });
+
+  it("prefers more people over firmer answers", () => {
+    assert.equal(
+      overlapSentence({
+        slots: [four, six],
+        votes: [ada([four], [six]), bea([], [six]), { name: "Cal", slots: [] }],
+        timeZone: zone,
+      }),
+      "No time works for everyone yet. Closest: Tue 6:00–6:30 PM, 2 of 3 people, 2 if needed.",
+    );
+  });
+
+  it("prefers firmer answers when as many people can make it", () => {
+    assert.equal(
+      overlapSentence({ slots: [four, six], votes: [ada([six], [four]), bea([four, six])], timeZone: zone }),
+      "Tue 6:00–6:30 PM works for everyone.",
+    );
+  });
+
+  it("treats a time marked both ways as a yes", () => {
+    const tally = tallySlots([four], [ada([four], [four])]).get(four);
+    assert.deepEqual(tally, { yes: 1, maybe: 0 });
+  });
+
+  it("ignores times that aren’t on the poll", () => {
+    const tally = tallySlots([four], [ada([], [four, six])]);
+    assert.deepEqual([...tally.entries()], [[four, { yes: 0, maybe: 1 }]]);
+  });
+
+  it("finds a time when every answer is if needed", () => {
+    assert.equal(
+      overlapSentence({ slots: [four, fourThirty], votes: [ada([], [four, fourThirty]), bea([], [four])], timeZone: zone }),
+      "Tue 4:00–4:30 PM works for everyone, 2 if needed.",
+    );
   });
 });

@@ -319,7 +319,7 @@ function Answers({
       <ul className="mt-5 max-w-xl border-t border-line">
         {voters.map((voter, index) => {
           const ref = voter.ref;
-          const times = voter.slots.length;
+          const times = voter.slots.length + voter.maybe.length;
           return (
             <li key={ref ?? index} className="border-b border-line py-2.5">
               {ref && confirming === ref ? (

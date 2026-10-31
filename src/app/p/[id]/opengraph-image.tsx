@@ -3,7 +3,7 @@ import { SLOT_MS } from "@/lib/constants";
 import { ogImage, OG_SIZE, type OgCell } from "@/lib/og-image";
 import { getPoll } from "@/lib/polls";
 import { pollDescription } from "@/lib/poll-meta";
-import { bestRun, countSlots } from "@/lib/sentence";
+import { bestTime, tallySlots } from "@/lib/sentence";
 
 export const alt = "A overlap poll with a grid of who is free when.";
 export const size = OG_SIZE;
@@ -19,12 +19,12 @@ export default async function Image({ params }: Params) {
     return ogImage({ title: "This poll doesn’t exist", line: "It may have been deleted or expired.", columns: [], people: 0 });
   }
 
-  const counts = countSlots(poll.slots, poll.voters);
+  const tallies = tallySlots(poll.slots, poll.voters);
   const outlined = new Set<string>();
   if (poll.final) {
     for (const slot of slotsIn(poll.slots, Date.parse(poll.final.start), Date.parse(poll.final.end))) outlined.add(slot);
   } else if (poll.voters.length > 1) {
-    const run = bestRun(poll.slots, counts);
+    const run = bestTime(poll.slots, poll.voters);
     if (run) for (const slot of slotsIn(poll.slots, run.start, run.end)) outlined.add(slot);
   }
 
@@ -33,7 +33,8 @@ export default async function Image({ params }: Params) {
   for (const slot of [...poll.slots].sort()) {
     const time = Date.parse(slot);
     if (time - previous !== SLOT_MS) columns.push([]);
-    columns[columns.length - 1].push({ count: counts.get(slot) ?? 0, outlined: outlined.has(slot) });
+    const tally = tallies.get(slot) ?? { yes: 0, maybe: 0 };
+    columns[columns.length - 1].push({ count: tally.yes + tally.maybe / 2, outlined: outlined.has(slot) });
     previous = time;
   }
 

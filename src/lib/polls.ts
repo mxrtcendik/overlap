@@ -9,7 +9,7 @@ import type { FinalTime, PollView, VoterView } from "./types";
 
 export type { FinalTime, PollView, VoterView };
 
-export type StoredVoter = { id: string; ref: string; name: string; slots: string[] };
+export type StoredVoter = { id: string; ref: string; name: string; slots: string[]; maybe: string[] };
 
 export type StoredPoll = {
   id: string;
@@ -38,8 +38,11 @@ const ownerHash = (token: string) => sha256(token);
 
 const voterRef = async (voterId: string) => (await sha256(`voter:${voterId}`)).slice(0, 16);
 
-const INSERT_MARKS = `INSERT INTO marks (voter_id, slot)
-  SELECT ?, value FROM json_each(?)
+const YES = 2;
+const IF_NEEDED = 1;
+
+const INSERT_MARKS = `INSERT INTO marks (voter_id, slot, level)
+  SELECT ?, value, ? FROM json_each(?)
   WHERE EXISTS (SELECT 1 FROM voters WHERE id = ?)`;
 
 export function toPollView(poll: StoredPoll, voterId: string | null, options: { refs?: boolean } = {}): PollView {
@@ -52,6 +55,7 @@ export function toPollView(poll: StoredPoll, voterId: string | null, options: { 
     voters: poll.voters.map((voter) => ({
       name: voter.name,
       slots: voter.slots,
+      maybe: voter.maybe,
       yours: voterId !== null && voter.id === voterId,
       ...(options.refs ? { ref: voter.ref } : {}),
     })),
@@ -80,15 +84,17 @@ export const getPoll = cache(async (id: string): Promise<StoredPoll | null> => {
   const [voters, marks] = await db.batch([
     db.prepare("SELECT id, name FROM voters WHERE poll_id = ? ORDER BY created_at ASC, id ASC").bind(id),
     db
-      .prepare("SELECT marks.voter_id, marks.slot FROM marks JOIN voters ON voters.id = marks.voter_id WHERE voters.poll_id = ?")
+      .prepare(
+        "SELECT marks.voter_id, marks.slot, marks.level FROM marks JOIN voters ON voters.id = marks.voter_id WHERE voters.poll_id = ?",
+      )
       .bind(id),
   ]);
 
-  const marksByVoter = new Map<string, string[]>();
-  for (const mark of marks.results as { voter_id: string; slot: string }[]) {
-    const list = marksByVoter.get(mark.voter_id) ?? [];
-    list.push(mark.slot);
-    marksByVoter.set(mark.voter_id, list);
+  const marksByVoter = new Map<string, { slots: string[]; maybe: string[] }>();
+  for (const mark of marks.results as { voter_id: string; slot: string; level: number }[]) {
+    const lists = marksByVoter.get(mark.voter_id) ?? { slots: [], maybe: [] };
+    (mark.level === IF_NEEDED ? lists.maybe : lists.slots).push(mark.slot);
+    marksByVoter.set(mark.voter_id, lists);
   }
 
   return {
@@ -105,7 +111,8 @@ export const getPoll = cache(async (id: string): Promise<StoredPoll | null> => {
         id: voter.id,
         ref: await voterRef(voter.id),
         name: voter.name,
-        slots: marksByVoter.get(voter.id) ?? [],
+        slots: marksByVoter.get(voter.id)?.slots ?? [],
+        maybe: marksByVoter.get(voter.id)?.maybe ?? [],
       })),
     ),
   };
@@ -183,8 +190,14 @@ export async function saveVote(
   const name = cleanText(nameInput, MAX_NAME);
   if (!name) return { ok: false, status: 400, error: "Names can be up to 40 characters." };
   const chosen = subset(poll.slots, (body as { slots?: unknown }).slots);
-  if (!chosen) return { ok: false, status: 400, error: "Some of those times aren’t on this poll." };
+  const maybeInput = (body as { maybe?: unknown }).maybe;
+  const maybe = maybeInput === undefined ? [] : subset(poll.slots, maybeInput);
+  if (!chosen || !maybe) return { ok: false, status: 400, error: "Some of those times aren’t on this poll." };
+  if (maybe.some((slot) => chosen.includes(slot))) {
+    return { ok: false, status: 400, error: "A time can be marked as yes or if needed, not both." };
+  }
   const chosenJson = JSON.stringify(chosen);
+  const maybeJson = JSON.stringify(maybe);
 
   const db = await getDb();
   const known = poll.voters.find((voter) => voter.id === voterId) ?? null;
@@ -193,7 +206,8 @@ export async function saveVote(
     await db.batch([
       db.prepare("UPDATE voters SET name = ? WHERE id = ? AND poll_id = ?").bind(name, known.id, poll.id),
       db.prepare("DELETE FROM marks WHERE voter_id = ?").bind(known.id),
-      db.prepare(INSERT_MARKS).bind(known.id, chosenJson, known.id),
+      db.prepare(INSERT_MARKS).bind(known.id, YES, chosenJson, known.id),
+      db.prepare(INSERT_MARKS).bind(known.id, IF_NEEDED, maybeJson, known.id),
     ]);
     return { ok: true, voterId: known.id };
   }
@@ -207,7 +221,8 @@ export async function saveVote(
          WHERE (SELECT COUNT(*) FROM voters WHERE poll_id = ?) < ?`,
       )
       .bind(nextId, poll.id, name, Date.now(), poll.id, MAX_VOTERS),
-    db.prepare(INSERT_MARKS).bind(nextId, chosenJson, nextId),
+    db.prepare(INSERT_MARKS).bind(nextId, YES, chosenJson, nextId),
+    db.prepare(INSERT_MARKS).bind(nextId, IF_NEEDED, maybeJson, nextId),
   ]);
   if ((inserted.meta.changes ?? 0) === 0) {
     return { ok: false, status: 409, error: `This poll is full. It already has ${MAX_VOTERS} answers.` };

@@ -1,6 +1,7 @@
 export type VoterView = {
   name: string;
   slots: string[];
+  maybe: string[];
   yours: boolean;
   ref?: string;
 };

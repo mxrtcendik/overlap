@@ -4,9 +4,11 @@ import { useEffect, useMemo, useRef, useState, type KeyboardEvent, type PointerE
 import { usePrefs, useTimeZone } from "@/lib/browser";
 import { SLOT_MS } from "@/lib/constants";
 import { clockTime, localParts, type Clock } from "@/lib/format";
-import { bestRun, countSlots } from "@/lib/sentence";
+import { bestTime, tallySlots, type Marks } from "@/lib/sentence";
 
 type Pos = { c: number; r: number };
+
+export type Brush = "yes" | "maybe";
 
 type Column = { key: string; weekday: string; month: string; day: string };
 type Row = { key: number; label: string; labeled: boolean };
@@ -18,9 +20,10 @@ type Layout = {
   first: Pos;
 };
 
-function heatOf(count: number, people: number): number {
-  if (count === 0) return 0;
-  return Math.round(16 + (count / people) * 84);
+function heatOf(yes: number, maybe: number, people: number): number {
+  const weight = yes + maybe / 2;
+  if (weight === 0) return 0;
+  return Math.round(16 + (weight / people) * 84);
 }
 
 function buildLayout(slots: string[], timeZone: string, clock: Clock): Layout {
@@ -76,6 +79,8 @@ export function PollGrid({
   slots,
   voters,
   selected,
+  maybe = EMPTY,
+  brush = "yes",
   readOnly,
   highlight = null,
   mode = "toggle",
@@ -85,14 +90,16 @@ export function PollGrid({
   onInspect,
 }: {
   slots: string[];
-  voters: { slots: string[] }[];
+  voters: Marks[];
   selected: string[];
+  maybe?: string[];
+  brush?: Brush;
   readOnly: boolean;
   highlight?: Set<string> | null;
   mode?: "toggle" | "range";
   outline?: { slots: Set<string>; label: string } | null;
   selectLabel?: string;
-  onChange?: (next: string[]) => void;
+  onChange?: (next: string[], nextMaybe: string[]) => void;
   onInspect?: (iso: string | null) => void;
 }) {
   const timeZone = useTimeZone();
@@ -106,27 +113,41 @@ export function PollGrid({
   const cellRefs = useRef(new Map<string, HTMLButtonElement>());
 
   const selectedSet = useMemo(() => new Set(selected), [selected]);
+  const maybeSet = useMemo(() => new Set(maybe), [maybe]);
+  const levelOf = (iso: string): Brush | null => (selectedSet.has(iso) ? "yes" : maybeSet.has(iso) ? "maybe" : null);
 
   const preview = useMemo(() => {
     if (!drag || !layout) return null;
-    const next = mode === "range" ? new Set<string>() : new Set(selected);
+    const yes = mode === "range" ? new Set<string>() : new Set(selected);
+    const ifNeeded = mode === "range" ? new Set<string>() : new Set(maybe);
+    const target = mode === "toggle" && brush === "maybe" ? ifNeeded : yes;
+    const other = target === yes ? ifNeeded : yes;
     const [c0, c1] = mode === "range" ? [drag.anchor.c, drag.anchor.c] : [drag.anchor.c, drag.current.c].sort((a, b) => a - b);
     const [r0, r1] = [drag.anchor.r, drag.current.r].sort((a, b) => a - b);
     for (let c = c0; c <= c1; c++) {
       for (let r = r0; r <= r1; r++) {
         const iso = layout.grid[c][r];
         if (!iso) continue;
-        if (drag.add) next.add(iso);
-        else next.delete(iso);
+        if (drag.add) {
+          target.add(iso);
+          other.delete(iso);
+        } else {
+          target.delete(iso);
+        }
       }
     }
-    return next;
-  }, [drag, layout, selected, mode]);
+    return { yes, maybe: ifNeeded };
+  }, [drag, layout, selected, maybe, mode, brush]);
 
   useEffect(() => {
     if (!drag) return;
     const commit = () => {
-      if (preview) onChange?.(slots.filter((slot) => preview.has(slot)));
+      if (preview) {
+        onChange?.(
+          slots.filter((slot) => preview.yes.has(slot)),
+          slots.filter((slot) => preview.maybe.has(slot)),
+        );
+      }
       setDrag(null);
     };
     const cancel = () => setDrag(null);
@@ -140,12 +161,12 @@ export function PollGrid({
 
   if (!timeZone || !layout) return <div className="min-h-40" />;
 
-  const counts = countSlots(slots, voters);
+  const tallies = tallySlots(slots, voters);
   const people = Math.max(voters.length, 1);
 
   const best = new Set<string>(outline?.slots);
   const outlineLabel = outline?.label ?? "Best time";
-  const run = !outline && voters.length > 1 ? bestRun(slots, counts) : null;
+  const run = !outline && voters.length > 1 ? bestTime(slots, voters) : null;
   if (run) {
     for (const slot of slots) {
       const time = Date.parse(slot);
@@ -153,7 +174,9 @@ export function PollGrid({
     }
   }
 
-  const shown = preview ?? selectedSet;
+  const shownYes = preview?.yes ?? selectedSet;
+  const shownMaybe = preview?.maybe ?? maybeSet;
+  const showMaybeKey = !readOnly && mode === "toggle" && (brush === "maybe" || shownMaybe.size > 0);
   const focusPos = active ?? layout.first;
 
   function onPointerDown(event: PointerEvent<HTMLButtonElement>, pos: Pos, iso: string) {
@@ -162,7 +185,26 @@ export function PollGrid({
       event.currentTarget.releasePointerCapture(event.pointerId);
     }
     setActive(pos);
-    setDrag({ anchor: pos, current: pos, add: mode === "range" || !selectedSet.has(iso) });
+    setDrag({ anchor: pos, current: pos, add: mode === "range" || levelOf(iso) !== brush });
+  }
+
+  function toggleOne(iso: string) {
+    if (mode === "range") {
+      onChange?.([iso], []);
+      return;
+    }
+    const yes = new Set(selected);
+    const ifNeeded = new Set(maybe);
+    const [target, other] = brush === "maybe" ? [ifNeeded, yes] : [yes, ifNeeded];
+    if (target.has(iso)) target.delete(iso);
+    else {
+      target.add(iso);
+      other.delete(iso);
+    }
+    onChange?.(
+      slots.filter((slot) => yes.has(slot)),
+      slots.filter((slot) => ifNeeded.has(slot)),
+    );
   }
 
   function onPointerEnter(pos: Pos, iso: string) {
@@ -231,11 +273,21 @@ export function PollGrid({
                   const iso = layout.grid[c][r];
                   if (!iso) return <td key={column.key} className="h-8 w-10" />;
                   const pos = { c, r };
-                  const count = counts.get(iso) ?? 0;
-                  const heat = heatOf(count, people);
-                  const on = shown.has(iso);
-                  const ink = on ? "text-background" : heat >= 58 ? "text-on-accent" : "text-foreground";
+                  const tally = tallies.get(iso) ?? { yes: 0, maybe: 0 };
+                  const count = tally.yes + tally.maybe;
+                  const heat = heatOf(tally.yes, tally.maybe, people);
+                  const on: Brush | null = shownYes.has(iso) ? "yes" : shownMaybe.has(iso) ? "maybe" : null;
+                  const ink =
+                    on === "yes"
+                      ? "text-background"
+                      : on === "maybe"
+                        ? "text-foreground"
+                        : heat >= 58
+                          ? "text-on-accent"
+                          : "text-foreground";
                   const isBest = best.has(iso);
+                  const free = `${count} of ${voters.length} free${tally.maybe > 0 ? `, ${tally.maybe} if needed` : ""}`;
+                  const yours = on === "maybe" ? ", yours if needed" : "";
                   return (
                     <td key={column.key} className="p-0">
                       <button
@@ -246,8 +298,8 @@ export function PollGrid({
                         type="button"
                         tabIndex={focusPos.c === c && focusPos.r === r ? 0 : -1}
                         aria-disabled={readOnly || undefined}
-                        aria-pressed={readOnly ? undefined : on}
-                        aria-label={`${column.weekday}, ${column.month} ${column.day}, ${row.label}. ${count} of ${voters.length} free${isBest ? `, ${outlineLabel.toLowerCase()}` : ""}.`}
+                        aria-pressed={readOnly ? undefined : on === "maybe" ? "mixed" : on === "yes"}
+                        aria-label={`${column.weekday}, ${column.month} ${column.day}, ${row.label}. ${free}${isBest ? `, ${outlineLabel.toLowerCase()}` : ""}${yours}.`}
                         onPointerDown={(event) => onPointerDown(event, pos, iso)}
                         onPointerEnter={() => onPointerEnter(pos, iso)}
                         onFocus={() => {
@@ -257,22 +309,20 @@ export function PollGrid({
                         onKeyDown={(event) => onKeyDown(event, pos)}
                         onClick={(event) => {
                           if (readOnly || event.detail !== 0) return;
-                          if (mode === "range") onChange?.([iso]);
-                          else
-                            onChange?.(
-                              on
-                                ? selected.filter((slot) => slot !== iso)
-                                : slots.filter((slot) => slot === iso || selectedSet.has(slot)),
-                            );
+                          toggleOne(iso);
                         }}
                         className="slot"
                         data-best={isBest ? "true" : undefined}
                         data-dim={highlight && !highlight.has(iso) ? "true" : undefined}
                         style={{ "--heat": `${heat}%` } as React.CSSProperties}
                       >
-                        <span className="slot-fill" data-on={on ? "true" : "false"} />
+                        <span className="slot-fill" data-on={on === "yes" ? "true" : on === "maybe" ? "maybe" : "false"} />
                         {count > 0 ? (
-                          <span className={`relative z-10 font-mono text-[10px] font-medium tabular-nums ${ink}`}>
+                          <span
+                            className={`relative z-10 font-mono text-[10px] font-medium tabular-nums ${ink} ${
+                              on === "maybe" ? "rounded-[2px] bg-paper px-[3px] leading-[14px]" : ""
+                            }`}
+                          >
                             {count}
                           </span>
                         ) : null}
@@ -285,12 +335,26 @@ export function PollGrid({
           </tbody>
         </table>
       </div>
-      <Legend selectLabel={readOnly ? null : selectLabel} outlineLabel={best.size > 0 ? outlineLabel : null} />
+      <Legend
+        selectLabel={readOnly ? null : selectLabel}
+        maybeLabel={showMaybeKey ? "You, if needed" : null}
+        outlineLabel={best.size > 0 ? outlineLabel : null}
+      />
     </div>
   );
 }
 
-function Legend({ selectLabel, outlineLabel }: { selectLabel: string | null; outlineLabel: string | null }) {
+const EMPTY: string[] = [];
+
+function Legend({
+  selectLabel,
+  maybeLabel,
+  outlineLabel,
+}: {
+  selectLabel: string | null;
+  maybeLabel: string | null;
+  outlineLabel: string | null;
+}) {
   const steps = [16, 44, 72, 100];
   return (
     <div className="mt-4 flex flex-wrap items-center gap-x-6 gap-y-2 text-xs text-muted" aria-hidden="true">
@@ -307,6 +371,12 @@ function Legend({ selectLabel, outlineLabel }: { selectLabel: string | null; out
         <span className="inline-flex items-center gap-2">
           <span className="inline-block size-3 rounded-[2px] bg-foreground" />
           {selectLabel}
+        </span>
+      ) : null}
+      {maybeLabel ? (
+        <span className="inline-flex items-center gap-2">
+          <span className="hatch inline-block size-3 rounded-[2px] border border-foreground" />
+          {maybeLabel}
         </span>
       ) : null}
       {outlineLabel ? (

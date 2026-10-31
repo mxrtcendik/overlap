@@ -1,20 +1,33 @@
-import { SLOT_MS } from "./constants";
+import { MAX_VOTERS, SLOT_MS } from "./constants";
 import { describeRun, type Clock } from "./format";
 
-export type Vote = { name: string; slots: string[] };
+export type Marks = { slots: string[]; maybe?: string[] };
+export type Vote = Marks & { name: string };
 
-export function countSlots(slots: string[], votes: { slots: string[] }[]): Map<string, number> {
-  const counts = new Map<string, number>();
-  for (const slot of slots) counts.set(slot, 0);
+export type Tally = { yes: number; maybe: number };
+
+export function tallySlots(slots: string[], votes: Marks[]): Map<string, Tally> {
+  const tallies = new Map<string, Tally>();
+  for (const slot of slots) tallies.set(slot, { yes: 0, maybe: 0 });
   for (const vote of votes) {
-    for (const slot of new Set(vote.slots)) {
-      if (counts.has(slot)) counts.set(slot, (counts.get(slot) ?? 0) + 1);
+    const yes = new Set(vote.slots);
+    for (const slot of yes) {
+      const tally = tallies.get(slot);
+      if (tally) tally.yes += 1;
+    }
+    for (const slot of new Set(vote.maybe ?? [])) {
+      const tally = tallies.get(slot);
+      if (tally && !yes.has(slot)) tally.maybe += 1;
     }
   }
-  return counts;
+  return tallies;
 }
 
-export type Run = { start: number; end: number; count: number };
+export function slotScore(tally: Tally): number {
+  return (tally.yes + tally.maybe) * (MAX_VOTERS + 1) + tally.yes;
+}
+
+export type Run = { start: number; end: number; score: number };
 
 export function bestRun(slots: string[], counts: Map<string, number>): Run | null {
   const times = slots.map((slot) => Date.parse(slot));
@@ -44,27 +57,40 @@ export function bestRun(slots: string[], counts: Map<string, number>): Run | nul
     index = end + 1;
   }
   if (!best) return null;
-  return { start: best.start, end: best.end, count: max };
+  return { start: best.start, end: best.end, score: max };
+}
+
+export type BestTime = { start: number; end: number; yes: number; maybe: number };
+
+export function bestTime(slots: string[], votes: Marks[]): BestTime | null {
+  const tallies = tallySlots(slots, votes);
+  const scores = new Map([...tallies].map(([slot, tally]) => [slot, slotScore(tally)]));
+  const run = bestRun(slots, scores);
+  if (!run) return null;
+  const first = slots.find((slot) => Date.parse(slot) === run.start);
+  const tally = (first && tallies.get(first)) || { yes: 0, maybe: 0 };
+  return { start: run.start, end: run.end, yes: tally.yes, maybe: tally.maybe };
 }
 
 export type Summary =
   | { kind: "empty" }
   | { kind: "one"; name: string }
   | { kind: "unmarked" }
-  | { kind: "all"; when: string }
-  | { kind: "some"; when: string; count: number; people: number };
+  | { kind: "all"; when: string; maybe: number }
+  | { kind: "some"; when: string; count: number; people: number; maybe: number };
 
 export function overlapSummary(input: { slots: string[]; votes: Vote[]; timeZone: string; clock?: Clock }): Summary {
   const people = input.votes.length;
   if (people === 0) return { kind: "empty" };
   if (people === 1) return { kind: "one", name: input.votes[0].name };
 
-  const run = bestRun(input.slots, countSlots(input.slots, input.votes));
-  if (!run) return { kind: "unmarked" };
+  const best = bestTime(input.slots, input.votes);
+  if (!best) return { kind: "unmarked" };
 
-  const when = describeRun(run.start, run.end, input.timeZone, input.slots, input.clock);
-  if (run.count === people) return { kind: "all", when };
-  return { kind: "some", when, count: run.count, people };
+  const when = describeRun(best.start, best.end, input.timeZone, input.slots, input.clock);
+  const count = best.yes + best.maybe;
+  if (count === people) return { kind: "all", when, maybe: best.maybe };
+  return { kind: "some", when, count, people, maybe: best.maybe };
 }
 
 export function summaryParts(summary: Summary): { before: string; when: string | null; after: string } {
@@ -76,15 +102,17 @@ export function summaryParts(summary: Summary): { before: string; when: string |
     case "unmarked":
       return { before: "No one has marked a time yet.", when: null, after: "" };
     case "all":
-      return { before: "", when: summary.when, after: " works for everyone." };
+      return { before: "", when: summary.when, after: ` works for everyone${ifNeeded(summary.maybe)}.` };
     case "some":
       return {
         before: "No time works for everyone yet. Closest: ",
         when: summary.when,
-        after: `, ${summary.count} of ${summary.people} people.`,
+        after: `, ${summary.count} of ${summary.people} people${ifNeeded(summary.maybe)}.`,
       };
   }
 }
+
+const ifNeeded = (maybe: number) => (maybe > 0 ? `, ${maybe} if needed` : "");
 
 export function overlapSentence(input: { slots: string[]; votes: Vote[]; timeZone: string; clock?: Clock }): string {
   const { before, when, after } = summaryParts(overlapSummary(input));

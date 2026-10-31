@@ -6,14 +6,16 @@ import { usePrefs, useTimeZone } from "@/lib/browser";
 import { SLOT_MS } from "@/lib/constants";
 import { describeRun, rangeLabel, type Clock } from "@/lib/format";
 import type { VoterView } from "@/lib/types";
-import { PollGrid } from "./poll-grid";
+import { PollGrid, type Brush } from "./poll-grid";
 
-type Voter = Pick<VoterView, "name" | "slots" | "yours">;
+type Voter = Pick<VoterView, "name" | "slots" | "maybe" | "yours">;
 
 export function Availability({
   slots,
   voters,
   selected = [],
+  maybe,
+  brush,
   readOnly,
   mode,
   outline,
@@ -24,11 +26,13 @@ export function Availability({
   slots: string[];
   voters: Voter[];
   selected?: string[];
+  maybe?: string[];
+  brush?: Brush;
   readOnly: boolean;
   mode?: "toggle" | "range";
   outline?: { slots: Set<string>; label: string } | null;
   selectLabel?: string;
-  onChange?: (next: string[]) => void;
+  onChange?: (next: string[], nextMaybe: string[]) => void;
   onPick?: (segment: Segment) => void;
 }) {
   const timeZone = useTimeZone();
@@ -44,6 +48,8 @@ export function Availability({
           slots={slots}
           voters={voters}
           selected={selected}
+          maybe={maybe}
+          brush={brush}
           readOnly={readOnly}
           highlight={highlight}
           mode={mode}
@@ -115,11 +121,7 @@ function BestTimes({
               </span>
             </div>
             <div className="mt-0.5 flex items-baseline justify-between gap-4">
-              <p className="truncate text-xs text-muted">
-                {segment.people.length === voters.length
-                  ? "Everyone"
-                  : segment.people.map((index) => voters[index].name).join(", ")}
-              </p>
+              <p className="truncate text-xs text-muted">{whoLine(segment, voters)}</p>
               {onPick ? (
                 <button type="button" className="link-quiet shrink-0 text-xs" onClick={() => onPick(segment)}>
                   Pick
@@ -134,10 +136,22 @@ function BestTimes({
   );
 }
 
+function whoLine(segment: Segment, voters: Voter[]): string {
+  const maybe = new Set(segment.maybe);
+  const firm = segment.people.filter((index) => !maybe.has(index)).map((index) => voters[index].name);
+  const soft = segment.maybe.map((index) => voters[index].name);
+  const everyone = segment.people.length === voters.length;
+  if (soft.length === 0) return everyone ? "Everyone" : firm.join(", ");
+  if (firm.length === 0) return `If needed: ${soft.join(", ")}`;
+  return `${everyone ? "Everyone" : firm.join(", ")} · if needed: ${soft.join(", ")}`;
+}
+
 function SlotDetail({ iso, voters, timeZone, clock }: { iso: string; voters: Voter[]; timeZone: string; clock: Clock }) {
   const start = Date.parse(iso);
   const label = rangeLabel(start, start + SLOT_MS, timeZone, clock);
-  const freeCount = voters.filter((voter) => voter.slots.includes(iso)).length;
+  const levelOf = (voter: Voter) => (voter.slots.includes(iso) ? "yes" : voter.maybe.includes(iso) ? "maybe" : null);
+  const freeCount = voters.filter((voter) => levelOf(voter) !== null).length;
+  const maybeCount = voters.filter((voter) => levelOf(voter) === "maybe").length;
 
   return (
     <section aria-label="Selected time">
@@ -145,19 +159,23 @@ function SlotDetail({ iso, voters, timeZone, clock }: { iso: string; voters: Vot
       <p className="mt-1 font-mono text-sm tabular-nums">{label.time}</p>
       <p className="mt-4 text-sm">
         {freeCount} of {voters.length} free
+        {maybeCount > 0 ? <span className="text-muted">, {maybeCount} if needed</span> : null}
       </p>
       <ul className="mt-2 space-y-1 text-sm">
         {voters.map((voter, index) => {
-          const free = voter.slots.includes(iso);
+          const level = levelOf(voter);
           return (
-            <li key={`${voter.name}-${index}`} className={`flex items-center gap-2 ${free ? "" : "text-muted"}`}>
+            <li key={`${voter.name}-${index}`} className={`flex items-center gap-2 ${level ? "" : "text-muted"}`}>
               <span
                 aria-hidden="true"
-                className={`inline-block size-1.5 rounded-full ${free ? "bg-accent" : "bg-line-strong"}`}
+                className={`inline-block size-1.5 rounded-full ${
+                  level === "yes" ? "bg-accent" : level === "maybe" ? "border border-accent" : "bg-line-strong"
+                }`}
               />
-              <span className={free ? undefined : "line-through decoration-line-strong"}>{voter.name}</span>
+              <span className={level ? undefined : "line-through decoration-line-strong"}>{voter.name}</span>
+              {level === "maybe" ? <span className="text-muted">if needed</span> : null}
               {voter.yours ? <span className="text-muted">· you</span> : null}
-              <span className="sr-only">{free ? "free" : "not free"}</span>
+              <span className="sr-only">{level === "yes" ? "free" : level === "maybe" ? "" : "not free"}</span>
             </li>
           );
         })}
@@ -177,7 +195,7 @@ function People({ voters, onHighlight }: { voters: Voter[]; onHighlight: (slots:
           <li
             key={`${voter.name}-${index}`}
             className="border border-line bg-paper px-2.5 py-1 transition-colors hover:border-line-strong"
-            onPointerEnter={() => onHighlight(new Set(voter.slots))}
+            onPointerEnter={() => onHighlight(new Set([...voter.slots, ...voter.maybe]))}
             onPointerLeave={() => onHighlight(null)}
           >
             {voter.name}

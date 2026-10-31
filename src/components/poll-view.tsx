@@ -8,7 +8,12 @@ import type { PollView as PollViewData, VoterView } from "@/lib/types";
 import { useLiveUpdates } from "@/lib/use-live-updates";
 import { Availability } from "./availability";
 import { FinalTime } from "./final-time";
+import type { Brush } from "./poll-grid";
 import { SentenceBlock, Status } from "./poll-summary";
+
+type Answer = { slots: string[]; maybe: string[] };
+
+const NO_ANSWER: Answer = { slots: [], maybe: [] };
 
 export function PollView({ poll }: { poll: PollViewData }) {
   useLiveUpdates(poll.id);
@@ -20,15 +25,16 @@ export function PollView({ poll }: { poll: PollViewData }) {
     return listed ? merged : [...merged, you];
   }, [poll.voters, you]);
   const [name, setName] = useState(you?.name ?? "");
-  const [selected, setSelected] = useState<string[]>(you?.slots ?? []);
+  const [answer, setAnswer] = useState<Answer>(you ? { slots: you.slots, maybe: you.maybe } : NO_ANSWER);
+  const [brush, setBrush] = useState<Brush>("yes");
   const [saved, setSaved] = useState(Boolean(you));
   const [error, setError] = useState<string | null>(null);
   const [pending, setPending] = useState(false);
   const [confirmingRemove, setConfirmingRemove] = useState(false);
   const nameRef = useRef(you?.name ?? "");
-  const selectedRef = useRef<string[]>(you?.slots ?? []);
+  const answerRef = useRef<Answer>(you ? { slots: you.slots, maybe: you.maybe } : NO_ANSWER);
   const inflight = useRef(false);
-  const queued = useRef<string[] | null>(null);
+  const queued = useRef<Answer | null>(null);
 
   function setNameValue(value: string) {
     nameRef.current = value;
@@ -46,8 +52,8 @@ export function PollView({ poll }: { poll: PollViewData }) {
     [poll.final, poll.slots],
   );
 
-  function applyYou(nextName: string, nextSlots: string[]) {
-    setYou({ name: nextName, slots: nextSlots, yours: true });
+  function applyYou(nextName: string, next: Answer) {
+    setYou({ name: nextName, slots: next.slots, maybe: next.maybe, yours: true });
   }
 
   async function flush() {
@@ -56,13 +62,16 @@ export function PollView({ poll }: { poll: PollViewData }) {
     setPending(true);
     try {
       while (queued.current) {
-        const nextSlots = queued.current;
+        const next = queued.current;
         const nextName = nameRef.current.trim().replace(/\s+/g, " ");
         queued.current = null;
         if (!nextName) throw new UserFacingError("Enter your name first.");
         setNameValue(nextName);
-        await request(`/p/${poll.id}/vote`, { method: "POST", ...json({ name: nextName, slots: nextSlots }) });
-        applyYou(nextName, nextSlots);
+        await request(`/p/${poll.id}/vote`, {
+          method: "POST",
+          ...json({ name: nextName, slots: next.slots, maybe: next.maybe }),
+        });
+        applyYou(nextName, next);
         setSaved(true);
         setError(null);
       }
@@ -76,17 +85,18 @@ export function PollView({ poll }: { poll: PollViewData }) {
     }
   }
 
-  function change(next: string[]) {
+  function change(slots: string[], maybe: string[]) {
     if (poll.closed) return;
     if (saved && !nameRef.current.trim()) {
       setError("Enter your name first.");
       return;
     }
-    selectedRef.current = next;
-    setSelected(next);
+    const next = { slots, maybe };
+    answerRef.current = next;
+    setAnswer(next);
     if (saved) {
       queued.current = next;
-      setYou((current) => (current ? { ...current, slots: next } : current));
+      setYou((current) => (current ? { ...current, ...next } : current));
       void flush();
     }
   }
@@ -95,7 +105,10 @@ export function PollView({ poll }: { poll: PollViewData }) {
     event.preventDefault();
     if (poll.closed) return;
     const current = new Set(poll.slots);
-    queued.current = selectedRef.current.filter((slot) => current.has(slot));
+    queued.current = {
+      slots: answerRef.current.slots.filter((slot) => current.has(slot)),
+      maybe: answerRef.current.maybe.filter((slot) => current.has(slot)),
+    };
     void flush();
   }
 
@@ -109,8 +122,8 @@ export function PollView({ poll }: { poll: PollViewData }) {
       await request(`/p/${poll.id}/vote`, { method: "DELETE" });
       setYou(null);
       setSaved(false);
-      selectedRef.current = [];
-      setSelected([]);
+      answerRef.current = NO_ANSWER;
+      setAnswer(NO_ANSWER);
       setConfirmingRemove(false);
     } catch (caught) {
       setError(messageOf(caught));
@@ -192,15 +205,56 @@ export function PollView({ poll }: { poll: PollViewData }) {
       ) : null}
 
       <div className="mt-8">
+        {poll.closed ? null : <BrushSwitch value={brush} onChange={setBrush} />}
         <Availability
           slots={poll.slots}
           voters={voters}
-          selected={selected}
+          selected={answer.slots}
+          maybe={answer.maybe}
+          brush={brush}
           readOnly={poll.closed}
           outline={finalOutline}
           onChange={change}
         />
       </div>
     </>
+  );
+}
+
+function BrushSwitch({ value, onChange }: { value: Brush; onChange: (brush: Brush) => void }) {
+  const options: { brush: Brush; label: string }[] = [
+    { brush: "yes", label: "Can make" },
+    { brush: "maybe", label: "If needed" },
+  ];
+  return (
+    <div className="mb-5 flex flex-wrap items-center gap-x-4 gap-y-2">
+      <span id="brush-label" className="text-sm text-muted">
+        Mark times as
+      </span>
+      <div role="group" aria-labelledby="brush-label" className="inline-flex border border-line">
+        {options.map((option) => {
+          const on = option.brush === value;
+          return (
+            <button
+              key={option.brush}
+              type="button"
+              aria-pressed={on}
+              onClick={() => onChange(option.brush)}
+              className={`inline-flex items-center gap-2 px-3 py-1.5 text-sm transition-colors ${
+                on ? "bg-paper text-foreground shadow-[inset_0_0_0_1px_var(--foreground)]" : "text-muted hover:text-foreground"
+              }`}
+            >
+              <span
+                aria-hidden="true"
+                className={`inline-block size-3 rounded-[2px] ${
+                  option.brush === "yes" ? "bg-foreground" : "hatch border border-foreground"
+                }`}
+              />
+              {option.label}
+            </button>
+          );
+        })}
+      </div>
+    </div>
   );
 }

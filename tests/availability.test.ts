@@ -46,4 +46,27 @@ describe("topSegments", () => {
     const voters = [{ slots: [at(9)] }, { slots: [at(10)] }, { slots: [at(11)] }];
     assert.equal(topSegments(slots, voters, 2).length, 2);
   });
+
+  it("ranks firm answers above if needed when as many people are free", () => {
+    const [first, second] = topSegments(slots, [
+      { slots: [at(9)], maybe: [at(10)] },
+      { slots: [at(9), at(10)] },
+    ]);
+    assert.equal(first.start, Date.parse(at(9)));
+    assert.deepEqual(first.maybe, []);
+    assert.equal(second.start, Date.parse(at(10)));
+    assert.deepEqual(second.people, [0, 1]);
+    assert.deepEqual(second.maybe, [0]);
+  });
+
+  it("splits a stretch where someone changes from yes to if needed", () => {
+    const segments = topSegments(slots, [{ slots: [at(9)], maybe: [at(9, 30)] }]);
+    assert.deepEqual(
+      segments.map((segment) => [segment.start, segment.maybe]),
+      [
+        [Date.parse(at(9)), []],
+        [Date.parse(at(9, 30)), [0]],
+      ],
+    );
+  });
 });
