@@ -1,10 +1,11 @@
 "use client";
 
 import { useMemo, useState } from "react";
-import { useTimeZone, useToday } from "@/lib/browser";
+import { usePrefs, useTimeZone, useToday } from "@/lib/browser";
 import { buildSlots } from "@/lib/schedule";
-import { overlapSentence } from "@/lib/sentence";
+import { overlapSummary } from "@/lib/sentence";
 import { PollGrid } from "./poll-grid";
+import { SummaryText } from "./poll-summary";
 
 const START = 9 * 60;
 const END = 13 * 60;
@@ -34,6 +35,7 @@ function nextWeekdays(today: string, count: number): string[] {
 export function Demo() {
   const today = useToday();
   const timeZone = useTimeZone();
+  const prefs = usePrefs();
   const [mine, setMine] = useState<string[]>([]);
 
   const demo = useMemo(() => {
@@ -53,7 +55,7 @@ export function Demo() {
     [demo, mine],
   );
 
-  if (!demo || !timeZone) return <div className="h-[30rem] w-full max-w-md" aria-hidden="true" />;
+  if (!demo || !timeZone || !prefs) return <div className="h-[30rem] w-full max-w-md" aria-hidden="true" />;
 
   return (
     <figure className="w-full max-w-md border border-line p-5 sm:p-6">
@@ -62,7 +64,7 @@ export function Demo() {
         <p className="text-xs text-muted">Example</p>
       </div>
       <p className="mt-2 min-h-12 text-sm leading-6 text-balance" aria-live="polite">
-        {overlapSentence({ slots: demo.slots, votes: voters, timeZone })}
+        <SummaryText summary={overlapSummary({ slots: demo.slots, votes: voters, timeZone, clock: prefs.clock })} />
       </p>
       <div className="mt-4">
         <PollGrid slots={demo.slots} voters={voters} selected={mine} readOnly={false} onChange={setMine} />

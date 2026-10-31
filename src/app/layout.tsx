@@ -14,7 +14,7 @@ const geistMono = Geist_Mono({
 
 export const metadata: Metadata = {
   title: { default: "overlap", template: "%s · overlap" },
-  description: "A scheduling poll with a public link and a secret link. No accounts.",
+  description: "Find a time that works for everyone. Send one link, see the overlap in your own timezone. No accounts.",
 };
 
 export const viewport: Viewport = {

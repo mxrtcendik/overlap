@@ -2,9 +2,8 @@
 
 import { useMemo, useRef, useState, type FormEvent } from "react";
 import { slotsIn } from "@/lib/availability";
-import { useTimeZone } from "@/lib/browser";
 import { MAX_NAME } from "@/lib/constants";
-import { overlapSentence } from "@/lib/sentence";
+import { json, messageOf, request, UserFacingError } from "@/lib/request";
 import type { PollView as PollViewData } from "@/lib/types";
 import { Availability } from "./availability";
 import { FinalTime } from "./final-time";
@@ -18,7 +17,6 @@ export function PollView({ poll }: { poll: PollViewData }) {
   const [saved, setSaved] = useState(Boolean(you));
   const [error, setError] = useState<string | null>(null);
   const [pending, setPending] = useState(false);
-  const timeZone = useTimeZone();
   const nameRef = useRef(you?.name ?? "");
   const selectedRef = useRef<string[]>(you?.slots ?? []);
   const inflight = useRef(false);
@@ -40,14 +38,6 @@ export function PollView({ poll }: { poll: PollViewData }) {
     [poll.final, poll.slots],
   );
 
-  const sentence = timeZone
-    ? overlapSentence({
-        slots: poll.slots,
-        votes: voters.map((voter) => ({ name: voter.name, slots: voter.slots })),
-        timeZone,
-      })
-    : "";
-
   function applyYou(nextName: string, nextSlots: string[]) {
     setVoters((current) => {
       if (current.some((voter) => voter.yours)) {
@@ -66,22 +56,16 @@ export function PollView({ poll }: { poll: PollViewData }) {
         const nextSlots = queued.current;
         const nextName = nameRef.current.trim().replace(/\s+/g, " ");
         queued.current = null;
-        if (!nextName) throw new Error("Enter a name.");
+        if (!nextName) throw new UserFacingError("Enter your name first.");
         setNameValue(nextName);
-        const response = await fetch(`/p/${poll.id}/vote`, {
-          method: "POST",
-          headers: { "content-type": "application/json" },
-          body: JSON.stringify({ name: nextName, slots: nextSlots }),
-        });
-        const data = (await response.json()) as { error?: string };
-        if (!response.ok) throw new Error(data.error || "Could not save.");
+        await request(`/p/${poll.id}/vote`, { method: "POST", ...json({ name: nextName, slots: nextSlots }) });
         applyYou(nextName, nextSlots);
         setSaved(true);
         setError(null);
       }
     } catch (caught) {
       queued.current = null;
-      setError(caught instanceof Error ? caught.message : "Could not save.");
+      setError(messageOf(caught));
     } finally {
       inflight.current = false;
       setPending(false);
@@ -92,7 +76,7 @@ export function PollView({ poll }: { poll: PollViewData }) {
   function change(next: string[]) {
     if (poll.closed) return;
     if (saved && !nameRef.current.trim()) {
-      setError("Enter a name.");
+      setError("Enter your name first.");
       return;
     }
     selectedRef.current = next;
@@ -117,7 +101,12 @@ export function PollView({ poll }: { poll: PollViewData }) {
     <>
       <h1 className="text-[1.75rem] leading-9 tracking-[-0.02em] text-balance">{poll.title}</h1>
       {poll.final ? <FinalTime pollId={poll.id} title={poll.title} final={poll.final} /> : null}
-      <SentenceBlock sentence={sentence} timeZone={timeZone} closed={poll.closed} />
+      <SentenceBlock
+        slots={poll.slots}
+        votes={voters}
+        closed={poll.closed}
+        emptyText="No answers yet. Be the first."
+      />
 
       {poll.closed ? null : (
         <form onSubmit={onSubmit} className="mt-8 flex flex-wrap items-end gap-3">
@@ -134,12 +123,19 @@ export function PollView({ poll }: { poll: PollViewData }) {
           </label>
           {!saved || nameChanged ? (
             <button type="submit" className="btn">
-              {saved ? "Save name" : "Save"}
+              {saved ? "Save name" : "Save answer"}
             </button>
           ) : null}
           {pending ? <Status state="saving" /> : null}
           {!pending && saved && !error ? <Status state="saved" /> : null}
         </form>
+      )}
+      {poll.closed ? null : (
+        <p className="mt-3 text-sm text-muted">
+          {saved
+            ? "Your answer saves as you change it."
+            : "Enter your name, drag across the times you can make, then save your answer."}
+        </p>
       )}
       {error ? (
         <p className="mt-3 text-sm text-danger" role="alert">

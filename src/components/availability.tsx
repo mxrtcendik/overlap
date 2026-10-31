@@ -2,9 +2,9 @@
 
 import { useMemo, useState } from "react";
 import { topSegments, type Segment } from "@/lib/availability";
-import { useTimeZone } from "@/lib/browser";
+import { usePrefs, useTimeZone } from "@/lib/browser";
 import { SLOT_MS } from "@/lib/constants";
-import { describeRun, rangeLabel } from "@/lib/sentence";
+import { describeRun, rangeLabel, type Clock } from "@/lib/format";
 import type { VoterView } from "@/lib/types";
 import { PollGrid } from "./poll-grid";
 
@@ -32,6 +32,7 @@ export function Availability({
   onPick?: (segment: Segment) => void;
 }) {
   const timeZone = useTimeZone();
+  const clock = usePrefs()?.clock ?? "h12";
   const [inspected, setInspected] = useState<string | null>(null);
   const [highlight, setHighlight] = useState<Set<string> | null>(null);
   const segments = useMemo(() => topSegments(slots, voters), [slots, voters]);
@@ -61,12 +62,13 @@ export function Availability({
                 slots={slots}
                 voters={voters}
                 timeZone={timeZone}
+                clock={clock}
                 onHighlight={setHighlight}
                 onPick={onPick}
               />
             </div>
             <div className={`[grid-area:1/1] ${inspected ? "" : "invisible"}`}>
-              <SlotDetail iso={inspected ?? slots[0]} voters={voters} timeZone={timeZone} />
+              <SlotDetail iso={inspected ?? slots[0]} voters={voters} timeZone={timeZone} clock={clock} />
             </div>
           </div>
           <People voters={voters} onHighlight={setHighlight} />
@@ -81,6 +83,7 @@ function BestTimes({
   slots,
   voters,
   timeZone,
+  clock,
   onHighlight,
   onPick,
 }: {
@@ -88,6 +91,7 @@ function BestTimes({
   slots: string[];
   voters: Voter[];
   timeZone: string;
+  clock: Clock;
   onHighlight: (slots: Set<string> | null) => void;
   onPick?: (segment: Segment) => void;
 }) {
@@ -105,7 +109,7 @@ function BestTimes({
             onPointerLeave={() => onHighlight(null)}
           >
             <div className="flex items-baseline justify-between gap-4">
-              <span className="text-sm">{describeRun(segment.start, segment.end, timeZone, slots)}</span>
+              <span className="text-sm">{describeRun(segment.start, segment.end, timeZone, slots, clock)}</span>
               <span className="font-mono text-xs text-muted tabular-nums">
                 {segment.people.length}/{voters.length}
               </span>
@@ -125,18 +129,18 @@ function BestTimes({
           </li>
         ))}
       </ol>
-      <p className="mt-3 text-xs text-muted [@media(hover:none)]:hidden">Hover a slot to see who is free.</p>
+      <p className="mt-3 text-xs text-muted [@media(hover:none)]:hidden">Hover over a time to see who’s free.</p>
     </section>
   );
 }
 
-function SlotDetail({ iso, voters, timeZone }: { iso: string; voters: Voter[]; timeZone: string }) {
+function SlotDetail({ iso, voters, timeZone, clock }: { iso: string; voters: Voter[]; timeZone: string; clock: Clock }) {
   const start = Date.parse(iso);
-  const label = rangeLabel(start, start + SLOT_MS, timeZone);
+  const label = rangeLabel(start, start + SLOT_MS, timeZone, clock);
   const freeCount = voters.filter((voter) => voter.slots.includes(iso)).length;
 
   return (
-    <section aria-label="Selected slot">
+    <section aria-label="Selected time">
       <h2 className="text-sm text-muted">{label.day}</h2>
       <p className="mt-1 font-mono text-sm tabular-nums">{label.time}</p>
       <p className="mt-4 text-sm">

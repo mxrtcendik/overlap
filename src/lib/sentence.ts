@@ -1,87 +1,7 @@
 import { SLOT_MS } from "./constants";
+import { describeRun, type Clock } from "./format";
 
 export type Vote = { name: string; slots: string[] };
-
-export type LocalParts = {
-  weekday: string;
-  month: string;
-  day: string;
-  year: string;
-  hour: string;
-  minute: string;
-  dayPeriod: string;
-};
-
-const formatters = new Map<string, Intl.DateTimeFormat>();
-
-function formatterFor(timeZone: string): Intl.DateTimeFormat {
-  let formatter = formatters.get(timeZone);
-  if (!formatter) {
-    formatter = new Intl.DateTimeFormat("en-US", {
-      timeZone,
-      weekday: "short",
-      month: "short",
-      day: "numeric",
-      year: "numeric",
-      hour: "numeric",
-      minute: "2-digit",
-      hourCycle: "h12",
-    });
-    formatters.set(timeZone, formatter);
-  }
-  return formatter;
-}
-
-export function localParts(ms: number, timeZone: string): LocalParts {
-  const parts = formatterFor(timeZone).formatToParts(new Date(ms));
-  const out: Partial<LocalParts> = {};
-  for (const part of parts) {
-    if (part.type !== "literal") out[part.type as keyof LocalParts] = part.value;
-  }
-  return out as LocalParts;
-}
-
-function clock(parts: LocalParts, withPeriod: boolean): string {
-  const base = `${parts.hour}:${parts.minute}`;
-  return withPeriod ? `${base} ${parts.dayPeriod}` : base;
-}
-
-function stamp(parts: LocalParts, withDate: boolean): string {
-  if (!withDate) return parts.weekday;
-  return `${parts.weekday}, ${parts.month} ${parts.day}`;
-}
-
-function sameCalendarDay(a: LocalParts, b: LocalParts): boolean {
-  return a.year === b.year && a.month === b.month && a.day === b.day;
-}
-
-function repeatedWeekday(slots: string[], timeZone: string): boolean {
-  const seen = new Map<string, Set<string>>();
-  for (const iso of slots) {
-    const parts = localParts(Date.parse(iso), timeZone);
-    const dates = seen.get(parts.weekday) ?? new Set<string>();
-    dates.add(`${parts.year}-${parts.month}-${parts.day}`);
-    if (dates.size > 1) return true;
-    seen.set(parts.weekday, dates);
-  }
-  return false;
-}
-
-export function describeRun(startMs: number, endMs: number, timeZone: string, slots: string[]): string {
-  const start = localParts(startMs, timeZone);
-  const end = localParts(endMs, timeZone);
-  const withDate = repeatedWeekday(slots, timeZone);
-  const oneSlot = endMs - startMs === SLOT_MS;
-  const lead = (parts: LocalParts) => (withDate ? `${stamp(parts, true)},` : stamp(parts, false));
-  if (oneSlot) return `${lead(start)} ${clock(start, false)}`;
-
-  const samePeriod = start.dayPeriod === end.dayPeriod;
-  const showPeriod = !samePeriod;
-  if (sameCalendarDay(start, end)) {
-    return `${lead(start)} ${clock(start, showPeriod)}–${clock(end, showPeriod)}`;
-  }
-  return `${lead(start)} ${clock(start, showPeriod)}–${lead(end)} ${clock(end, showPeriod)}`;
-}
 
 export function countSlots(slots: string[], votes: { slots: string[] }[]): Map<string, number> {
   const counts = new Map<string, number>();
@@ -127,32 +47,46 @@ export function bestRun(slots: string[], counts: Map<string, number>): Run | nul
   return { start: best.start, end: best.end, count: max };
 }
 
-export function overlapSentence(input: { slots: string[]; votes: Vote[]; timeZone: string }): string {
+export type Summary =
+  | { kind: "empty" }
+  | { kind: "one"; name: string }
+  | { kind: "unmarked" }
+  | { kind: "all"; when: string }
+  | { kind: "some"; when: string; count: number; people: number };
+
+export function overlapSummary(input: { slots: string[]; votes: Vote[]; timeZone: string; clock?: Clock }): Summary {
   const people = input.votes.length;
-  if (people === 0) return "No one has answered.";
-  if (people === 1) return `Only ${input.votes[0].name} so far.`;
+  if (people === 0) return { kind: "empty" };
+  if (people === 1) return { kind: "one", name: input.votes[0].name };
 
   const run = bestRun(input.slots, countSlots(input.slots, input.votes));
-  if (!run) return "No time works for everyone.";
+  if (!run) return { kind: "unmarked" };
 
-  const when = describeRun(run.start, run.end, input.timeZone, input.slots);
-  if (run.count === people) {
-    const noun = run.count === 1 ? "person" : "people";
-    return `${when} works for ${run.count} ${noun}.`;
-  }
-  return `No time works for everyone. ${when} works for ${run.count} of ${people}.`;
+  const when = describeRun(run.start, run.end, input.timeZone, input.slots, input.clock);
+  if (run.count === people) return { kind: "all", when };
+  return { kind: "some", when, count: run.count, people };
 }
 
-export function rangeLabel(start: number, end: number, timeZone: string): { day: string; time: string } {
-  const from = localParts(start, timeZone);
-  const to = localParts(end, timeZone);
-  const day = `${from.weekday}, ${from.month} ${from.day}`;
-  if (sameCalendarDay(from, localParts(end - 1, timeZone))) {
-    const time =
-      from.dayPeriod === to.dayPeriod
-        ? `${clock(from, false)}–${clock(to, true)}`
-        : `${clock(from, true)}–${clock(to, true)}`;
-    return { day, time };
+export function summaryParts(summary: Summary): { before: string; when: string | null; after: string } {
+  switch (summary.kind) {
+    case "empty":
+      return { before: "No answers yet.", when: null, after: "" };
+    case "one":
+      return { before: `Only ${summary.name} has answered so far.`, when: null, after: "" };
+    case "unmarked":
+      return { before: "No one has marked a time yet.", when: null, after: "" };
+    case "all":
+      return { before: "", when: summary.when, after: " works for everyone." };
+    case "some":
+      return {
+        before: "No time works for everyone yet. Closest: ",
+        when: summary.when,
+        after: `, ${summary.count} of ${summary.people} people.`,
+      };
   }
-  return { day, time: `${clock(from, true)} – ${to.weekday}, ${to.month} ${to.day}, ${clock(to, true)}` };
+}
+
+export function overlapSentence(input: { slots: string[]; votes: Vote[]; timeZone: string; clock?: Clock }): string {
+  const { before, when, after } = summaryParts(overlapSummary(input));
+  return `${before}${when ?? ""}${after}`;
 }

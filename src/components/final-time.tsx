@@ -1,8 +1,8 @@
 "use client";
 
-import { usePageLocation, useTimeZone } from "@/lib/browser";
+import { usePageLocation, usePrefs, useTimeZone } from "@/lib/browser";
 import { googleCalendarUrl } from "@/lib/calendar";
-import { rangeLabel } from "@/lib/sentence";
+import { rangeLabel } from "@/lib/format";
 import type { FinalTime as FinalTimeData } from "@/lib/types";
 
 export function FinalTime({
@@ -19,10 +19,11 @@ export function FinalTime({
   pending?: boolean;
 }) {
   const timeZone = useTimeZone();
+  const prefs = usePrefs();
   const location = usePageLocation();
   const start = Date.parse(final.start);
   const end = Date.parse(final.end);
-  const label = timeZone ? rangeLabel(start, end, timeZone) : null;
+  const label = timeZone && prefs ? rangeLabel(start, end, timeZone, prefs.clock) : null;
   const publicUrl = location ? `${location.origin}/p/${pollId}` : "";
 
   return (

@@ -1,13 +1,3 @@
-export function formatMinutes(mins: number): string {
-  if (mins === 24 * 60) return "Midnight";
-  const h24 = Math.floor(mins / 60);
-  const minute = mins % 60;
-  const period = h24 >= 12 ? "PM" : "AM";
-  let hour = h24 % 12;
-  if (hour === 0) hour = 12;
-  return `${hour}:${String(minute).padStart(2, "0")} ${period}`;
-}
-
 export function ymd(date: Date): string {
   const year = date.getFullYear();
   const month = String(date.getMonth() + 1).padStart(2, "0");

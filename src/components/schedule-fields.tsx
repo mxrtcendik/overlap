@@ -1,9 +1,9 @@
 "use client";
 
 import { useState } from "react";
-import { useToday } from "@/lib/browser";
+import { usePrefs, useToday } from "@/lib/browser";
 import { MAX_DAYS } from "@/lib/constants";
-import { formatMinutes } from "@/lib/schedule";
+import { minutesLabel } from "@/lib/format";
 
 const WEEKDAYS = ["Su", "Mo", "Tu", "We", "Th", "Fr", "Sa"] as const;
 
@@ -40,19 +40,22 @@ function Month({
   month,
   today,
   dates,
+  weekStart,
   onToggle,
 }: {
   year: number;
   month: number;
   today: string | null;
   dates: string[];
+  weekStart: number;
   onToggle: (iso: string) => void;
 }) {
-  const first = new Date(year, month, 1).getDay();
+  const leading = (new Date(year, month, 1).getDay() - weekStart + 7) % 7;
   const count = new Date(year, month + 1, 0).getDate();
   const label = new Date(year, month, 1).toLocaleString("en-US", { month: "long", year: "numeric" });
+  const weekdays = WEEKDAYS.map((_, index) => WEEKDAYS[(index + weekStart) % 7]);
   const cells: Array<number | null> = [
-    ...Array.from({ length: first }, () => null),
+    ...Array.from({ length: leading }, () => null),
     ...Array.from({ length: count }, (_, index) => index + 1),
   ];
 
@@ -62,7 +65,7 @@ function Month({
         {label}
       </div>
       <div className="grid grid-cols-7 gap-1 text-center">
-        {WEEKDAYS.map((day) => (
+        {weekdays.map((day) => (
           <div key={day} className="py-1 text-xs text-muted">
             {day}
           </div>
@@ -118,6 +121,9 @@ export function ScheduleFields({
   onEnd: (end: number) => void;
 }) {
   const today = useToday();
+  const prefs = usePrefs();
+  const clock = prefs?.clock ?? "h12";
+  const weekStart = prefs?.weekStart ?? 0;
   const [message, setMessage] = useState<string | null>(null);
   const [offset, setOffset] = useState(() => initialOffset(today, dates));
   const anchor = today
@@ -138,7 +144,7 @@ export function ScheduleFields({
       return;
     }
     if (dates.length >= MAX_DAYS) {
-      setMessage("14 days at most.");
+      setMessage(`You can pick up to ${MAX_DAYS} days.`);
       return;
     }
     setMessage(null);
@@ -158,7 +164,7 @@ export function ScheduleFields({
   return (
     <fieldset>
       <legend className="text-sm text-muted">Days and hours</legend>
-      <p className="mt-2 text-sm text-muted">Up to 14 days. The range can cover at most 12 hours. Slots are 30 minutes.</p>
+      <p className="mt-2 text-sm text-muted">Pick up to 14 days, then a time window of up to 12 hours.</p>
       <div className="relative mt-4 min-h-[17.5rem]">
         <div className="absolute top-0 right-0 z-10 flex gap-1">
           <button
@@ -183,7 +189,14 @@ export function ScheduleFields({
         <div className="grid gap-8 sm:grid-cols-2">
           {months.map((month, index) => (
             <div key={`${month.year}-${month.month}`} className={index === 1 ? "hidden sm:block" : undefined}>
-              <Month year={month.year} month={month.month} today={today} dates={dates} onToggle={toggle} />
+              <Month
+                year={month.year}
+                month={month.month}
+                today={today}
+                dates={dates}
+                weekStart={weekStart}
+                onToggle={toggle}
+              />
             </div>
           ))}
         </div>
@@ -209,7 +222,7 @@ export function ScheduleFields({
           >
             {startOptions().map((minute) => (
               <option key={minute} value={minute}>
-                {formatMinutes(minute)}
+                {minutesLabel(minute, clock)}
               </option>
             ))}
           </select>
@@ -223,7 +236,7 @@ export function ScheduleFields({
           >
             {endOptions(start).map((minute) => (
               <option key={minute} value={minute}>
-                {formatMinutes(minute)}
+                {minutesLabel(minute, clock)}
               </option>
             ))}
           </select>

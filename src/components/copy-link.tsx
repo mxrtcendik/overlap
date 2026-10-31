@@ -1,14 +1,49 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
 
-export function CopyLink({ label, href }: { label: string; href: string }) {
-  const [copied, setCopied] = useState(false);
+type CopyState = "idle" | "copied" | "failed";
+
+export async function copyText(text: string): Promise<boolean> {
+  try {
+    await navigator.clipboard.writeText(text);
+    return true;
+  } catch {
+    return false;
+  }
+}
+
+export function useCopyState(): [CopyState, (ok: boolean) => void] {
+  const [state, setState] = useState<CopyState>("idle");
+  useEffect(() => {
+    if (state !== "copied") return;
+    const timer = window.setTimeout(() => setState("idle"), 2000);
+    return () => window.clearTimeout(timer);
+  }, [state]);
+  return [state, (ok) => setState(ok ? "copied" : "failed")];
+}
+
+export function CopyLink({
+  label,
+  note,
+  href,
+  secret = false,
+}: {
+  label: string;
+  note?: string;
+  href: string;
+  secret?: boolean;
+}) {
+  const [state, report] = useCopyState();
 
   return (
-    <div className="mt-5">
-      <div className="text-sm text-muted">{label}</div>
-      <div className="mt-1 flex items-start gap-4">
+    <div className="mt-6">
+      <div className="flex items-center gap-2 text-sm">
+        {secret ? <span aria-hidden="true" className="inline-block size-1.5 rounded-full bg-danger" /> : null}
+        {label}
+      </div>
+      {note ? <p className="mt-0.5 text-sm text-muted">{note}</p> : null}
+      <div className="mt-1.5 flex items-start gap-4">
         <a
           href={href}
           referrerPolicy="no-referrer"
@@ -16,21 +51,15 @@ export function CopyLink({ label, href }: { label: string; href: string }) {
         >
           {href}
         </a>
-        <button
-          type="button"
-          className="link-quiet shrink-0 leading-6"
-          onClick={async () => {
-            try {
-              await navigator.clipboard.writeText(href);
-              setCopied(true);
-            } catch {
-              setCopied(false);
-            }
-          }}
-        >
-          <span aria-live="polite">{copied ? "Copied" : "Copy"}</span>
+        <button type="button" className="link-quiet shrink-0 leading-6" onClick={async () => report(await copyText(href))}>
+          <span aria-live="polite">{state === "copied" ? "Copied" : "Copy"}</span>
         </button>
       </div>
+      {state === "failed" ? (
+        <p className="mt-1 text-sm text-danger" role="alert">
+          Your browser blocked copying. Select the link and copy it yourself.
+        </p>
+      ) : null}
     </div>
   );
 }

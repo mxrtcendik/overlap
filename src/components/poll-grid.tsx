@@ -1,9 +1,10 @@
 "use client";
 
 import { useEffect, useMemo, useRef, useState, type KeyboardEvent, type PointerEvent } from "react";
-import { useTimeZone } from "@/lib/browser";
+import { usePrefs, useTimeZone } from "@/lib/browser";
 import { SLOT_MS } from "@/lib/constants";
-import { bestRun, countSlots, localParts, type LocalParts } from "@/lib/sentence";
+import { clockTime, localParts, type Clock } from "@/lib/format";
+import { bestRun, countSlots } from "@/lib/sentence";
 
 type Pos = { c: number; r: number };
 
@@ -17,25 +18,17 @@ type Layout = {
   first: Pos;
 };
 
-function minutesOf(parts: LocalParts): number {
-  let hour = Number(parts.hour);
-  const minute = Number(parts.minute);
-  if (hour === 12) hour = 0;
-  if (parts.dayPeriod.toUpperCase() === "PM") hour += 12;
-  return hour * 60 + minute;
-}
-
 function heatOf(count: number, people: number): number {
   if (count === 0) return 0;
   return Math.round(16 + (count / people) * 84);
 }
 
-function buildLayout(slots: string[], timeZone: string): Layout {
+function buildLayout(slots: string[], timeZone: string, clock: Clock): Layout {
   const localized = slots
     .map((iso) => {
       const time = Date.parse(iso);
       const parts = localParts(time, timeZone);
-      return { iso, time, parts, minutes: minutesOf(parts), dateKey: `${parts.year}-${parts.month}-${parts.day}` };
+      return { iso, time, parts, minutes: parts.hour * 60 + parts.minute, dateKey: `${parts.year}-${parts.month}-${parts.day}` };
     })
     .sort((a, b) => a.time - b.time);
 
@@ -49,7 +42,7 @@ function buildLayout(slots: string[], timeZone: string): Layout {
 
   const labels = new Map<number, string>();
   for (const slot of localized) {
-    if (!labels.has(slot.minutes)) labels.set(slot.minutes, `${slot.parts.hour}:${slot.parts.minute} ${slot.parts.dayPeriod}`);
+    if (!labels.has(slot.minutes)) labels.set(slot.minutes, clockTime(slot.parts, clock));
   }
   const rows: Row[] = [...labels.entries()]
     .sort((a, b) => a[0] - b[0])
@@ -103,7 +96,11 @@ export function PollGrid({
   onInspect?: (iso: string | null) => void;
 }) {
   const timeZone = useTimeZone();
-  const layout = useMemo(() => (timeZone ? buildLayout(slots, timeZone) : null), [slots, timeZone]);
+  const clock = usePrefs()?.clock ?? null;
+  const layout = useMemo(
+    () => (timeZone && clock ? buildLayout(slots, timeZone, clock) : null),
+    [slots, timeZone, clock],
+  );
   const [active, setActive] = useState<Pos | null>(null);
   const [drag, setDrag] = useState<{ anchor: Pos; current: Pos; add: boolean } | null>(null);
   const cellRefs = useRef(new Map<string, HTMLButtonElement>());
@@ -203,7 +200,7 @@ export function PollGrid({
       >
         <table className="border-separate border-spacing-1 select-none">
           <caption className="sr-only">
-            Availability. Times are in your timezone. Use the arrow keys to move between slots
+            Availability. Times are in your timezone. Use the arrow keys to move between times
             {readOnly ? "." : " and Space to mark one."}
           </caption>
           <thead>

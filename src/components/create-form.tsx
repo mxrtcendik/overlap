@@ -2,8 +2,9 @@
 
 import { useEffect, useRef, useState, type FormEvent } from "react";
 import { MAX_TITLE } from "@/lib/constants";
+import { json, messageOf, request } from "@/lib/request";
 import { buildSlots } from "@/lib/schedule";
-import { CopyLink } from "./copy-link";
+import { CopyLink, copyText, useCopyState } from "./copy-link";
 import { ScheduleFields } from "./schedule-fields";
 
 export function CreateForm() {
@@ -13,7 +14,7 @@ export function CreateForm() {
   const [end, setEnd] = useState(17 * 60);
   const [error, setError] = useState<string | null>(null);
   const [pending, setPending] = useState(false);
-  const [links, setLinks] = useState<{ publicUrl: string; secretUrl: string } | null>(null);
+  const [links, setLinks] = useState<{ title: string; publicUrl: string; secretUrl: string } | null>(null);
   const linksHeading = useRef<HTMLHeadingElement>(null);
 
   useEffect(() => {
@@ -29,22 +30,18 @@ export function CreateForm() {
     setPending(true);
     setError(null);
     try {
-      const response = await fetch("/api/polls", {
+      const data = await request<{ id: string; ownerToken: string }>("/api/polls", {
         method: "POST",
-        headers: { "content-type": "application/json" },
-        body: JSON.stringify({ title, slots: buildSlots(dates, start, end) }),
+        ...json({ title, slots: buildSlots(dates, start, end) }),
       });
-      const data = (await response.json()) as { error?: string; id?: string; ownerToken?: string };
-      if (!response.ok || !data.id || !data.ownerToken) {
-        throw new Error(data.error || "Could not create the poll.");
-      }
       const origin = window.location.origin;
       setLinks({
+        title: title.trim(),
         publicUrl: `${origin}/p/${data.id}`,
         secretUrl: `${origin}/o/${data.ownerToken}`,
       });
     } catch (caught) {
-      setError(caught instanceof Error ? caught.message : "Could not create the poll.");
+      setError(messageOf(caught));
     } finally {
       setPending(false);
     }
@@ -52,38 +49,21 @@ export function CreateForm() {
 
   if (links) {
     return (
-      <>
-        <h2
-          ref={linksHeading}
-          tabIndex={-1}
-          className="scroll-mt-10 text-[1.75rem] leading-9 tracking-[-0.02em] text-balance outline-none"
-        >
-          Save both links
-        </h2>
-        <p className="mt-4 text-sm leading-6">
-          This screen shows them together once. Anyone with the public link can answer. The secret link is the only way
-          to edit or delete the poll. If you lose it, you cannot get it back.
-        </p>
-        <CopyLink label="Public link" href={links.publicUrl} />
-        <CopyLink label="Secret link" href={links.secretUrl} />
-        <button
-          type="button"
-          className="mt-10 link-quiet"
-          onClick={() => {
-            setLinks(null);
-            setTitle("");
-            setDates([]);
-          }}
-        >
-          Make another poll
-        </button>
-      </>
+      <SavedLinks
+        links={links}
+        headingRef={linksHeading}
+        onAnother={() => {
+          setLinks(null);
+          setTitle("");
+          setDates([]);
+        }}
+      />
     );
   }
 
   return (
     <form onSubmit={onSubmit}>
-      <h2 className="text-[1.75rem] leading-9 tracking-[-0.02em] text-balance">New poll</h2>
+      <h2 className="text-[1.75rem] leading-9 tracking-[-0.02em] text-balance">Create a poll</h2>
       <label className="mt-8 block text-sm text-muted">
         Title
         <input
@@ -91,7 +71,8 @@ export function CreateForm() {
           onChange={(event) => setTitle(event.target.value)}
           maxLength={MAX_TITLE}
           required
-          className="field mt-1"
+          placeholder="Team retro"
+          className="field mt-1 placeholder:text-muted/60"
         />
       </label>
       <div className="mt-8">
@@ -103,8 +84,64 @@ export function CreateForm() {
         </p>
       ) : null}
       <button type="submit" disabled={pending} className="mt-8 btn">
-        {pending ? "Creating" : "Create poll"}
+        {pending ? "Creating…" : "Create poll"}
       </button>
     </form>
+  );
+}
+
+function SavedLinks({
+  links,
+  headingRef,
+  onAnother,
+}: {
+  links: { title: string; publicUrl: string; secretUrl: string };
+  headingRef: React.RefObject<HTMLHeadingElement | null>;
+  onAnother: () => void;
+}) {
+  const [state, report] = useCopyState();
+
+  return (
+    <>
+      <h2
+        ref={headingRef}
+        tabIndex={-1}
+        className="scroll-mt-10 text-[1.75rem] leading-9 tracking-[-0.02em] text-balance outline-none"
+      >
+        Save both links
+      </h2>
+      <p className="mt-4 leading-7">You’ll only see this once. Save both links now.</p>
+      <CopyLink label="Public link" note="Share this with everyone you’re asking." href={links.publicUrl} />
+      <CopyLink
+        label="Secret link"
+        note="Keep this private. It’s the only way to edit or delete the poll, and it can’t be recovered."
+        href={links.secretUrl}
+        secret
+      />
+      <div className="mt-8 flex flex-wrap items-center gap-x-5 gap-y-3">
+        <button
+          type="button"
+          className="btn"
+          onClick={async () =>
+            report(
+              await copyText(`${links.title}\n\nPublic link: ${links.publicUrl}\nSecret link (keep private): ${links.secretUrl}`),
+            )
+          }
+        >
+          <span aria-live="polite">{state === "copied" ? "Copied both" : "Copy both links"}</span>
+        </button>
+        <a href={links.secretUrl} referrerPolicy="no-referrer" className="link-quiet">
+          Open the owner view
+        </a>
+        <button type="button" className="link-quiet" onClick={onAnother}>
+          Create another poll
+        </button>
+      </div>
+      {state === "failed" ? (
+        <p className="mt-3 text-sm text-danger" role="alert">
+          Your browser blocked copying. Select each link and copy it yourself.
+        </p>
+      ) : null}
+    </>
   );
 }

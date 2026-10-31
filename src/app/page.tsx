@@ -5,15 +5,15 @@ import { Shell } from "@/components/shell";
 const STEPS = [
   {
     title: "Pick days and hours",
-    body: "Up to 14 days in 30-minute slots. There is nothing to sign up for.",
+    body: "Choose up to 14 days and a window of hours. No sign-up, no app to install.",
   },
   {
     title: "Send the public link",
-    body: "People type a name and drag across the times they can do. Each person sees their own timezone.",
+    body: "Everyone types a name and drags across the times that work. Each person sees their own timezone.",
   },
   {
     title: "Read the answer",
-    body: "The page names the time that works for the most people. A secret link lets you edit or delete the poll.",
+    body: "The page names the time that works for the most people. Set it as the final time and everyone can add it to their calendar.",
   },
 ];
 
@@ -26,11 +26,11 @@ export default function Home() {
             Pick a few days. Send one link.
           </h1>
           <p className="mt-5 text-lg leading-7 text-muted text-pretty">
-            Everyone marks when they are free, in their own timezone. The page tells you which time works, in one
+            Everyone marks when they’re free, in their own timezone. The page tells you which time works, in one
             sentence.
           </p>
           <a href="#new" className="btn mt-8">
-            Make a poll
+            Create a poll
           </a>
         </div>
         <Demo />
