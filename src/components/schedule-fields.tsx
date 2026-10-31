@@ -1,9 +1,10 @@
 "use client";
 
-import { useState } from "react";
-import { usePrefs, useToday } from "@/lib/browser";
+import { useMemo, useState } from "react";
+import { usePrefs, useTimeZone, useToday } from "@/lib/browser";
 import { MAX_DAYS } from "@/lib/constants";
-import { minutesLabel } from "@/lib/format";
+import { minutesLabel, zonedToUtc } from "@/lib/format";
+import { TimeZoneNote } from "./time-zone";
 
 const WEEKDAYS = ["Su", "Mo", "Tu", "We", "Th", "Fr", "Sa"] as const;
 
@@ -121,6 +122,11 @@ export function ScheduleFields({
   onEnd: (end: number) => void;
 }) {
   const today = useToday();
+  const timeZone = useTimeZone();
+  const pickedTimes = useMemo(
+    () => (timeZone ? dates.map((date) => zonedToUtc(date, start, timeZone)) : []),
+    [dates, start, timeZone],
+  );
   const prefs = usePrefs();
   const clock = prefs?.clock ?? "h12";
   const weekStart = prefs?.weekStart ?? 0;
@@ -242,6 +248,7 @@ export function ScheduleFields({
           </select>
         </label>
       </div>
+      <TimeZoneNote lead="Hours are in" times={pickedTimes} />
     </fieldset>
   );
 }

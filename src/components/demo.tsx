@@ -29,16 +29,16 @@ export function Demo() {
   const [mine, setMine] = useState<string[]>([]);
 
   const demo = useMemo(() => {
-    if (!today) return null;
+    if (!today || !timeZone) return null;
     const dates = nextWeekdays(today, DEMO_DAYS);
     const perDay = (DEMO_END - DEMO_START) / 30;
-    const slots = buildSlots(dates, DEMO_START, DEMO_END);
+    const slots = buildSlots(dates, DEMO_START, DEMO_END, timeZone);
     const voters = DEMO_PEOPLE.map((person) => ({
       name: person.name,
       slots: person.free.flatMap(([day, from, to]) => slots.slice(day * perDay + from, day * perDay + to)),
     }));
     return { slots, voters };
-  }, [today]);
+  }, [today, timeZone]);
 
   const voters = useMemo(
     () => (demo ? (mine.length > 0 ? [...demo.voters, { name: "You", slots: mine }] : demo.voters) : []),

@@ -98,6 +98,49 @@ export function minutesLabel(minutes: number, clock: Clock): string {
   return clockTime({ hour: Math.floor(minutes / 60), minute: minutes % 60 }, clock);
 }
 
+export type WallParts = { year: number; month: number; day: number; hour: number; minute: number };
+
+const numericFormatters = new Map<string, Intl.DateTimeFormat>();
+
+export function wallParts(ms: number, timeZone: string): WallParts {
+  let formatter = numericFormatters.get(timeZone);
+  if (!formatter) {
+    formatter = new Intl.DateTimeFormat("en-US", {
+      timeZone,
+      year: "numeric",
+      month: "numeric",
+      day: "numeric",
+      hour: "numeric",
+      minute: "numeric",
+      hourCycle: "h23",
+    });
+    numericFormatters.set(timeZone, formatter);
+  }
+  const out: Record<string, number> = {};
+  for (const part of formatter.formatToParts(new Date(ms))) {
+    if (part.type !== "literal") out[part.type] = Number(part.value);
+  }
+  return { year: out.year, month: out.month, day: out.day, hour: out.hour % 24, minute: out.minute };
+}
+
+export function wallDate(parts: WallParts): string {
+  return `${parts.year}-${pad(parts.month)}-${pad(parts.day)}`;
+}
+
+export function zonedToUtc(date: string, minutes: number, timeZone: string): number {
+  const [year, month, day] = date.split("-").map(Number);
+  const wall = Date.UTC(year, month - 1, day, 0, minutes);
+  const offsetAt = (ms: number) => {
+    const parts = wallParts(ms, timeZone);
+    return Date.UTC(parts.year, parts.month - 1, parts.day, parts.hour, parts.minute) - Math.floor(ms / 60_000) * 60_000;
+  };
+  const guess = wall - offsetAt(wall);
+  const corrected = wall - offsetAt(guess);
+  const check = wallParts(corrected, timeZone);
+  const lands = Date.UTC(check.year, check.month - 1, check.day, check.hour, check.minute) === wall;
+  return lands ? corrected : guess;
+}
+
 export function timeZoneLabel(timeZone: string, at = Date.now()): string {
   const offset =
     new Intl.DateTimeFormat("en-US", { timeZone, timeZoneName: "shortOffset" })
@@ -106,6 +149,14 @@ export function timeZoneLabel(timeZone: string, at = Date.now()): string {
   const city = timeZone.includes("/") && !timeZone.startsWith("Etc/") ? timeZone.split("/").pop()!.replaceAll("_", " ") : null;
   if (!city) return /^GMT([+-]0)?$/.test(offset) ? "UTC" : offset;
   return `${city} time (${offset})`;
+}
+
+export function timeZoneLabelFor(timeZone: string, times: number[]): string {
+  if (times.length === 0) return timeZoneLabel(timeZone);
+  const first = timeZoneLabel(timeZone, Math.min(...times));
+  const last = timeZoneLabel(timeZone, Math.max(...times));
+  if (first === last) return first;
+  return first.replace(/ \([^)]*\)$/, "");
 }
 
 export function detectClock(locale: string): Clock {

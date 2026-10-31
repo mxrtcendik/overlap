@@ -3,7 +3,15 @@
 import { useEffect, useMemo, useState, type FormEvent } from "react";
 import { useRouter } from "next/navigation";
 import { slotsIn } from "@/lib/availability";
-import { dismissCreated, useIsClient, useJustCreated, usePageLocation, usePrefs, useTimeZone } from "@/lib/browser";
+import {
+  deviceTimeZone,
+  dismissCreated,
+  useIsClient,
+  useJustCreated,
+  usePageLocation,
+  usePrefs,
+  useTimeZone,
+} from "@/lib/browser";
 import { MAX_TITLE, SLOT_MS } from "@/lib/constants";
 import { buildSlots, inferSchedule } from "@/lib/schedule";
 import { rangeLabel, type Clock } from "@/lib/format";
@@ -83,7 +91,7 @@ export function OwnerView({ poll, hasResponses }: { poll: PollView; hasResponses
     setPending(true);
     setError(null);
     try {
-      await send("PATCH", { slots: buildSlots(dates, start, end) });
+      await send("PATCH", { slots: buildSlots(dates, start, end, timeZone ?? deviceTimeZone()) });
       router.refresh();
     } catch (caught) {
       setError({ at: "settings", message: messageOf(caught) });
@@ -421,9 +429,10 @@ function DaysEditor({
   onSave: (dates: string[], start: number, end: number) => Promise<void>;
 }) {
   const client = useIsClient();
+  const timeZone = useTimeZone();
   const [draft, setDraft] = useState<{ dates: string[]; start: number; end: number } | null>(null);
-  if (!client) return <div className="min-h-40" />;
-  const schedule = draft ?? inferSchedule(slots);
+  if (!client || !timeZone) return <div className="min-h-40" />;
+  const schedule = draft ?? inferSchedule(slots, timeZone);
 
   return (
     <form

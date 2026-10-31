@@ -1,30 +1,22 @@
-export function ymd(date: Date): string {
-  const year = date.getFullYear();
-  const month = String(date.getMonth() + 1).padStart(2, "0");
-  const day = String(date.getDate()).padStart(2, "0");
-  return `${year}-${month}-${day}`;
-}
+import { wallDate, wallParts, zonedToUtc } from "./format";
 
-export function buildSlots(dates: string[], startMin: number, endMin: number): string[] {
-  const slots: string[] = [];
+export function buildSlots(dates: string[], startMin: number, endMin: number, timeZone: string): string[] {
+  const slots = new Set<string>();
   for (const date of [...dates].sort()) {
-    const [year, month, day] = date.split("-").map(Number);
     for (let minute = startMin; minute < endMin; minute += 30) {
-      const local = new Date(year, month - 1, day, Math.floor(minute / 60), minute % 60, 0, 0);
-      slots.push(local.toISOString());
+      slots.add(new Date(zonedToUtc(date, minute, timeZone)).toISOString());
     }
   }
-  return slots;
+  return [...slots].sort();
 }
 
-export function inferSchedule(slots: string[]): { dates: string[]; start: number; end: number } {
+export function inferSchedule(slots: string[], timeZone: string): { dates: string[]; start: number; end: number } {
   const byDate = new Map<string, number[]>();
   for (const iso of slots) {
-    const date = new Date(iso);
-    const key = ymd(date);
-    const minutes = date.getHours() * 60 + date.getMinutes();
+    const parts = wallParts(Date.parse(iso), timeZone);
+    const key = wallDate(parts);
     const list = byDate.get(key) ?? [];
-    list.push(minutes);
+    list.push(parts.hour * 60 + parts.minute);
     byDate.set(key, list);
   }
   let start = 24 * 60;

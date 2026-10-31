@@ -2,7 +2,7 @@
 
 import { useState, type FormEvent } from "react";
 import { useRouter } from "next/navigation";
-import { markCreated } from "@/lib/browser";
+import { deviceTimeZone, markCreated, useTimeZone } from "@/lib/browser";
 import { MAX_TITLE } from "@/lib/constants";
 import { expiresAtFor, rememberPoll } from "@/lib/my-polls";
 import { json, messageOf, request } from "@/lib/request";
@@ -11,6 +11,7 @@ import { ScheduleFields } from "./schedule-fields";
 
 export function CreateForm() {
   const router = useRouter();
+  const timeZone = useTimeZone();
   const [title, setTitle] = useState("");
   const [dates, setDates] = useState<string[]>([]);
   const [start, setStart] = useState(9 * 60);
@@ -26,7 +27,7 @@ export function CreateForm() {
     }
     setPending(true);
     setError(null);
-    const slots = buildSlots(dates, start, end);
+    const slots = buildSlots(dates, start, end, timeZone ?? deviceTimeZone());
     try {
       const data = await request<{ id: string; ownerToken: string }>("/api/polls", {
         method: "POST",

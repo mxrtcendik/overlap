@@ -1,18 +1,75 @@
 "use client";
 
 import { useSyncExternalStore } from "react";
-import { detectClock, detectWeekStart, type Clock } from "./format";
+import { detectClock, detectWeekStart, wallDate, wallParts, type Clock } from "./format";
 
 function subscribe() {
   return () => {};
 }
 
+const ZONE_KEY = "overlap:timezone";
+const zoneListeners = new Set<() => void>();
+let zoneOverride: string | null | undefined;
+
+export function deviceTimeZone(): string {
+  return Intl.DateTimeFormat().resolvedOptions().timeZone;
+}
+
+export function isTimeZone(value: string): boolean {
+  try {
+    new Intl.DateTimeFormat("en-US", { timeZone: value });
+    return true;
+  } catch {
+    return false;
+  }
+}
+
+function readZoneOverride(): string | null {
+  if (zoneOverride === undefined) {
+    try {
+      const stored = window.localStorage.getItem(ZONE_KEY);
+      zoneOverride = stored && isTimeZone(stored) ? stored : null;
+    } catch {
+      zoneOverride = null;
+    }
+  }
+  return zoneOverride;
+}
+
+function readZone(): string {
+  return readZoneOverride() ?? deviceTimeZone();
+}
+
+function subscribeZone(listener: () => void) {
+  zoneListeners.add(listener);
+  const onStorage = (event: StorageEvent) => {
+    if (event.key !== ZONE_KEY) return;
+    zoneOverride = undefined;
+    listener();
+  };
+  window.addEventListener("storage", onStorage);
+  return () => {
+    zoneListeners.delete(listener);
+    window.removeEventListener("storage", onStorage);
+  };
+}
+
 export function useTimeZone(): string | null {
-  return useSyncExternalStore(
-    subscribe,
-    () => Intl.DateTimeFormat().resolvedOptions().timeZone,
-    () => null,
-  );
+  return useSyncExternalStore(subscribeZone, readZone, () => null);
+}
+
+export function useTimeZoneChosen(): boolean {
+  return useSyncExternalStore(subscribeZone, () => readZoneOverride() !== null, () => false);
+}
+
+export function setTimeZone(zone: string | null) {
+  zoneOverride = zone === deviceTimeZone() ? null : zone;
+  try {
+    if (zoneOverride) window.localStorage.setItem(ZONE_KEY, zoneOverride);
+    else window.localStorage.removeItem(ZONE_KEY);
+  } catch {
+  }
+  for (const listener of zoneListeners) listener();
 }
 
 export function useIsClient(): boolean {
@@ -78,17 +135,12 @@ export function useJustCreated(token: string | null): boolean {
   return token !== null && created === token;
 }
 
-let todaySnapshot: string | null = null;
-
 function readToday() {
-  const now = new Date();
-  const today = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, "0")}-${String(now.getDate()).padStart(2, "0")}`;
-  if (todaySnapshot !== today) todaySnapshot = today;
-  return todaySnapshot;
+  return wallDate(wallParts(Date.now(), readZone()));
 }
 
 export function useToday(): string | null {
-  return useSyncExternalStore(subscribe, readToday, () => null);
+  return useSyncExternalStore(subscribeZone, readToday, () => null);
 }
 
 export type Prefs = { clock: Clock; weekStart: number };
