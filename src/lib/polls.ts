@@ -119,6 +119,8 @@ function closesAt(slots: string[]): number {
   return Math.max(...slots.map((slot) => Date.parse(slot))) + SLOT_MS;
 }
 
+const ALL_PAST = "Those times have already passed. Pick a later day or time.";
+
 export async function createPoll(
   titleInput: unknown,
   slotsInput: unknown,
@@ -130,6 +132,7 @@ export async function createPoll(
   if (!title) return { ok: false, error: "Titles can be up to 80 characters." };
   const parsed = parseSlots(slotsInput);
   if (!parsed.ok) return parsed;
+  if (closesAt(parsed.slots) <= Date.now()) return { ok: false, error: ALL_PAST };
 
   const db = await getDb();
   const id = randomToken(16);
@@ -225,6 +228,7 @@ export async function updateSlots(token: string, slotsInput: unknown): Promise<{
   const parsed = parseSlots(slotsInput);
   if (!parsed.ok) return { ok: false, status: 400, error: parsed.error };
   const closes = closesAt(parsed.slots);
+  if (closes <= Date.now()) return { ok: false, status: 400, error: ALL_PAST };
   const hash = await ownerHash(token);
   const db = await getDb();
   const updated = await db
