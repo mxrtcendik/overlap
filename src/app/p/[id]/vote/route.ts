@@ -1,5 +1,6 @@
 import { cookies } from "next/headers";
 import { NextResponse } from "next/server";
+import { announceChange } from "@/lib/announce";
 import { getDb } from "@/lib/db";
 import { jsonError, readJson } from "@/lib/http";
 import { saveVote } from "@/lib/polls";
@@ -26,6 +27,7 @@ export async function POST(request: Request, { params }: Params) {
       path: `/p/${id}`,
       maxAge: 60 * 60 * 24 * 400,
     });
+    await announceChange(id);
     return NextResponse.json({ ok: true });
   } catch (error) {
     console.error(JSON.stringify({ event: "vote_failed", message: error instanceof Error ? error.message : "error" }));

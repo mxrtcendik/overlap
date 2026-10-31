@@ -26,6 +26,10 @@
       "migrations_dir": "migrations"
     }
   ],
+  "durable_objects": {
+    "bindings": [{ "name": "POLL_ROOM", "class_name": "PollRoom" }]
+  },
+  "migrations": [{ "tag": "v1", "new_sqlite_classes": ["PollRoom"] }],
   "services": [
     {
       "binding": "WORKER_SELF_REFERENCE",

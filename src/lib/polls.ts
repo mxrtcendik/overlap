@@ -209,7 +209,9 @@ export async function saveVote(
   return { ok: true, voterId: nextId };
 }
 
-export async function updateTitle(token: string, titleInput: unknown): Promise<{ ok: true } | Failure> {
+type Done = { ok: true; id: string };
+
+export async function updateTitle(token: string, titleInput: unknown): Promise<Done | Failure> {
   if (typeof titleInput !== "string" || titleInput.trim() === "") {
     return { ok: false, status: 400, error: "Enter a title." };
   }
@@ -217,14 +219,14 @@ export async function updateTitle(token: string, titleInput: unknown): Promise<{
   if (!title) return { ok: false, status: 400, error: "Titles can be up to 80 characters." };
   const db = await getDb();
   const updated = await db
-    .prepare("UPDATE polls SET title = ? WHERE owner_hash = ?")
+    .prepare("UPDATE polls SET title = ? WHERE owner_hash = ? RETURNING id")
     .bind(title, await ownerHash(token))
-    .run();
-  if ((updated.meta.changes ?? 0) === 0) return NOT_FOUND;
-  return { ok: true };
+    .first<{ id: string }>();
+  if (!updated) return NOT_FOUND;
+  return { ok: true, id: updated.id };
 }
 
-export async function updateSlots(token: string, slotsInput: unknown): Promise<{ ok: true } | Failure> {
+export async function updateSlots(token: string, slotsInput: unknown): Promise<Done | Failure> {
   const parsed = parseSlots(slotsInput);
   if (!parsed.ok) return { ok: false, status: 400, error: parsed.error };
   const closes = closesAt(parsed.slots);
@@ -236,18 +238,19 @@ export async function updateSlots(token: string, slotsInput: unknown): Promise<{
       `UPDATE polls
        SET slots = ?, closes_at = ?, delete_at = ?, final_start = NULL, final_end = NULL
        WHERE owner_hash = ?
-         AND NOT EXISTS (SELECT 1 FROM voters WHERE voters.poll_id = polls.id)`,
+         AND NOT EXISTS (SELECT 1 FROM voters WHERE voters.poll_id = polls.id)
+       RETURNING id`,
     )
     .bind(JSON.stringify(parsed.slots), closes, closes + RETAIN_MS, hash)
-    .run();
-  if ((updated.meta.changes ?? 0) > 0) return { ok: true };
+    .first<{ id: string }>();
+  if (updated) return { ok: true, id: updated.id };
 
   const existing = await db.prepare("SELECT 1 FROM polls WHERE owner_hash = ?").bind(hash).first();
   if (!existing) return NOT_FOUND;
   return { ok: false, status: 409, error: "Days can’t change after the first answer." };
 }
 
-export async function updateFinal(token: string, input: unknown): Promise<{ ok: true } | Failure> {
+export async function updateFinal(token: string, input: unknown): Promise<Done | Failure> {
   const poll = await getPollByOwnerToken(token);
   if (!poll) return NOT_FOUND;
   const parsed = parseFinal(poll.slots, input);
@@ -257,15 +260,15 @@ export async function updateFinal(token: string, input: unknown): Promise<{ ok: 
     .prepare("UPDATE polls SET final_start = ?, final_end = ? WHERE id = ?")
     .bind(parsed.final?.start ?? null, parsed.final?.end ?? null, poll.id)
     .run();
-  return { ok: true };
+  return { ok: true, id: poll.id };
 }
 
-export async function deleteOwned(token: string): Promise<{ ok: true } | Failure> {
+export async function deleteOwned(token: string): Promise<Done | Failure> {
   const db = await getDb();
   const deleted = await db
-    .prepare("DELETE FROM polls WHERE owner_hash = ?")
+    .prepare("DELETE FROM polls WHERE owner_hash = ? RETURNING id")
     .bind(await ownerHash(token))
-    .run();
-  if ((deleted.meta.changes ?? 0) === 0) return NOT_FOUND;
-  return { ok: true };
+    .first<{ id: string }>();
+  if (!deleted) return NOT_FOUND;
+  return { ok: true, id: deleted.id };
 }

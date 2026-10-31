@@ -1,4 +1,5 @@
 import { NextResponse } from "next/server";
+import { announceChange } from "@/lib/announce";
 import { getDb } from "@/lib/db";
 import { jsonError, readJson } from "@/lib/http";
 import { deleteOwned, updateFinal, updateSlots, updateTitle } from "@/lib/polls";
@@ -21,16 +22,19 @@ export async function PATCH(request: Request, { params }: Params) {
     if ("final" in record) {
       const result = await updateFinal(token, record.final);
       if (!result.ok) return jsonError(result.error, result.status);
+      await announceChange(result.id);
       return NextResponse.json({ ok: true });
     }
     if ("slots" in record) {
       const result = await updateSlots(token, record.slots);
       if (!result.ok) return jsonError(result.error, result.status);
+      await announceChange(result.id);
       return NextResponse.json({ ok: true });
     }
     if ("title" in record) {
       const result = await updateTitle(token, record.title);
       if (!result.ok) return jsonError(result.error, result.status);
+      await announceChange(result.id);
       return NextResponse.json({ ok: true });
     }
     return jsonError("That change couldn’t be saved.", 400);
@@ -50,6 +54,7 @@ export async function DELETE(request: Request, { params }: Params) {
     }
     const result = await deleteOwned(token);
     if (!result.ok) return jsonError(result.error, result.status);
+    await announceChange(result.id);
     return NextResponse.json({ ok: true });
   } catch (error) {
     console.error(JSON.stringify({ event: "owner_delete_failed", message: error instanceof Error ? error.message : "error" }));
