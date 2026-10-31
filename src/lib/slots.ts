@@ -7,17 +7,17 @@ export function parseSlots(input: unknown): SlotResult {
     return { ok: false, error: "Pick at least one day." };
   }
   if (input.length > MAX_SLOTS) {
-    return { ok: false, error: "That is too many times." };
+    return { ok: false, error: "That’s too many times for one poll." };
   }
 
   const times: number[] = [];
   for (const item of input) {
     if (typeof item !== "string") {
-      return { ok: false, error: "Use 30-minute slots." };
+      return { ok: false, error: "Times must fall on the hour or half hour." };
     }
     const time = Date.parse(item);
     if (!Number.isFinite(time) || time % (60 * 1000) !== 0) {
-      return { ok: false, error: "Use 30-minute slots." };
+      return { ok: false, error: "Times must fall on the hour or half hour." };
     }
     times.push(time);
   }
@@ -25,10 +25,10 @@ export function parseSlots(input: unknown): SlotResult {
   times.sort((a, b) => a - b);
   for (let i = 1; i < times.length; i++) {
     if (times[i] === times[i - 1]) {
-      return { ok: false, error: "Use 30-minute slots." };
+      return { ok: false, error: "Times must fall on the hour or half hour." };
     }
     if ((times[i] - times[i - 1]) % SLOT_MS !== 0) {
-      return { ok: false, error: "Use 30-minute slots." };
+      return { ok: false, error: "Times must fall on the hour or half hour." };
     }
   }
 
@@ -40,12 +40,12 @@ export function parseSlots(input: unknown): SlotResult {
   }
 
   if (groups.length > MAX_DAYS) {
-    return { ok: false, error: "Pick 14 days at most." };
+    return { ok: false, error: "Pick up to 14 days." };
   }
   for (const group of groups) {
     const span = group[group.length - 1] - group[0] + SLOT_MS;
     if (group.length > MAX_SLOTS_PER_DAY || span > MAX_RANGE_MS) {
-      return { ok: false, error: "The time range can be 12 hours at most." };
+      return { ok: false, error: "The time window can be up to 12 hours." };
     }
   }
 
@@ -56,7 +56,7 @@ export type FinalResult = { ok: true; final: { start: number; end: number } | nu
 
 export function parseFinal(slots: string[], input: unknown): FinalResult {
   if (input === null) return { ok: true, final: null };
-  const error = { ok: false as const, error: "Pick one unbroken stretch of this poll's times." };
+  const error = { ok: false as const, error: "Pick one unbroken stretch of this poll’s times." };
   if (!input || typeof input !== "object") return error;
   const { start: startInput, end: endInput } = input as { start?: unknown; end?: unknown };
   if (typeof startInput !== "string" || typeof endInput !== "string") return error;

@@ -32,7 +32,7 @@ type PollRow = {
 
 type Failure = { ok: false; status: number; error: string };
 
-const NOT_FOUND: Failure = { ok: false, status: 404, error: "This poll does not exist." };
+const NOT_FOUND: Failure = { ok: false, status: 404, error: "This poll doesn’t exist." };
 
 const ownerHash = (token: string) => sha256(token);
 
@@ -127,7 +127,7 @@ export async function createPoll(
     return { ok: false, error: "Enter a title." };
   }
   const title = cleanText(titleInput, MAX_TITLE);
-  if (!title) return { ok: false, error: "The title can be 80 characters at most." };
+  if (!title) return { ok: false, error: "Titles can be up to 80 characters." };
   const parsed = parseSlots(slotsInput);
   if (!parsed.ok) return parsed;
 
@@ -164,17 +164,17 @@ export async function saveVote(
 ): Promise<{ ok: true; voterId: string } | Failure> {
   const poll = await getPoll(pollId);
   if (!poll) return NOT_FOUND;
-  if (poll.closed) return { ok: false, status: 403, error: "This poll is closed." };
-  if (!body || typeof body !== "object") return { ok: false, status: 400, error: "Enter a name." };
+  if (poll.closed) return { ok: false, status: 403, error: "Voting has ended for this poll." };
+  if (!body || typeof body !== "object") return { ok: false, status: 400, error: "Enter your name." };
 
   const nameInput = (body as { name?: unknown }).name;
   if (typeof nameInput !== "string" || nameInput.trim() === "") {
-    return { ok: false, status: 400, error: "Enter a name." };
+    return { ok: false, status: 400, error: "Enter your name." };
   }
   const name = cleanText(nameInput, MAX_NAME);
-  if (!name) return { ok: false, status: 400, error: "A name can be 40 characters at most." };
+  if (!name) return { ok: false, status: 400, error: "Names can be up to 40 characters." };
   const chosen = subset(poll.slots, (body as { slots?: unknown }).slots);
-  if (!chosen) return { ok: false, status: 400, error: "Those times are not on this poll." };
+  if (!chosen) return { ok: false, status: 400, error: "Some of those times aren’t on this poll." };
   const chosenJson = JSON.stringify(chosen);
 
   const db = await getDb();
@@ -201,7 +201,7 @@ export async function saveVote(
     db.prepare(INSERT_MARKS).bind(nextId, chosenJson, nextId),
   ]);
   if ((inserted.meta.changes ?? 0) === 0) {
-    return { ok: false, status: 409, error: `This poll already has ${MAX_VOTERS} people.` };
+    return { ok: false, status: 409, error: `This poll is full. It already has ${MAX_VOTERS} answers.` };
   }
   return { ok: true, voterId: nextId };
 }
@@ -211,7 +211,7 @@ export async function updateTitle(token: string, titleInput: unknown): Promise<{
     return { ok: false, status: 400, error: "Enter a title." };
   }
   const title = cleanText(titleInput, MAX_TITLE);
-  if (!title) return { ok: false, status: 400, error: "The title can be 80 characters at most." };
+  if (!title) return { ok: false, status: 400, error: "Titles can be up to 80 characters." };
   const db = await getDb();
   const updated = await db
     .prepare("UPDATE polls SET title = ? WHERE owner_hash = ?")
@@ -240,7 +240,7 @@ export async function updateSlots(token: string, slotsInput: unknown): Promise<{
 
   const existing = await db.prepare("SELECT 1 FROM polls WHERE owner_hash = ?").bind(hash).first();
   if (!existing) return NOT_FOUND;
-  return { ok: false, status: 409, error: "The days are fixed once someone has answered." };
+  return { ok: false, status: 409, error: "Days can’t change after the first answer." };
 }
 
 export async function updateFinal(token: string, input: unknown): Promise<{ ok: true } | Failure> {

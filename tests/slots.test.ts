@@ -26,17 +26,17 @@ describe("parseSlots", () => {
 
   it("rejects a 15th day", () => {
     const parsed = parseSlots(Array.from({ length: 15 }, (_, index) => day(index * 2)));
-    assert.deepEqual(parsed, { ok: false, error: "Pick 14 days at most." });
+    assert.deepEqual(parsed, { ok: false, error: "Pick up to 14 days." });
   });
 
   it("rejects a range over 12 hours", () => {
     const parsed = parseSlots(range(8, 25));
-    assert.deepEqual(parsed, { ok: false, error: "The time range can be 12 hours at most." });
+    assert.deepEqual(parsed, { ok: false, error: "The time window can be up to 12 hours." });
   });
 
   it("rejects a gap that is not a 30-minute step", () => {
     const parsed = parseSlots(["2026-01-06T15:00:00.000Z", "2026-01-06T15:15:00.000Z"]);
-    assert.deepEqual(parsed, { ok: false, error: "Use 30-minute slots." });
+    assert.deepEqual(parsed, { ok: false, error: "Times must fall on the hour or half hour." });
   });
 
   it("rejects an empty selection", () => {

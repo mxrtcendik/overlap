@@ -9,14 +9,14 @@ type Params = { params: Promise<{ token: string }> };
 
 export async function PATCH(request: Request, { params }: Params) {
   const { token } = await params;
-  if (!isToken(token)) return jsonError("This poll does not exist.", 404);
+  if (!isToken(token)) return jsonError("This poll doesn’t exist.", 404);
   try {
     const db = await getDb();
     if (!(await allowWrite(db, request, "owner"))) {
-      return jsonError("Too many saves. Wait a little and try again.", 429);
+      return jsonError("You’re saving too quickly. Try again in a few minutes.", 429);
     }
     const body = await readJson(request);
-    if (!body || typeof body !== "object") return jsonError("Could not save.", 400);
+    if (!body || typeof body !== "object") return jsonError("That change couldn’t be saved.", 400);
     const record = body as { title?: unknown; slots?: unknown; final?: unknown };
     if ("final" in record) {
       const result = await updateFinal(token, record.final);
@@ -33,26 +33,26 @@ export async function PATCH(request: Request, { params }: Params) {
       if (!result.ok) return jsonError(result.error, result.status);
       return NextResponse.json({ ok: true });
     }
-    return jsonError("Could not save.", 400);
+    return jsonError("That change couldn’t be saved.", 400);
   } catch (error) {
     console.error(JSON.stringify({ event: "owner_update_failed", message: error instanceof Error ? error.message : "error" }));
-    return jsonError("Could not save. Try again.", 500);
+    return jsonError("Something went wrong while saving. Try again.", 500);
   }
 }
 
 export async function DELETE(request: Request, { params }: Params) {
   const { token } = await params;
-  if (!isToken(token)) return jsonError("This poll does not exist.", 404);
+  if (!isToken(token)) return jsonError("This poll doesn’t exist.", 404);
   try {
     const db = await getDb();
     if (!(await allowWrite(db, request, "owner"))) {
-      return jsonError("Too many saves. Wait a little and try again.", 429);
+      return jsonError("You’re saving too quickly. Try again in a few minutes.", 429);
     }
     const result = await deleteOwned(token);
     if (!result.ok) return jsonError(result.error, result.status);
     return NextResponse.json({ ok: true });
   } catch (error) {
     console.error(JSON.stringify({ event: "owner_delete_failed", message: error instanceof Error ? error.message : "error" }));
-    return jsonError("Could not delete the poll. Try again.", 500);
+    return jsonError("Something went wrong while deleting the poll. Try again.", 500);
   }
 }
