@@ -82,6 +82,11 @@ function Month({
               key={iso}
               type="button"
               disabled={past}
+              aria-label={new Date(year, month, day).toLocaleDateString("en-US", {
+                weekday: "long",
+                month: "long",
+                day: "numeric",
+              })}
               aria-pressed={selected}
               aria-current={isToday ? "date" : undefined}
               onClick={() => onToggle(iso)}
