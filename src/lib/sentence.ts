@@ -142,3 +142,17 @@ export function overlapSentence(input: { slots: string[]; votes: Vote[]; timeZon
   }
   return `No time works for everyone. ${when} works for ${run.count} of ${people}.`;
 }
+
+export function rangeLabel(start: number, end: number, timeZone: string): { day: string; time: string } {
+  const from = localParts(start, timeZone);
+  const to = localParts(end, timeZone);
+  const day = `${from.weekday}, ${from.month} ${from.day}`;
+  if (sameCalendarDay(from, localParts(end - 1, timeZone))) {
+    const time =
+      from.dayPeriod === to.dayPeriod
+        ? `${clock(from, false)}–${clock(to, true)}`
+        : `${clock(from, true)}–${clock(to, true)}`;
+    return { day, time };
+  }
+  return { day, time: `${clock(from, true)} – ${to.weekday}, ${to.month} ${to.day}, ${clock(to, true)}` };
+}

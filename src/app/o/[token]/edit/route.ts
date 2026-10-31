@@ -1,7 +1,7 @@
 import { NextResponse } from "next/server";
 import { getDb } from "@/lib/db";
 import { jsonError, readJson } from "@/lib/http";
-import { deleteOwned, updateSlots, updateTitle } from "@/lib/polls";
+import { deleteOwned, updateFinal, updateSlots, updateTitle } from "@/lib/polls";
 import { allowWrite } from "@/lib/rate";
 import { isToken } from "@/lib/tokens";
 
@@ -17,7 +17,12 @@ export async function PATCH(request: Request, { params }: Params) {
     }
     const body = await readJson(request);
     if (!body || typeof body !== "object") return jsonError("Could not save.", 400);
-    const record = body as { title?: unknown; slots?: unknown };
+    const record = body as { title?: unknown; slots?: unknown; final?: unknown };
+    if ("final" in record) {
+      const result = await updateFinal(token, record.final);
+      if (!result.ok) return jsonError(result.error, result.status);
+      return NextResponse.json({ ok: true });
+    }
     if ("slots" in record) {
       const result = await updateSlots(token, record.slots);
       if (!result.ok) return jsonError(result.error, result.status);

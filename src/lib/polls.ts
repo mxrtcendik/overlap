@@ -2,12 +2,12 @@ import "server-only";
 import { cache } from "react";
 import { MAX_NAME, MAX_TITLE, MAX_VOTERS, RETAIN_MS, SLOT_MS } from "./constants";
 import { getDb } from "./db";
-import { parseSlots } from "./slots";
+import { parseFinal, parseSlots } from "./slots";
 import { cleanText } from "./text";
 import { isToken, randomToken, sha256 } from "./tokens";
-import type { PollView, VoterView } from "./types";
+import type { FinalTime, PollView, VoterView } from "./types";
 
-export type { PollView, VoterView };
+export type { FinalTime, PollView, VoterView };
 
 export type StoredVoter = { id: string; name: string; slots: string[] };
 
@@ -16,6 +16,7 @@ export type StoredPoll = {
   title: string;
   slots: string[];
   closed: boolean;
+  final: FinalTime | null;
   voters: StoredVoter[];
 };
 
@@ -25,6 +26,8 @@ type PollRow = {
   slots: string;
   closes_at: number;
   delete_at: number;
+  final_start: number | null;
+  final_end: number | null;
 };
 
 type Failure = { ok: false; status: number; error: string };
@@ -43,6 +46,7 @@ export function toPollView(poll: StoredPoll, voterId: string | null): PollView {
     title: poll.title,
     slots: poll.slots,
     closed: poll.closed,
+    final: poll.final,
     voters: poll.voters.map((voter) => ({
       name: voter.name,
       slots: voter.slots,
@@ -65,7 +69,7 @@ export const getPoll = cache(async (id: string): Promise<StoredPoll | null> => {
   const db = await getDb();
   const now = Date.now();
   const poll = await db
-    .prepare("SELECT id, title, slots, closes_at, delete_at FROM polls WHERE id = ?")
+    .prepare("SELECT id, title, slots, closes_at, delete_at, final_start, final_end FROM polls WHERE id = ?")
     .bind(id)
     .first<PollRow>();
   if (!poll || poll.delete_at <= now) return null;
@@ -89,6 +93,10 @@ export const getPoll = cache(async (id: string): Promise<StoredPoll | null> => {
     title: poll.title,
     slots: parseStoredSlots(poll.slots),
     closed: poll.closes_at <= now,
+    final:
+      poll.final_start !== null && poll.final_end !== null
+        ? { start: new Date(poll.final_start).toISOString(), end: new Date(poll.final_end).toISOString() }
+        : null,
     voters: (voters.results as { id: string; name: string }[]).map((voter) => ({
       id: voter.id,
       name: voter.name,
@@ -222,7 +230,7 @@ export async function updateSlots(token: string, slotsInput: unknown): Promise<{
   const updated = await db
     .prepare(
       `UPDATE polls
-       SET slots = ?, closes_at = ?, delete_at = ?
+       SET slots = ?, closes_at = ?, delete_at = ?, final_start = NULL, final_end = NULL
        WHERE owner_hash = ?
          AND NOT EXISTS (SELECT 1 FROM voters WHERE voters.poll_id = polls.id)`,
     )
@@ -233,6 +241,19 @@ export async function updateSlots(token: string, slotsInput: unknown): Promise<{
   const existing = await db.prepare("SELECT 1 FROM polls WHERE owner_hash = ?").bind(hash).first();
   if (!existing) return NOT_FOUND;
   return { ok: false, status: 409, error: "The days are fixed once someone has answered." };
+}
+
+export async function updateFinal(token: string, input: unknown): Promise<{ ok: true } | Failure> {
+  const poll = await getPollByOwnerToken(token);
+  if (!poll) return NOT_FOUND;
+  const parsed = parseFinal(poll.slots, input);
+  if (!parsed.ok) return { ok: false, status: 400, error: parsed.error };
+  const db = await getDb();
+  await db
+    .prepare("UPDATE polls SET final_start = ?, final_end = ? WHERE id = ?")
+    .bind(parsed.final?.start ?? null, parsed.final?.end ?? null, poll.id)
+    .run();
+  return { ok: true };
 }
 
 export async function deleteOwned(token: string): Promise<{ ok: true } | Failure> {

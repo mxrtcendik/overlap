@@ -35,3 +35,10 @@ export function topSegments(slots: string[], voters: { slots: string[] }[], limi
     .slice(0, limit)
     .map(({ start, end, slots: segmentSlots, people }) => ({ start, end, slots: segmentSlots, people }));
 }
+
+export function slotsIn(slots: string[], start: number, end: number): string[] {
+  return slots.filter((slot) => {
+    const time = Date.parse(slot);
+    return time >= start && time < end;
+  });
+}

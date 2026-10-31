@@ -1,0 +1,2 @@
+ALTER TABLE polls ADD COLUMN final_start INTEGER;
+ALTER TABLE polls ADD COLUMN final_end INTEGER;

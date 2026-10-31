@@ -51,3 +51,22 @@ export function parseSlots(input: unknown): SlotResult {
 
   return { ok: true, slots: times.map((time) => new Date(time).toISOString()) };
 }
+
+export type FinalResult = { ok: true; final: { start: number; end: number } | null } | { ok: false; error: string };
+
+export function parseFinal(slots: string[], input: unknown): FinalResult {
+  if (input === null) return { ok: true, final: null };
+  const error = { ok: false as const, error: "Pick one unbroken stretch of this poll's times." };
+  if (!input || typeof input !== "object") return error;
+  const { start: startInput, end: endInput } = input as { start?: unknown; end?: unknown };
+  if (typeof startInput !== "string" || typeof endInput !== "string") return error;
+  const start = Date.parse(startInput);
+  const end = Date.parse(endInput);
+  if (!Number.isFinite(start) || !Number.isFinite(end) || end <= start || (end - start) % SLOT_MS !== 0) return error;
+
+  const times = new Set(slots.map((slot) => Date.parse(slot)));
+  for (let time = start; time < end; time += SLOT_MS) {
+    if (!times.has(time)) return error;
+  }
+  return { ok: true, final: { start, end } };
+}
