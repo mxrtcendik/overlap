@@ -1,16 +1,12 @@
-import Link from "next/link";
-import { ForgetMissingPoll } from "@/components/my-polls";
-import { Shell } from "@/components/shell";
+import type { Metadata } from "next";
+import { Missing } from "@/components/missing";
+
+export const metadata: Metadata = { title: "Page not found" };
 
 export default function NotFound() {
   return (
-    <Shell>
-      <ForgetMissingPoll />
-      <h1 className="text-[1.75rem] leading-9 tracking-[-0.02em] text-balance">This poll doesn’t exist.</h1>
-      <p className="mt-4 text-muted">It may have been deleted, or it expired 30 days after its last day.</p>
-      <Link href="/" className="btn mt-8">
-        Create a poll
-      </Link>
-    </Shell>
+    <Missing title="Page not found">
+      <p>There’s nothing at this address. If someone sent you a link, check that it was copied in full.</p>
+    </Missing>
   );
 }
