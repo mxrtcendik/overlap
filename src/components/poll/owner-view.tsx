@@ -31,6 +31,7 @@ import { SentenceBlock } from "./poll-summary";
 import { ScheduleFields } from "../common/schedule-fields";
 import { VotingControls } from "./voting-controls";
 import { OptionsView } from "./options-view";
+import { CopyPoll } from "./copy-poll";
 import { OptionsFields, toOptions, type OptionDraft } from "../common/options-fields";
 import { wallDate, wallParts } from "@/lib/time/format";
 import { DurationField } from "../common/duration-field";
@@ -447,6 +448,10 @@ export function OwnerView({
       ) : null}
 
       <div className="mt-12 max-w-xl border-t border-line pt-6">
+        <CopyPoll poll={stored} />
+      </div>
+
+      <div className="mt-6 max-w-xl border-t border-line pt-6">
         {confirming ? (
           <div className="appear border-l-2 border-danger pl-4">
             <p>Delete this poll and all its answers? This can’t be undone.</p>
