@@ -115,6 +115,8 @@ GitHub Actions runs the checks, both builds and the browser tests on every push.
 5. To send the link emails, set up Cloudflare Email Sending for the domain, so the `EMAIL` binding can send from `links@overlap.cendik.dev`. Without it the email form stays hidden.
 6. `bun run deploy`.
 
+For visit counts, set `NEXT_PUBLIC_CF_WEB_ANALYTICS_TOKEN` to a Cloudflare Web Analytics token when building. It's cookieless, and it only runs on the home page and public poll pages, never on secret links.
+
 Production builds use https://overlap.cendik.dev for absolute preview URLs. Set `SITE_URL` while building to use another address.
 
 ## Limits

@@ -1,6 +1,7 @@
 import { CreateForm } from "@/components/home/create-form";
 import { Demo } from "@/components/home/demo";
 import { MyPolls } from "@/components/home/my-polls";
+import { Analytics } from "@/components/common/analytics";
 import { Shell } from "@/components/common/shell";
 
 const STEPS = [
@@ -57,6 +58,7 @@ export default function Home() {
       <section id="new" className="mt-24 max-w-xl scroll-mt-10 border-t border-line pt-10">
         <CreateForm />
       </section>
+      <Analytics />
     </Shell>
   );
 }
