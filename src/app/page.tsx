@@ -21,7 +21,7 @@ const STEPS = [
 export default function Home() {
   return (
     <Shell wide>
-      <section className="grid items-center gap-12 lg:grid-cols-[1fr_auto] lg:gap-16">
+      <section className="grid items-center gap-12 lg:grid-cols-[1fr_28rem] lg:gap-16">
         <div className="max-w-lg">
           <h1 className="text-[2.25rem] leading-[1.15] tracking-[-0.025em] text-balance sm:text-[2.75rem]">
             Pick a few days. Send one link.
