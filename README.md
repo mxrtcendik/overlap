@@ -132,15 +132,12 @@ The days and hours can change while nobody has answered yet. People can remove t
 
 Overlap was built with help from Claude Code, an AI coding agent. These are my contributions:
 
-- I chose the idea and its limits: no accounts, one public link and one secret link, nothing to install.
-- I set the visual direction early: warm paper background, ink-coloured text, hairline borders, a single green accent, and no gradients, glassy cards or anything that looks generated.
-- I made the stack calls: moving from npm to Bun, replacing hand-written SQL with Drizzle, and adding Turnstile and Cloudflare's rate limiter.
-- I decided which features to build and in what order (calendar import, deadlines, notes, weekly polls), and named the project and its domain.
-- I used it as it grew and sent back what felt off, like the grid header that read "13 Dec 14" when a poll crossed into a new month.
+- The idea and its limits: no accounts, one public link and one secret link, nothing to install.
+- The visual direction: a warm paper background, ink-coloured text, hairline borders and a single green accent.
+- The stack choices: Bun, Drizzle instead of hand-written SQL, Turnstile and Cloudflare's rate limiter.
+- Which features to build and in what order, and the name and domain.
 
 The parts I found most interesting were the ones where a constraint shaped the design: D1's limit on bound values deciding how answers are inserted, Durable Objects that only ever say "changed", and weekly polls stored as a real week so nothing else had to change.
-
-Next up: tests that run against the real Worker, CI on GitHub Actions, and putting it live at overlap.cendik.dev.
 
 ## License
 
