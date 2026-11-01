@@ -17,6 +17,7 @@ export async function GET(request: Request, { params }: Params) {
     end: Date.parse(poll.final.end),
     url,
     stamp: Date.now(),
+    weekly: poll.kind === "weekly",
   });
 
   return new Response(body, {

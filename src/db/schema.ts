@@ -7,6 +7,7 @@ export const polls = sqliteTable(
     id: text("id").primaryKey(),
     ownerHash: text("owner_hash").notNull().unique(),
     title: text("title").notNull(),
+    kind: text("kind").$type<"dates" | "weekly">().notNull().default("dates"),
     slots: text("slots", { mode: "json" }).notNull().$type<string[]>(),
     createdAt: integer("created_at").notNull(),
     closesAt: integer("closes_at").notNull(),

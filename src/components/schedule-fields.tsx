@@ -4,6 +4,7 @@ import { useMemo, useState } from "react";
 import { usePrefs, useTimeZone, useToday } from "@/lib/browser";
 import { MAX_DAYS } from "@/lib/constants";
 import { minutesLabel, zonedToUtc } from "@/lib/format";
+import { datesForWeekdays, WEEKDAY_NAMES, weekdayOf } from "@/lib/weekly";
 import { TimeZoneNote } from "./time-zone";
 
 const WEEKDAYS = ["Su", "Mo", "Tu", "We", "Th", "Fr", "Sa"] as const;
@@ -103,6 +104,48 @@ function Month({
   );
 }
 
+function WeekdayPicker({
+  dates,
+  today,
+  weekStart,
+  onDates,
+}: {
+  dates: string[];
+  today: string | null;
+  weekStart: number;
+  onDates: (dates: string[]) => void;
+}) {
+  const picked = new Set(dates.map(weekdayOf));
+  const order = Array.from({ length: 7 }, (_, index) => (weekStart + index) % 7);
+  return (
+    <div role="group" aria-label="Days of the week" className="mt-4 grid max-w-md grid-cols-7 gap-1">
+      {order.map((weekday) => {
+        const on = picked.has(weekday);
+        return (
+          <button
+            key={weekday}
+            type="button"
+            aria-pressed={on}
+            aria-label={WEEKDAY_NAMES[weekday]}
+            disabled={!today}
+            onClick={() => {
+              const next = new Set(picked);
+              if (on) next.delete(weekday);
+              else next.add(weekday);
+              if (today) onDates(datesForWeekdays([...next], today, weekStart));
+            }}
+            className={`h-10 border text-sm transition-colors duration-100 ${
+              on ? "border-foreground bg-foreground text-background" : "border-line hover:bg-line/70"
+            }`}
+          >
+            {WEEKDAY_NAMES[weekday].slice(0, 3)}
+          </button>
+        );
+      })}
+    </div>
+  );
+}
+
 function Chevron({ direction }: { direction: "left" | "right" }) {
   return (
     <svg viewBox="0 0 16 16" aria-hidden="true" className="size-4" fill="none" stroke="currentColor" strokeWidth="1.5">
@@ -112,6 +155,7 @@ function Chevron({ direction }: { direction: "left" | "right" }) {
 }
 
 export function ScheduleFields({
+  weekly = false,
   dates,
   start,
   end,
@@ -119,6 +163,7 @@ export function ScheduleFields({
   onStart,
   onEnd,
 }: {
+  weekly?: boolean;
   dates: string[];
   start: number;
   end: number;
@@ -175,7 +220,14 @@ export function ScheduleFields({
   return (
     <fieldset>
       <legend className="text-sm text-muted">Days and hours</legend>
-      <p className="mt-2 text-sm text-muted">Pick up to 14 days, then a time window of up to 12 hours.</p>
+      <p className="mt-2 text-sm text-muted">
+        {weekly
+          ? "Pick the days of the week, then a time window of up to 12 hours."
+          : "Pick up to 14 days, then a time window of up to 12 hours."}
+      </p>
+      {weekly ? (
+        <WeekdayPicker dates={dates} today={today} weekStart={weekStart} onDates={onDates} />
+      ) : (
       <div className="relative mt-4 min-h-[17.5rem]">
         <div className="absolute top-0 right-0 z-10 flex gap-1">
           <button
@@ -212,6 +264,7 @@ export function ScheduleFields({
           ))}
         </div>
       </div>
+      )}
       {message ? (
         <p className="mt-3 text-sm text-danger" role="alert">
           {message}
@@ -220,7 +273,9 @@ export function ScheduleFields({
         <p className="mt-3 text-sm text-muted">
           {dates.length === 0
             ? "No days picked yet."
-            : `${dates.length === 1 ? "1 day" : `${dates.length} days`}: ${dates.map(shortDate).join(", ")}`}
+            : weekly
+              ? `Every ${dates.map((date) => WEEKDAY_NAMES[weekdayOf(date)]).join(", ")}`
+              : `${dates.length === 1 ? "1 day" : `${dates.length} days`}: ${dates.map(shortDate).join(", ")}`}
         </p>
       )}
       <div className="mt-4 flex flex-wrap gap-6">

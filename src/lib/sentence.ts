@@ -79,7 +79,13 @@ export type Summary =
   | { kind: "all"; when: string; maybe: number }
   | { kind: "some"; when: string; count: number; people: number; maybe: number };
 
-export function overlapSummary(input: { slots: string[]; votes: Vote[]; timeZone: string; clock?: Clock }): Summary {
+export function overlapSummary(input: {
+  slots: string[];
+  votes: Vote[];
+  timeZone: string;
+  clock?: Clock;
+  weekly?: boolean;
+}): Summary {
   const people = input.votes.length;
   if (people === 0) return { kind: "empty" };
   if (people === 1) return { kind: "one", name: input.votes[0].name };
@@ -87,7 +93,7 @@ export function overlapSummary(input: { slots: string[]; votes: Vote[]; timeZone
   const best = bestTime(input.slots, input.votes);
   if (!best) return { kind: "unmarked" };
 
-  const when = describeRun(best.start, best.end, input.timeZone, input.slots, input.clock);
+  const when = describeRun(best.start, best.end, input.timeZone, input.slots, input.clock, input.weekly);
   const count = best.yes + best.maybe;
   if (count === people) return { kind: "all", when, maybe: best.maybe };
   return { kind: "some", when, count, people, maybe: best.maybe };
@@ -114,7 +120,7 @@ export function summaryParts(summary: Summary): { before: string; when: string |
 
 const ifNeeded = (maybe: number) => (maybe > 0 ? `, ${maybe} if needed` : "");
 
-export function overlapSentence(input: { slots: string[]; votes: Vote[]; timeZone: string; clock?: Clock }): string {
+export function overlapSentence(input: Parameters<typeof overlapSummary>[0]): string {
   const { before, when, after } = summaryParts(overlapSummary(input));
   return `${before}${when ?? ""}${after}`;
 }

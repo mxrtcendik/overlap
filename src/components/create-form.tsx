@@ -9,12 +9,14 @@ import { json, messageOf, request, UserFacingError } from "@/lib/request";
 import { buildSlots } from "@/lib/schedule";
 import { CREATE_ACTION } from "@/lib/turnstile-check";
 import { useTurnstile } from "@/lib/use-turnstile";
+import { WEEKLY_OPEN_MS, type PollKind } from "@/lib/weekly";
 import { ScheduleFields } from "./schedule-fields";
 
 export function CreateForm() {
   const router = useRouter();
   const timeZone = useTimeZone();
   const [title, setTitle] = useState("");
+  const [kind, setKind] = useState<PollKind>("dates");
   const [dates, setDates] = useState<string[]>([]);
   const [start, setStart] = useState(9 * 60);
   const [end, setEnd] = useState(17 * 60);
@@ -38,9 +40,10 @@ export function CreateForm() {
       }
       const data = await request<{ id: string; ownerToken: string }>("/api/polls", {
         method: "POST",
-        ...json({ title, slots, "cf-turnstile-response": token }),
+        ...json({ title, slots, kind, "cf-turnstile-response": token }),
       });
-      rememberPoll({ id: data.id, token: data.ownerToken, title: title.trim(), expiresAt: expiresAtFor(slots) });
+      const lastEnd = kind === "weekly" ? new Date(Date.now() + WEEKLY_OPEN_MS).toISOString() : undefined;
+      rememberPoll({ id: data.id, token: data.ownerToken, title: title.trim(), expiresAt: expiresAtFor(slots, lastEnd) });
       const marked = markCreated(data.ownerToken);
       router.push(`/o/${data.ownerToken}${marked ? "" : "#created"}`);
     } catch (caught) {
@@ -64,8 +67,24 @@ export function CreateForm() {
           className="field mt-1 placeholder:text-muted/60"
         />
       </label>
-      <div className="mt-8">
-        <ScheduleFields dates={dates} start={start} end={end} onDates={setDates} onStart={setStart} onEnd={setEnd} />
+      <KindSwitch
+        value={kind}
+        onChange={(next) => {
+          setKind(next);
+          setDates([]);
+          setError(null);
+        }}
+      />
+      <div className="mt-6">
+        <ScheduleFields
+          weekly={kind === "weekly"}
+          dates={dates}
+          start={start}
+          end={end}
+          onDates={setDates}
+          onStart={setStart}
+          onEnd={setEnd}
+        />
       </div>
       {error ? (
         <p className="mt-4 text-sm text-danger" role="alert">
@@ -77,5 +96,37 @@ export function CreateForm() {
         {pending ? "Creating…" : "Create poll"}
       </button>
     </form>
+  );
+}
+
+function KindSwitch({ value, onChange }: { value: PollKind; onChange: (kind: PollKind) => void }) {
+  const options: { kind: PollKind; label: string }[] = [
+    { kind: "dates", label: "Specific dates" },
+    { kind: "weekly", label: "Days of the week" },
+  ];
+  return (
+    <div className="mt-8 flex flex-wrap items-center gap-x-4 gap-y-2">
+      <span id="kind-label" className="text-sm text-muted">
+        Ask about
+      </span>
+      <div role="group" aria-labelledby="kind-label" className="inline-flex border border-line">
+        {options.map((option) => {
+          const on = option.kind === value;
+          return (
+            <button
+              key={option.kind}
+              type="button"
+              aria-pressed={on}
+              onClick={() => onChange(option.kind)}
+              className={`px-3 py-1.5 text-sm transition-colors ${
+                on ? "bg-paper text-foreground shadow-[inset_0_0_0_1px_var(--foreground)]" : "text-muted hover:text-foreground"
+              }`}
+            >
+              {option.label}
+            </button>
+          );
+        })}
+      </div>
+    </div>
   );
 }

@@ -1,0 +1,1 @@
+ALTER TABLE `polls` ADD `kind` text DEFAULT 'dates' NOT NULL;

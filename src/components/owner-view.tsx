@@ -11,6 +11,7 @@ import {
   usePageLocation,
   usePrefs,
   useTimeZone,
+  useToday,
 } from "@/lib/browser";
 import { MAX_TITLE, SLOT_MS } from "@/lib/constants";
 import { buildSlots, inferSchedule } from "@/lib/schedule";
@@ -27,6 +28,7 @@ import { FinalTime } from "./final-time";
 import { SentenceBlock } from "./poll-summary";
 import { ScheduleFields } from "./schedule-fields";
 import { VotingControls } from "./voting-controls";
+import { datesForWeekdays, weekdayOf } from "@/lib/weekly";
 
 export function OwnerView({ poll, hasResponses }: { poll: PollView; hasResponses: boolean }) {
   const router = useRouter();
@@ -45,14 +47,15 @@ export function OwnerView({ poll, hasResponses }: { poll: PollView; hasResponses
   const [confirming, setConfirming] = useState(false);
   const [deleted, setDeleted] = useState(false);
   useLiveUpdates(poll.id, !deleted);
+  const weekly = poll.kind === "weekly";
   useRefreshAt(poll.closed || deleted ? null : poll.closesAt);
   const justCreated = useJustCreated(location ? (new URL(location.href).pathname.split("/")[2] ?? null) : null);
   const savedOnDevice = useMyPolls().some((saved) => saved.id === poll.id);
 
   useEffect(() => {
     const token = window.location.pathname.split("/")[2];
-    if (token) rememberPoll({ id: poll.id, token, title: poll.title, expiresAt: expiresAtFor(poll.slots) });
-  }, [poll.id, poll.title, poll.slots]);
+    if (token) rememberPoll({ id: poll.id, token, title: poll.title, expiresAt: expiresAtFor(poll.slots, poll.lastEnd) });
+  }, [poll.id, poll.title, poll.slots, poll.lastEnd]);
   const [draft, setDraft] = useState<string[]>([]);
 
   const finalOutline = useMemo(
@@ -189,6 +192,7 @@ export function OwnerView({ poll, hasResponses }: { poll: PollView; hasResponses
           title={poll.title}
           final={poll.final}
           pending={pending}
+          weekly={weekly}
           onClear={() => void setFinal(null)}
         />
       ) : null}
@@ -197,6 +201,8 @@ export function OwnerView({ poll, hasResponses }: { poll: PollView; hasResponses
         votes={poll.voters}
         closed={poll.closed}
         deadline={poll.deadline}
+        lastEnd={poll.lastEnd}
+        weekly={weekly}
         emptyText="No answers yet. Share the public link to collect them."
       />
       {location && !justCreated ? <ShareBar title={poll.title} href={`${location.origin}/p/${poll.id}`} /> : null}
@@ -213,6 +219,7 @@ export function OwnerView({ poll, hasResponses }: { poll: PollView; hasResponses
           selected={draft}
           selectLabel="Your pick"
           outline={finalOutline}
+          weekly={weekly}
           onChange={setDraft}
           onPick={(segment) => void setFinal({ start: segment.start, end: segment.end })}
         />
@@ -228,6 +235,7 @@ export function OwnerView({ poll, hasResponses }: { poll: PollView; hasResponses
           draft={draft}
           timeZone={timeZone}
           clock={prefs.clock}
+          weekly={weekly}
           pending={pending}
           onConfirm={(final) => void setFinal(final)}
           onCancel={() => setDraft([])}
@@ -239,7 +247,8 @@ export function OwnerView({ poll, hasResponses }: { poll: PollView; hasResponses
         </h2>
         <div className="mt-4">
           <VotingControls
-            slots={poll.slots}
+            lastEnd={poll.lastEnd}
+            weekly={weekly}
             closed={poll.closed}
             deadline={poll.deadline}
             pending={pending}
@@ -302,7 +311,7 @@ export function OwnerView({ poll, hasResponses }: { poll: PollView; hasResponses
                 Saving new days clears {poll.final && poll.deadline ? "the final time and the deadline" : poll.final ? "the final time" : "the deadline"}.
               </p>
             ) : null}
-            <DaysEditor key={poll.slots.join("|")} slots={poll.slots} pending={pending} onSave={onDays} />
+            <DaysEditor key={poll.slots.join("|")} slots={poll.slots} weekly={weekly} pending={pending} onSave={onDays} />
           </>
         )}
       </div>
@@ -418,6 +427,7 @@ function DraftBar({
   draft,
   timeZone,
   clock,
+  weekly,
   pending,
   onConfirm,
   onCancel,
@@ -426,6 +436,7 @@ function DraftBar({
   draft: string[];
   timeZone: string;
   clock: Clock;
+  weekly: boolean;
   pending: boolean;
   onConfirm: (final: { start: number; end: number }) => void;
   onCancel: () => void;
@@ -436,7 +447,7 @@ function DraftBar({
     start: new Date(range.start).toISOString(),
     end: new Date(range.end).toISOString(),
   });
-  const label = rangeLabel(range.start, range.end, timeZone, clock);
+  const label = rangeLabel(range.start, range.end, timeZone, clock, weekly);
 
   return (
     <div className="sticky bottom-0 z-30 -mx-4 mt-6 flex flex-wrap items-center gap-x-5 gap-y-3 border-t border-line bg-background px-4 py-3 sm:mx-0 sm:px-0">
@@ -461,18 +472,26 @@ function DraftBar({
 
 function DaysEditor({
   slots,
+  weekly,
   pending,
   onSave,
 }: {
   slots: string[];
+  weekly: boolean;
   pending: boolean;
   onSave: (dates: string[], start: number, end: number) => Promise<void>;
 }) {
   const client = useIsClient();
   const timeZone = useTimeZone();
+  const today = useToday();
+  const prefs = usePrefs();
   const [draft, setDraft] = useState<{ dates: string[]; start: number; end: number } | null>(null);
-  if (!client || !timeZone) return <div className="min-h-40" />;
-  const schedule = draft ?? inferSchedule(slots, timeZone);
+  if (!client || !timeZone || !today || !prefs) return <div className="min-h-40" />;
+  const inferred = inferSchedule(slots, timeZone);
+  const initial = weekly
+    ? { ...inferred, dates: datesForWeekdays([...new Set(inferred.dates.map(weekdayOf))], today, prefs.weekStart) }
+    : inferred;
+  const schedule = draft ?? initial;
 
   return (
     <form
@@ -482,6 +501,7 @@ function DaysEditor({
       }}
     >
       <ScheduleFields
+        weekly={weekly}
         dates={schedule.dates}
         start={schedule.start}
         end={schedule.end}

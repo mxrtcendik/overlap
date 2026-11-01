@@ -12,11 +12,11 @@ export async function POST(request: Request) {
     }
     const body = await readJson(request);
     if (!body || typeof body !== "object") return jsonError("Enter a title.", 400);
-    const record = body as { title?: unknown; slots?: unknown; "cf-turnstile-response"?: unknown };
+    const record = body as { title?: unknown; slots?: unknown; kind?: unknown; "cf-turnstile-response"?: unknown };
     if (!(await verifyTurnstile(request, record["cf-turnstile-response"], CREATE_ACTION))) {
       return jsonError("We couldn’t confirm you’re not a bot. Reload the page and try again.", 403);
     }
-    const result = await createPoll(record.title, record.slots);
+    const result = await createPoll(record.title, record.slots, record.kind);
     if (!result.ok) return jsonError(result.error, 400);
     return NextResponse.json({ id: result.id, ownerToken: result.ownerToken });
   } catch (error) {

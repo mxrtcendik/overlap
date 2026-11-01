@@ -1,3 +1,5 @@
+import { weekdayName } from "./weekly";
+
 export type Clock = "h12" | "h23";
 
 export type LocalParts = {
@@ -74,23 +76,38 @@ function repeatedWeekday(slots: string[], timeZone: string): boolean {
   return false;
 }
 
-export function describeRun(startMs: number, endMs: number, timeZone: string, slots: string[], clock: Clock = "h12"): string {
+export function describeRun(
+  startMs: number,
+  endMs: number,
+  timeZone: string,
+  slots: string[],
+  clock: Clock = "h12",
+  weekly = false,
+): string {
   const start = localParts(startMs, timeZone);
   const end = localParts(endMs, timeZone);
-  const withDate = repeatedWeekday(slots, timeZone);
-  const lead = (parts: LocalParts) => (withDate ? `${parts.weekday}, ${parts.month} ${parts.day},` : parts.weekday);
+  const withDate = !weekly && repeatedWeekday(slots, timeZone);
+  const lead = (parts: LocalParts) =>
+    weekly ? `${weekdayName(parts.weekday)}s` : withDate ? `${parts.weekday}, ${parts.month} ${parts.day},` : parts.weekday;
   if (sameCalendarDay(start, localParts(endMs - 1, timeZone))) {
     return `${lead(start)} ${timeRange(start, end, clock)}`;
   }
   return `${lead(start)} ${clockTime(start, clock)}–${lead(end)} ${clockTime(end, clock)}`;
 }
 
-export function rangeLabel(start: number, end: number, timeZone: string, clock: Clock = "h12"): { day: string; time: string } {
+export function rangeLabel(
+  start: number,
+  end: number,
+  timeZone: string,
+  clock: Clock = "h12",
+  weekly = false,
+): { day: string; time: string } {
   const from = localParts(start, timeZone);
   const to = localParts(end, timeZone);
-  const day = `${from.weekday}, ${from.month} ${from.day}`;
+  const day = weekly ? `Every ${weekdayName(from.weekday)}` : `${from.weekday}, ${from.month} ${from.day}`;
   if (sameCalendarDay(from, localParts(end - 1, timeZone))) return { day, time: timeRange(from, to, clock) };
-  return { day, time: `${clockTime(from, clock)} – ${to.weekday}, ${to.month} ${to.day}, ${clockTime(to, clock)}` };
+  const toDay = weekly ? weekdayName(to.weekday) : `${to.weekday}, ${to.month} ${to.day}`;
+  return { day, time: `${clockTime(from, clock)} – ${toDay}, ${clockTime(to, clock)}` };
 }
 
 export function momentLabel(ms: number, timeZone: string, clock: Clock = "h12"): string {

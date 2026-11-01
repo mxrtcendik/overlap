@@ -20,6 +20,7 @@ export function Availability({
   mode,
   outline,
   selectLabel,
+  weekly = false,
   onChange,
   onPick,
 }: {
@@ -32,6 +33,7 @@ export function Availability({
   mode?: "toggle" | "range";
   outline?: { slots: Set<string>; label: string } | null;
   selectLabel?: string;
+  weekly?: boolean;
   onChange?: (next: string[], nextMaybe: string[]) => void;
   onPick?: (segment: Segment) => void;
 }) {
@@ -61,6 +63,7 @@ export function Availability({
           mode={mode}
           outline={outline}
           selectLabel={selectLabel}
+          weekly={weekly}
           onChange={onChange}
           onInspect={setInspected}
         />
@@ -71,6 +74,7 @@ export function Availability({
             <div className={`[grid-area:1/1] ${inspected ? "invisible" : ""}`}>
               <BestTimes
                 segments={segments}
+                weekly={weekly}
                 slots={slots}
                 voters={voters}
                 timeZone={timeZone}
@@ -80,7 +84,7 @@ export function Availability({
               />
             </div>
             <div className={`[grid-area:1/1] ${inspected ? "" : "invisible"}`}>
-              <SlotDetail iso={inspected ?? slots[0]} voters={voters} timeZone={timeZone} clock={clock} />
+              <SlotDetail iso={inspected ?? slots[0]} voters={voters} timeZone={timeZone} clock={clock} weekly={weekly} />
             </div>
           </div>
           <People
@@ -97,6 +101,7 @@ export function Availability({
 
 function BestTimes({
   segments,
+  weekly,
   slots,
   voters,
   timeZone,
@@ -105,6 +110,7 @@ function BestTimes({
   onPick,
 }: {
   segments: Segment[];
+  weekly: boolean;
   slots: string[];
   voters: Voter[];
   timeZone: string;
@@ -126,7 +132,7 @@ function BestTimes({
             onPointerLeave={() => onHighlight(null)}
           >
             <div className="flex items-baseline justify-between gap-4">
-              <span className="text-sm">{describeRun(segment.start, segment.end, timeZone, slots, clock)}</span>
+              <span className="text-sm">{describeRun(segment.start, segment.end, timeZone, slots, clock, weekly)}</span>
               <span className="font-mono text-xs text-muted tabular-nums">
                 {segment.people.length}/{voters.length}
               </span>
@@ -157,9 +163,21 @@ function whoLine(segment: Segment, voters: Voter[]): string {
   return `${everyone ? "Everyone" : firm.join(", ")} · if needed: ${soft.join(", ")}`;
 }
 
-function SlotDetail({ iso, voters, timeZone, clock }: { iso: string; voters: Voter[]; timeZone: string; clock: Clock }) {
+function SlotDetail({
+  iso,
+  voters,
+  timeZone,
+  clock,
+  weekly,
+}: {
+  iso: string;
+  voters: Voter[];
+  timeZone: string;
+  clock: Clock;
+  weekly: boolean;
+}) {
   const start = Date.parse(iso);
-  const label = rangeLabel(start, start + SLOT_MS, timeZone, clock);
+  const label = rangeLabel(start, start + SLOT_MS, timeZone, clock, weekly);
   const levelOf = (voter: Voter) => (voter.slots.includes(iso) ? "yes" : voter.maybe.includes(iso) ? "maybe" : null);
   const freeCount = voters.filter((voter) => levelOf(voter) !== null).length;
   const maybeCount = voters.filter((voter) => levelOf(voter) === "maybe").length;

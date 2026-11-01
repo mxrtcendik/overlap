@@ -18,6 +18,7 @@ const NO_ANSWER: Answer = { slots: [], maybe: [] };
 
 export function PollView({ poll }: { poll: PollViewData }) {
   useLiveUpdates(poll.id);
+  const weekly = poll.kind === "weekly";
   useRefreshAt(poll.closed ? null : poll.closesAt);
   const [you, setYou] = useState<VoterView | null>(() => poll.voters.find((voter) => voter.yours) ?? null);
   const voters = useMemo(() => {
@@ -150,12 +151,14 @@ export function PollView({ poll }: { poll: PollViewData }) {
   return (
     <>
       <h1 className="text-[1.75rem] leading-9 tracking-[-0.02em] text-balance">{poll.title}</h1>
-      {poll.final ? <FinalTime pollId={poll.id} title={poll.title} final={poll.final} /> : null}
+      {poll.final ? <FinalTime pollId={poll.id} title={poll.title} final={poll.final} weekly={weekly} /> : null}
       <SentenceBlock
         slots={poll.slots}
         votes={voters}
         closed={poll.closed}
         deadline={poll.deadline}
+        lastEnd={poll.lastEnd}
+        weekly={weekly}
         emptyText="No answers yet. Be the first."
       />
 
@@ -247,6 +250,7 @@ export function PollView({ poll }: { poll: PollViewData }) {
           brush={brush}
           readOnly={poll.closed}
           outline={finalOutline}
+          weekly={weekly}
           onChange={change}
         />
       </div>

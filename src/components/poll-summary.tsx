@@ -2,7 +2,6 @@
 
 import { useMemo } from "react";
 import { usePrefs, useTimeZone } from "@/lib/browser";
-import { SLOT_MS } from "@/lib/constants";
 import { momentLabel } from "@/lib/format";
 import { overlapSummary, summaryParts, type Summary, type Vote } from "@/lib/sentence";
 import { TimeZoneNote } from "./time-zone";
@@ -24,17 +23,21 @@ export function SentenceBlock({
   votes,
   closed,
   deadline,
+  lastEnd,
+  weekly = false,
   emptyText,
 }: {
   slots: string[];
   votes: Vote[];
   closed: boolean;
   deadline: string | null;
+  lastEnd: string;
+  weekly?: boolean;
   emptyText: string;
 }) {
   const timeZone = useTimeZone();
   const prefs = usePrefs();
-  const summary = timeZone && prefs ? overlapSummary({ slots, votes, timeZone, clock: prefs.clock }) : null;
+  const summary = timeZone && prefs ? overlapSummary({ slots, votes, timeZone, clock: prefs.clock, weekly }) : null;
   const times = useMemo(() => slots.map((slot) => Date.parse(slot)), [slots]);
 
   return (
@@ -43,19 +46,34 @@ export function SentenceBlock({
         {summary ? <SummaryText summary={summary} emptyText={emptyText} /> : null}
       </p>
       <TimeZoneNote lead="Times are shown in" times={times} />
-      <VotingStatus closed={closed} deadline={deadline} lastEnd={Math.max(...times) + SLOT_MS} />
+      <VotingStatus closed={closed} deadline={deadline} lastEnd={Date.parse(lastEnd)} weekly={weekly} />
     </div>
   );
 }
 
-function VotingStatus({ closed, deadline, lastEnd }: { closed: boolean; deadline: string | null; lastEnd: number }) {
+function VotingStatus({
+  closed,
+  deadline,
+  lastEnd,
+  weekly,
+}: {
+  closed: boolean;
+  deadline: string | null;
+  lastEnd: number;
+  weekly: boolean;
+}) {
   const timeZone = useTimeZone();
   const prefs = usePrefs();
   const at = deadline === null ? null : Date.parse(deadline);
   const when = at !== null && timeZone && prefs ? momentLabel(at, timeZone, prefs.clock) : null;
   let text: string | null = null;
   if (closed) {
-    text = at !== null && at < lastEnd && when ? `Voting closed ${when}.` : "Voting has ended. The last time on this poll has passed.";
+    text =
+      at !== null && at < lastEnd && when
+        ? `Voting closed ${when}.`
+        : weekly
+          ? "Voting has ended."
+          : "Voting has ended. The last time on this poll has passed.";
   } else if (when) {
     text = `Voting closes ${when}.`;
   }

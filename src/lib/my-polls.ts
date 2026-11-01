@@ -18,8 +18,9 @@ let rawSnapshot: string | null | undefined;
 let pollsSnapshot: MyPoll[] = [];
 const EMPTY: MyPoll[] = [];
 
-export function expiresAtFor(slots: string[]): number {
-  return Math.max(...slots.map((slot) => Date.parse(slot))) + SLOT_MS + RETAIN_MS;
+export function expiresAtFor(slots: string[], lastEnd?: string): number {
+  const end = lastEnd ? Date.parse(lastEnd) : Math.max(...slots.map((slot) => Date.parse(slot))) + SLOT_MS;
+  return end + RETAIN_MS;
 }
 
 function readRaw(): string | null {

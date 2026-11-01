@@ -2,7 +2,6 @@
 
 import { useState } from "react";
 import { usePrefs, useTimeZone } from "@/lib/browser";
-import { SLOT_MS } from "@/lib/constants";
 import { momentLabel, timeZoneLabel, wallDate, wallParts, zonedToUtc } from "@/lib/format";
 
 function wallInput(ms: number, timeZone: string): string {
@@ -17,14 +16,16 @@ function fromWallInput(value: string, timeZone: string): string | null {
 }
 
 export function VotingControls({
-  slots,
+  lastEnd: lastEndIso,
+  weekly,
   closed,
   deadline,
   pending,
   error,
   onChange,
 }: {
-  slots: string[];
+  lastEnd: string;
+  weekly: boolean;
   closed: boolean;
   deadline: string | null;
   pending: boolean;
@@ -38,15 +39,16 @@ export function VotingControls({
   const [earliest, setEarliest] = useState("");
   if (!timeZone || !prefs) return <div className="min-h-16" />;
 
-  const lastEnd = Math.max(...slots.map((slot) => Date.parse(slot))) + SLOT_MS;
+  const lastEnd = Date.parse(lastEndIso);
   const at = deadline === null ? null : Date.parse(deadline);
   const label = (ms: number) => momentLabel(ms, timeZone, prefs.clock);
   const closedEarly = closed && at !== null && at < lastEnd;
 
   let status: string;
   if (closedEarly) status = `You closed voting ${label(at)}. Answers stay, but nobody can add or change one.`;
-  else if (closed) status = "Voting ended when the last time on the poll passed.";
+  else if (closed) status = weekly ? "Voting has ended." : "Voting ended when the last time on the poll passed.";
   else if (at !== null) status = `Voting closes ${label(at)}.`;
+  else if (weekly) status = `Voting is open until ${label(lastEnd)}, two months after the poll was made.`;
   else status = `Voting is open until the last time ends, ${label(lastEnd)}.`;
 
   async function save(next: "now" | string | null) {

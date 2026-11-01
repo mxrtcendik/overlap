@@ -5,6 +5,7 @@ import { usePrefs, useTimeZone } from "@/lib/browser";
 import { SLOT_MS } from "@/lib/constants";
 import { clockTime, localParts, type Clock } from "@/lib/format";
 import { bestTime, tallySlots, type Marks } from "@/lib/sentence";
+import { weekdayName } from "@/lib/weekly";
 
 type Pos = { c: number; r: number };
 
@@ -86,6 +87,7 @@ export function PollGrid({
   mode = "toggle",
   outline = null,
   selectLabel = "You",
+  weekly = false,
   onChange,
   onInspect,
 }: {
@@ -99,6 +101,7 @@ export function PollGrid({
   mode?: "toggle" | "range";
   outline?: { slots: Set<string>; label: string } | null;
   selectLabel?: string;
+  weekly?: boolean;
   onChange?: (next: string[], nextMaybe: string[]) => void;
   onInspect?: (iso: string | null) => void;
 }) {
@@ -272,11 +275,17 @@ export function PollGrid({
                 const newMonth = c === 0 || layout.columns[c - 1].month !== column.month;
                 return (
                   <th key={column.key} scope="col" className="px-1 pb-2 text-center text-xs font-normal">
-                    <div className={`h-4 whitespace-nowrap ${newMonth ? "text-foreground" : ""}`}>
-                      <span className={newMonth ? undefined : "sr-only"}>{column.month}</span>
-                    </div>
-                    <div className="mt-0.5 text-muted">{column.weekday}</div>
-                    <div className="mt-0.5 font-medium tabular-nums">{column.day}</div>
+                    {weekly ? (
+                      <div className="font-medium">{column.weekday}</div>
+                    ) : (
+                      <>
+                        <div className={`h-4 whitespace-nowrap ${newMonth ? "text-foreground" : ""}`}>
+                          <span className={newMonth ? undefined : "sr-only"}>{column.month}</span>
+                        </div>
+                        <div className="mt-0.5 text-muted">{column.weekday}</div>
+                        <div className="mt-0.5 font-medium tabular-nums">{column.day}</div>
+                      </>
+                    )}
                   </th>
                 );
               })}
@@ -321,7 +330,7 @@ export function PollGrid({
                         tabIndex={focusPos.c === c && focusPos.r === r ? 0 : -1}
                         aria-disabled={readOnly || undefined}
                         aria-pressed={readOnly ? undefined : on === "maybe" ? "mixed" : on === "yes"}
-                        aria-label={`${column.weekday}, ${column.month} ${column.day}, ${row.label}. ${free}${isBest ? `, ${outlineLabel.toLowerCase()}` : ""}${yours}.`}
+                        aria-label={`${weekly ? weekdayName(column.weekday) : `${column.weekday}, ${column.month} ${column.day}`}, ${row.label}. ${free}${isBest ? `, ${outlineLabel.toLowerCase()}` : ""}${yours}.`}
                         onPointerDown={(event) => onPointerDown(event, pos, iso)}
                         onPointerEnter={() => onPointerEnter(pos, iso)}
                         onFocus={() => {

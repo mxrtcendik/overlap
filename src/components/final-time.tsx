@@ -11,10 +11,12 @@ export function FinalTime({
   final,
   onClear,
   pending = false,
+  weekly = false,
 }: {
   pollId: string;
   title: string;
   final: FinalTimeData;
+  weekly?: boolean;
   onClear?: () => void;
   pending?: boolean;
 }) {
@@ -23,7 +25,7 @@ export function FinalTime({
   const location = usePageLocation();
   const start = Date.parse(final.start);
   const end = Date.parse(final.end);
-  const label = timeZone && prefs ? rangeLabel(start, end, timeZone, prefs.clock) : null;
+  const label = timeZone && prefs ? rangeLabel(start, end, timeZone, prefs.clock, weekly) : null;
   const publicUrl = location ? `${location.origin}/p/${pollId}` : "";
 
   return (
@@ -46,7 +48,7 @@ export function FinalTime({
         </a>
         {publicUrl ? (
           <a
-            href={googleCalendarUrl({ title, start, end, url: publicUrl })}
+            href={googleCalendarUrl({ title, start, end, url: publicUrl, weekly })}
             target="_blank"
             rel="noopener noreferrer"
             className="link-quiet"

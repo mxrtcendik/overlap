@@ -5,6 +5,7 @@ export type CalendarEvent = {
   end: number;
   url: string;
   stamp: number;
+  weekly?: boolean;
 };
 
 export function utcStamp(ms: number): string {
@@ -47,6 +48,7 @@ export function toIcs(event: CalendarEvent): string {
     `DTSTAMP:${utcStamp(event.stamp)}`,
     `DTSTART:${utcStamp(event.start)}`,
     `DTEND:${utcStamp(event.end)}`,
+    ...(event.weekly ? ["RRULE:FREQ=WEEKLY"] : []),
     `SUMMARY:${escapeText(event.title)}`,
     `DESCRIPTION:${escapeText(`Picked with Overlap: ${event.url}`)}`,
     `URL:${event.url}`,
@@ -56,13 +58,14 @@ export function toIcs(event: CalendarEvent): string {
   return lines.map(foldLine).join("\r\n") + "\r\n";
 }
 
-export function googleCalendarUrl(event: Pick<CalendarEvent, "title" | "start" | "end" | "url">): string {
+export function googleCalendarUrl(event: Pick<CalendarEvent, "title" | "start" | "end" | "url" | "weekly">): string {
   const params = new URLSearchParams({
     action: "TEMPLATE",
     text: event.title,
     dates: `${utcStamp(event.start)}/${utcStamp(event.end)}`,
     details: `Picked with Overlap: ${event.url}`,
   });
+  if (event.weekly) params.set("recur", "RRULE:FREQ=WEEKLY");
   return `https://calendar.google.com/calendar/render?${params.toString()}`;
 }
 

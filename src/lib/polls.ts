@@ -9,6 +9,7 @@ import { parseFinal, parseSlots } from "./slots";
 import { cleanText, parseNote } from "./text";
 import { isToken, randomToken, sha256 } from "./tokens";
 import type { FinalTime, PollView, VoterView } from "./types";
+import { WEEK_MS, WEEKLY_OPEN_MS, type PollKind } from "./weekly";
 
 export type { FinalTime, PollView, VoterView };
 
@@ -21,6 +22,8 @@ export type StoredPoll = {
   closed: boolean;
   closesAt: number;
   deadline: number | null;
+  kind: PollKind;
+  lastEnd: number;
   final: FinalTime | null;
   voters: StoredVoter[];
 };
@@ -48,6 +51,8 @@ export function toPollView(poll: StoredPoll, voterId: string | null, options: { 
     closed: poll.closed,
     closesAt: new Date(poll.closesAt).toISOString(),
     deadline: poll.deadline === null ? null : new Date(poll.deadline).toISOString(),
+    kind: poll.kind,
+    lastEnd: new Date(poll.lastEnd).toISOString(),
     final: poll.final,
     voters: poll.voters.map((voter) => ({
       name: voter.name,
@@ -65,7 +70,17 @@ async function findPoll(match: SQL): Promise<StoredPoll | null> {
   const now = Date.now();
   const poll = await db.query.polls.findFirst({
     where: and(match, gt(polls.deleteAt, now)),
-    columns: { id: true, title: true, slots: true, closesAt: true, deadline: true, finalStart: true, finalEnd: true },
+    columns: {
+      id: true,
+      title: true,
+      kind: true,
+      slots: true,
+      createdAt: true,
+      closesAt: true,
+      deadline: true,
+      finalStart: true,
+      finalEnd: true,
+    },
     with: {
       voters: {
         columns: { id: true, name: true, note: true },
@@ -83,6 +98,8 @@ async function findPoll(match: SQL): Promise<StoredPoll | null> {
     closed: poll.closesAt <= now,
     closesAt: poll.closesAt,
     deadline: poll.deadline,
+    kind: poll.kind,
+    lastEnd: naturalEnd(poll.kind, poll.slots, poll.createdAt),
     final:
       poll.finalStart !== null && poll.finalEnd !== null
         ? { start: new Date(poll.finalStart).toISOString(), end: new Date(poll.finalEnd).toISOString() }
@@ -112,12 +129,29 @@ function closesAt(slots: string[]): number {
   return Math.max(...slots.map((slot) => Date.parse(slot))) + SLOT_MS;
 }
 
+function naturalEnd(kind: PollKind, slots: string[], createdAt: number): number {
+  return kind === "weekly" ? createdAt + WEEKLY_OPEN_MS : closesAt(slots);
+}
+
+function parseKind(input: unknown): PollKind | null {
+  if (input === undefined || input === "dates") return "dates";
+  return input === "weekly" ? "weekly" : null;
+}
+
+function fitsOneWeek(slots: string[]): boolean {
+  const times = slots.map((slot) => Date.parse(slot));
+  return Math.max(...times) + SLOT_MS - Math.min(...times) <= WEEK_MS;
+}
+
 const ALL_PAST = "Those times have already passed. Pick a later day or time.";
 
 export async function createPoll(
   titleInput: unknown,
   slotsInput: unknown,
+  kindInput?: unknown,
 ): Promise<{ ok: true; id: string; ownerToken: string } | { ok: false; error: string }> {
+  const kind = parseKind(kindInput);
+  if (!kind) return { ok: false, error: "That kind of poll doesn’t exist." };
   if (typeof titleInput !== "string" || titleInput.trim() === "") {
     return { ok: false, error: "Enter a title." };
   }
@@ -126,16 +160,18 @@ export async function createPoll(
   const parsed = parseSlots(slotsInput);
   if (!parsed.ok) return parsed;
   if (closesAt(parsed.slots) <= Date.now()) return { ok: false, error: ALL_PAST };
+  if (kind === "weekly" && !fitsOneWeek(parsed.slots)) return { ok: false, error: "A weekly poll covers one week." };
 
   const db = await getDb();
   const id = randomToken(16);
   const ownerToken = randomToken(24);
   const now = Date.now();
-  const closes = closesAt(parsed.slots);
+  const closes = naturalEnd(kind, parsed.slots, now);
   await db.insert(polls).values({
     id,
     ownerHash: await ownerHash(ownerToken),
     title,
+    kind,
     slots: parsed.slots,
     createdAt: now,
     closesAt: closes,
@@ -231,8 +267,13 @@ export async function updateTitle(token: string, titleInput: unknown): Promise<D
 export async function updateSlots(token: string, slotsInput: unknown): Promise<Done | Failure> {
   const parsed = parseSlots(slotsInput);
   if (!parsed.ok) return { ok: false, status: 400, error: parsed.error };
-  const closes = closesAt(parsed.slots);
-  if (closes <= Date.now()) return { ok: false, status: 400, error: ALL_PAST };
+  if (closesAt(parsed.slots) <= Date.now()) return { ok: false, status: 400, error: ALL_PAST };
+  const current = await getPollByOwnerToken(token);
+  if (!current) return NOT_FOUND;
+  if (current.kind === "weekly" && !fitsOneWeek(parsed.slots)) {
+    return { ok: false, status: 400, error: "A weekly poll covers one week." };
+  }
+  const closes = current.kind === "weekly" ? current.lastEnd : closesAt(parsed.slots);
   const hash = await ownerHash(token);
   const db = await getDb();
   const updated = await db
@@ -263,7 +304,7 @@ export async function updateSlots(token: string, slotsInput: unknown): Promise<D
 export async function updateDeadline(token: string, input: unknown): Promise<Done | Failure> {
   const poll = await getPollByOwnerToken(token);
   if (!poll) return NOT_FOUND;
-  const parsed = parseDeadline(input, { now: Date.now(), lastEnd: closesAt(poll.slots) });
+  const parsed = parseDeadline(input, { now: Date.now(), lastEnd: poll.lastEnd });
   if (!parsed.ok) return parsed;
   const db = await getDb();
   await db.update(polls).set({ deadline: parsed.deadline, closesAt: parsed.closesAt }).where(eq(polls.id, poll.id));
