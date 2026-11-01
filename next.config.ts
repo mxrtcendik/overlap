@@ -2,6 +2,12 @@ import type { NextConfig } from "next";
 import { initOpenNextCloudflareForDev } from "@opennextjs/cloudflare";
 
 const isDev = process.env.NODE_ENV === "development";
+
+if (!isDev) {
+  for (const name of ["SITE_URL", "NEXT_PUBLIC_TURNSTILE_SITE_KEY"]) {
+    if (!process.env[name]) console.warn(`${name} is not set. See .env.example before deploying.`);
+  }
+}
 const analytics = Boolean(process.env.NEXT_PUBLIC_CF_WEB_ANALYTICS_TOKEN) && !isDev;
 
 const csp = [

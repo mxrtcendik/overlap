@@ -3,7 +3,7 @@ import { describe, it } from "node:test";
 import { escapeText, foldLine, googleCalendarUrl, icsFileName, toIcs, utcStamp } from "../src/lib/calendar/export";
 
 const event = {
-  uid: "abc@overlap.cendik.dev",
+  uid: "abc@overlap.example.com",
   title: "Design review; launch, v2",
   start: Date.UTC(2026, 10, 4, 11, 0),
   end: Date.UTC(2026, 10, 4, 12, 0),
@@ -51,7 +51,7 @@ describe("calendar export", () => {
 });
 
 describe("weekly events keep their wall-clock time", () => {
-  const weekly = { uid: "w@overlap.cendik.dev", title: "Run", start: Date.parse("2026-10-19T22:00:00Z"), end: Date.parse("2026-10-19T23:00:00Z"), url: "https://overlap.cendik.dev/p/w", stamp: 0, weekly: true, zone: "America/New_York" };
+  const weekly = { uid: "w@overlap.example.com", title: "Run", start: Date.parse("2026-10-19T22:00:00Z"), end: Date.parse("2026-10-19T23:00:00Z"), url: "https://overlap.example.com/p/w", stamp: 0, weekly: true, zone: "America/New_York" };
 
   it("writes local times with a TZID and a weekly rule", () => {
     const ics = toIcs(weekly);

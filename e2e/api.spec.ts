@@ -34,3 +34,9 @@ test("sends security headers and keeps polls out of search", async ({ request })
   expect(poll.status()).toBe(404);
   expect(poll.headers()["x-robots-tag"]).toContain("noindex");
 });
+
+test("ignores request bodies that aren't sent as JSON", async ({ request }) => {
+  const body = JSON.stringify({ title: "Form post", slots: slotsFor(), "cf-turnstile-response": TEST_TOKEN });
+  const response = await request.post("/api/polls", { headers: { "content-type": "text/plain" }, data: body });
+  expect(response.status()).toBe(400);
+});

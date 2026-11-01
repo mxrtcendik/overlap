@@ -19,8 +19,8 @@ describe("readEmail", () => {
 describe("linksEmail", () => {
   const email = linksEmail({
     title: `Retro <script>&"`,
-    publicUrl: "https://overlap.cendik.dev/p/abc",
-    secretUrl: "https://overlap.cendik.dev/o/secret",
+    publicUrl: "https://overlap.example.com/p/abc",
+    secretUrl: "https://overlap.example.com/o/secret",
   });
 
   it("names the poll in the subject", () => {
@@ -28,8 +28,8 @@ describe("linksEmail", () => {
   });
 
   it("puts both links in the text", () => {
-    assert.match(email.text, /https:\/\/overlap\.cendik\.dev\/p\/abc/);
-    assert.match(email.text, /https:\/\/overlap\.cendik\.dev\/o\/secret/);
+    assert.match(email.text, /https:\/\/overlap\.example\.com\/p\/abc/);
+    assert.match(email.text, /https:\/\/overlap\.example\.com\/o\/secret/);
   });
 
   it("escapes the title in the HTML", () => {

@@ -19,7 +19,8 @@
     }
   },
   "vars": {
-    "TURNSTILE_HOSTNAMES": "overlap.cendik.dev"
+    "TURNSTILE_HOSTNAMES": "overlap.cendik.dev",
+    "EMAIL_FROM": "links@overlap.cendik.dev"
   },
   "d1_databases": [
     {

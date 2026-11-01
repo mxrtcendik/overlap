@@ -31,7 +31,7 @@ export default async function OwnerPage({ params }: Params) {
       <OwnerView
         poll={toPollView(poll, null, { refs: true })}
         hasResponses={poll.voters.length > 0}
-        canEmail={Boolean(env.EMAIL)}
+        canEmail={Boolean(env.EMAIL && env.EMAIL_FROM)}
       />
     </Shell>
   );

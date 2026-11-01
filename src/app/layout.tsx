@@ -15,9 +15,7 @@ const geistMono = Geist_Mono({
 const description = "Find a time that works for everyone. Send one link, see the overlap in your own timezone. No accounts.";
 
 export const metadata: Metadata = {
-  metadataBase: new URL(
-    process.env.SITE_URL ?? (process.env.NODE_ENV === "production" ? "https://overlap.cendik.dev" : "http://localhost:3000"),
-  ),
+  metadataBase: new URL(process.env.SITE_URL ?? "http://localhost:3000"),
   title: { default: "Overlap", template: "%s · Overlap" },
   description,
   openGraph: { type: "website", siteName: "Overlap", title: "Overlap", description },

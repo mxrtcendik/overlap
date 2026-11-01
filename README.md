@@ -2,10 +2,7 @@
 
 Pick a few days, send one link, and see which time works for everyone.
 
-<picture>
-  <source media="(prefers-color-scheme: dark)" srcset="docs/screenshots/demo-dark.gif">
-  <img alt="Answers arrive one by one on an example poll, then a visitor drags down Wednesday to add themselves" src="docs/screenshots/demo-light.gif" width="420">
-</picture>
+![Answers arrive one by one on an example poll, then a visitor drags down Wednesday to add themselves](docs/screenshots/demo-light.gif)
 
 Overlap is a small scheduling poll. You choose some days and a window of hours, share the link, and everyone drags across the times they can make. The page then tells you the answer in one sentence, like *"Tue 11:30 AM–1:00 PM works for everyone"*, shown in each person's own timezone.
 
@@ -13,10 +10,7 @@ There are no accounts. Creating a poll gives you two links: a public one to shar
 
 ## What it does
 
-<picture>
-  <source media="(prefers-color-scheme: dark)" srcset="docs/screenshots/poll-dark.png">
-  <img alt="A poll with five answers, the overlap sentence, and who is free at the hovered time" src="docs/screenshots/poll-light.png">
-</picture>
+![A poll with five answers, the overlap sentence, and who is free at the hovered time](docs/screenshots/poll-light.png)
 
 - **Timezones done properly.** Everyone sees the grid in their own zone, with their own 12- or 24-hour clock and first day of the week. If you're planning from another city, you can switch the zone next to the times.
 - **"If needed" answers.** Mark a time as one you can make, or one you'd rather not but could. The best time is the one most people can make, and among those, the one the fewest only "could".
@@ -109,16 +103,20 @@ GitHub Actions runs the checks, both builds and the browser tests on every push.
 
 ## Deploying
 
+Deployment settings live in two places, so nothing about a particular deployment is hardcoded:
+
+- **Build time**, in `.env.production.local` (copy `.env.example`; it is ignored by git): `SITE_URL`, `NEXT_PUBLIC_TURNSTILE_SITE_KEY` and, optionally, `NEXT_PUBLIC_CF_WEB_ANALYTICS_TOKEN`. Without a site key the build falls back to Cloudflare's test key, which the production server refuses, and the build warns about it.
+- **Run time**, in `wrangler.jsonc`: the D1 database, `TURNSTILE_HOSTNAMES`, `EMAIL_FROM` and the email binding's allowed sender. The only secret is `TURNSTILE_SECRET`.
+
+Then:
+
 1. Create a D1 database called `overlap` and put its id in `wrangler.jsonc`.
 2. Apply the migrations: `bunx wrangler d1 migrations apply overlap --remote`.
 3. Store the Turnstile secret: `bunx wrangler secret put TURNSTILE_SECRET`.
-4. Check that `TURNSTILE_HOSTNAMES` in `wrangler.jsonc` lists your domain.
-5. To send the link emails, set up Cloudflare Email Sending for the domain, so the `EMAIL` binding can send from `links@overlap.cendik.dev`. Without it the email form stays hidden.
-6. `bun run deploy`.
+4. For link emails, set up Cloudflare Email Sending for your domain and make `EMAIL_FROM` one of its addresses. Without it the email form stays hidden.
+5. `bun run deploy`.
 
-For visit counts, set `NEXT_PUBLIC_CF_WEB_ANALYTICS_TOKEN` to a Cloudflare Web Analytics token when building. It's cookieless, and it only runs on the home page and public poll pages, never on secret links.
-
-Production builds use https://overlap.cendik.dev for absolute preview URLs. Set `SITE_URL` while building to use another address.
+Web Analytics is cookieless and only runs on the home page and public poll pages, never on secret links.
 
 ## Limits
 

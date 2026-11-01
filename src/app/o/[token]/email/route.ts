@@ -8,8 +8,6 @@ import { getPollByOwnerToken } from "@/server/polls";
 import { allowWrite } from "@/server/rate-limit";
 import { verifyTurnstile } from "@/server/turnstile";
 
-const SENDER = { name: "Overlap", email: "links@overlap.cendik.dev" };
-
 export async function POST(request: Request, { params }: { params: Promise<{ token: string }> }) {
   const { token } = await params;
   if (!isToken(token)) return jsonError("This poll doesn’t exist.", 404);
@@ -28,11 +26,12 @@ export async function POST(request: Request, { params }: { params: Promise<{ tok
 
     const { env } = await getCloudflareContext({ async: true });
     const mailer = env.EMAIL as SendEmail | undefined;
-    if (!mailer) return jsonError("Email isn’t available right now.", 503);
+    const sender = env.EMAIL_FROM as string | undefined;
+    if (!mailer || !sender) return jsonError("Email isn’t available right now.", 503);
 
     const origin = new URL(request.url).origin;
     const message = linksEmail({ title: poll.title, publicUrl: `${origin}/p/${poll.id}`, secretUrl: `${origin}/o/${token}` });
-    await mailer.send({ from: SENDER, to, ...message });
+    await mailer.send({ from: { name: "Overlap", email: sender }, to, ...message });
     console.log(JSON.stringify({ event: "links_emailed" }));
     return NextResponse.json({ ok: true });
   } catch (error) {

@@ -2,9 +2,9 @@
 
 import { useCallback, useEffect, useRef } from "react";
 
-const SITE_KEY =
-  process.env.NEXT_PUBLIC_TURNSTILE_SITE_KEY ||
-  (process.env.NODE_ENV === "development" ? "1x00000000000000000000AA" : "0x4AAAAAAFvCsJu7MQTAVW_P");
+export const TEST_SITE_KEY = "1x00000000000000000000AA";
+
+const SITE_KEY = process.env.NEXT_PUBLIC_TURNSTILE_SITE_KEY || TEST_SITE_KEY;
 
 const SCRIPT = "https://challenges.cloudflare.com/turnstile/v0/api.js?render=explicit";
 const WAIT_MS = 15_000;
