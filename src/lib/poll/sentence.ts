@@ -2,7 +2,7 @@ import { MAX_VOTERS, SLOT_MS } from "../constants";
 import { describeRun, type Clock } from "../time/format";
 import { topWindows } from "./availability";
 
-export type Marks = { slots: string[]; maybe?: string[] };
+export type Marks = { slots: string[]; maybe?: string[]; required?: boolean };
 export type Vote = Marks & { name: string };
 
 export type Tally = { yes: number; maybe: number };
@@ -69,7 +69,9 @@ export function bestTime(slots: string[], votes: Marks[], duration: number | nul
     return top ? { start: top.start, end: top.end, yes: top.people.length - top.maybe.length, maybe: top.maybe.length } : null;
   }
   const tallies = tallySlots(slots, votes);
-  const scores = new Map([...tallies].map(([slot, tally]) => [slot, slotScore(tally)]));
+  const required = votes.filter((vote) => vote.required);
+  const fits = (slot: string) => required.every((vote) => vote.slots.includes(slot) || (vote.maybe ?? []).includes(slot));
+  const scores = new Map([...tallies].map(([slot, tally]) => [slot, fits(slot) ? slotScore(tally) : 0]));
   const run = bestRun(slots, scores);
   if (!run) return null;
   const first = slots.find((slot) => Date.parse(slot) === run.start);
@@ -82,7 +84,8 @@ export type Summary =
   | { kind: "one"; name: string }
   | { kind: "unmarked" }
   | { kind: "all"; when: string; maybe: number }
-  | { kind: "some"; when: string; count: number; people: number; maybe: number };
+  | { kind: "some"; when: string; count: number; people: number; maybe: number; required: string[] }
+  | { kind: "clash"; required: string[] };
 
 export function overlapSummary(input: {
   slots: string[];
@@ -97,12 +100,13 @@ export function overlapSummary(input: {
   if (people === 1) return { kind: "one", name: input.votes[0].name };
 
   const best = bestTime(input.slots, input.votes, input.duration ?? null);
-  if (!best) return { kind: "unmarked" };
+  const required = input.votes.filter((vote) => vote.required).map((vote) => vote.name);
+  if (!best) return required.length > 0 ? { kind: "clash", required } : { kind: "unmarked" };
 
   const when = describeRun(best.start, best.end, input.timeZone, input.slots, input.clock, input.weekly);
   const count = best.yes + best.maybe;
   if (count === people) return { kind: "all", when, maybe: best.maybe };
-  return { kind: "some", when, count, people, maybe: best.maybe };
+  return { kind: "some", when, count, people, maybe: best.maybe, required };
 }
 
 export function summaryParts(summary: Summary): { before: string; when: string | null; after: string } {
@@ -115,13 +119,29 @@ export function summaryParts(summary: Summary): { before: string; when: string |
       return { before: "No one has marked a time yet.", when: null, after: "" };
     case "all":
       return { before: "", when: summary.when, after: ` works for everyone${ifNeeded(summary.maybe)}.` };
+    case "clash":
+      return {
+        before:
+          summary.required.length === 1
+            ? `${summary.required[0]} must be there but hasn’t marked any times yet.`
+            : `${nameList(summary.required)} must be there, but they have no time in common yet.`,
+        when: null,
+        after: "",
+      };
     case "some":
       return {
-        before: "No time works for everyone yet. Closest: ",
+        before: summary.required.length
+          ? `No time works for everyone yet. Closest that suits ${nameList(summary.required)}: `
+          : "No time works for everyone yet. Closest: ",
         when: summary.when,
         after: `, ${summary.count} of ${summary.people} people${ifNeeded(summary.maybe)}.`,
       };
   }
+}
+
+export function nameList(names: string[]): string {
+  if (names.length <= 1) return names.join("");
+  return `${names.slice(0, -1).join(", ")} and ${names[names.length - 1]}`;
 }
 
 const ifNeeded = (maybe: number) => (maybe > 0 ? `, ${maybe} if needed` : "");

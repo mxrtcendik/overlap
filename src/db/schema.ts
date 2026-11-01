@@ -31,6 +31,7 @@ export const voters = sqliteTable(
     name: text("name").notNull(),
     createdAt: integer("created_at").notNull(),
     note: text("note"),
+    required: integer("required", { mode: "boolean" }).notNull().default(false),
   },
   (table) => [index("voters_poll_id").on(table.pollId, table.createdAt)],
 );

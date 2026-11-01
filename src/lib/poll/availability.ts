@@ -1,5 +1,13 @@
 import { SLOT_MS } from "../constants";
 
+type Answer = { slots: string[]; maybe?: string[]; required?: boolean };
+
+export function requiredOf(voters: Answer[]): number[] {
+  return voters.flatMap((voter, index) => (voter.required ? [index] : []));
+}
+
+const coversRequired = (people: number[], required: number[]) => required.every((index) => people.includes(index));
+
 export type Segment = {
   start: number;
   end: number;
@@ -10,7 +18,7 @@ export type Segment = {
 
 export function topSegments(
   slots: string[],
-  voters: { slots: string[]; maybe?: string[] }[],
+  voters: Answer[],
   limit = 3,
   duration: number | null = null,
 ): Segment[] {
@@ -35,8 +43,9 @@ export function topSegments(
     segments.push(current);
   }
 
+  const required = requiredOf(voters);
   return segments
-    .filter((segment) => segment.people.length > 0)
+    .filter((segment) => segment.people.length > 0 && coversRequired(segment.people, required))
     .sort(
       (a, b) =>
         b.people.length - a.people.length ||
@@ -55,7 +64,8 @@ export function slotsIn(slots: string[], start: number, end: number): string[] {
   });
 }
 
-export function windowsOf(slots: string[], voters: { slots: string[]; maybe?: string[] }[], minutes: number): Segment[] {
+export function windowsOf(slots: string[], voters: Answer[], minutes: number): Segment[] {
+  const required = requiredOf(voters);
   const size = Math.round(minutes / (SLOT_MS / 60_000));
   const ordered = [...slots].sort((a, b) => Date.parse(a) - Date.parse(b));
   const times = ordered.map((slot) => Date.parse(slot));
@@ -73,7 +83,7 @@ export function windowsOf(slots: string[], voters: { slots: string[]; maybe?: st
       people.push(index);
       if (span.some((slot) => !yes[index].has(slot))) soft.push(index);
     });
-    if (people.length > 0) windows.push({ start: times[first], end: times[last] + SLOT_MS, slots: span, people, maybe: soft });
+    if (people.length > 0 && coversRequired(people, required)) windows.push({ start: times[first], end: times[last] + SLOT_MS, slots: span, people, maybe: soft });
   }
   return windows.sort(
     (a, b) => b.people.length - a.people.length || a.maybe.length - b.maybe.length || a.start - b.start,
@@ -82,7 +92,7 @@ export function windowsOf(slots: string[], voters: { slots: string[]; maybe?: st
 
 export function topWindows(
   slots: string[],
-  voters: { slots: string[]; maybe?: string[] }[],
+  voters: Answer[],
   minutes: number,
   limit = 3,
 ): Segment[] {

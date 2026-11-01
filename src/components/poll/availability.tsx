@@ -8,7 +8,7 @@ import { describeRun, rangeLabel, type Clock } from "@/lib/time/format";
 import type { VoterView } from "@/lib/types";
 import { PollGrid, type Brush } from "./poll-grid";
 
-type Voter = Pick<VoterView, "name" | "slots" | "maybe" | "yours"> & { note?: string | null };
+type Voter = Pick<VoterView, "name" | "slots" | "maybe" | "yours"> & { note?: string | null; required?: boolean };
 
 export function Availability({
   slots,
@@ -263,6 +263,7 @@ function People({
               >
                 {voter.name}
                 {voter.yours ? <span className="text-muted"> · you</span> : null}
+                {voter.required ? <span className="text-muted"> · required</span> : null}
                 {voter.note ? <span className="text-muted"> · {voter.note}</span> : null}
               </button>
             </li>

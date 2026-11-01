@@ -25,7 +25,6 @@ const WINDOWS_ZONES: Record<string, string> = {
   "AUS Eastern Standard Time": "Australia/Sydney",
 };
 
-
 function knownZone(tzid: string | null | undefined): string | null {
   if (!tzid) return null;
   const name = WINDOWS_ZONES[tzid] ?? tzid.replace(/^\/+/, "");

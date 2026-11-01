@@ -172,6 +172,18 @@ export function OwnerView({
     }
   }
 
+  async function onRequired(ref: string, required: boolean): Promise<boolean> {
+    setError(null);
+    try {
+      await send("PATCH", { required }, `answers/${ref}`);
+      router.refresh();
+      return true;
+    } catch (caught) {
+      setError({ at: "answers", message: messageOf(caught) });
+      return false;
+    }
+  }
+
   async function onRemove(ref: string) {
     setPending(true);
     setError(null);
@@ -322,6 +334,7 @@ export function OwnerView({
           pending={pending}
           error={error?.at === "answers" ? error.message : null}
           onRemove={(ref) => void onRemove(ref)}
+          onRequired={onRequired}
         />
       ) : null}
 
@@ -409,6 +422,7 @@ function Answers({
   pending,
   error,
   onRemove,
+  onRequired,
 }: {
   title: string;
   slots: string[];
@@ -417,8 +431,17 @@ function Answers({
   pending: boolean;
   error: string | null;
   onRemove: (ref: string) => void;
+  onRequired: (ref: string, required: boolean) => Promise<boolean>;
 }) {
   const [confirming, setConfirming] = useState<string | null>(null);
+  const [requiredDraft, setRequiredDraft] = useState<Record<string, boolean>>({});
+
+  async function toggleRequired(ref: string, required: boolean) {
+    setRequiredDraft((current) => ({ ...current, [ref]: required }));
+    if (!(await onRequired(ref, required))) {
+      setRequiredDraft((current) => ({ ...current, [ref]: !required }));
+    }
+  }
   const timeZone = useTimeZone();
 
   function download() {
@@ -468,6 +491,17 @@ function Answers({
                     <span className="font-mono text-xs text-muted tabular-nums">
                       {times === 0 ? "No times" : times === 1 ? "1 time" : `${times} times`}
                     </span>
+                    {ref ? (
+                      <label className="inline-flex items-center gap-1.5 text-sm text-muted">
+                        <input
+                          type="checkbox"
+                          className="size-3.5 accent-[var(--foreground)]"
+                          checked={requiredDraft[ref] ?? voter.required}
+                          onChange={(event) => void toggleRequired(ref, event.target.checked)}
+                        />
+                        Must be there
+                      </label>
+                    ) : null}
                     {ref ? (
                       <button
                         type="button"

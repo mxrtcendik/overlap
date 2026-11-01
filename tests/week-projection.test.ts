@@ -32,7 +32,7 @@ describe("projectPoll", () => {
     duration: null,
     lastEnd: "2026-12-31T00:00:00.000Z",
     final: { start: october[0], end: "2026-10-19T23:00:00.000Z" },
-    voters: [{ name: "Ada", note: null, slots: [october[0]], maybe: [october[1]], yours: false }],
+    voters: [{ name: "Ada", note: null, required: false, slots: [october[0]], maybe: [october[1]], yours: false }],
   };
   const week = currentWeek(october, zone, Date.parse("2026-11-04T12:00:00Z"));
   const shown = projectPoll(poll, week);

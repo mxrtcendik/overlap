@@ -1,6 +1,7 @@
 export type VoterView = {
   name: string;
   note: string | null;
+  required: boolean;
   slots: string[];
   maybe: string[];
   yours: boolean;
@@ -17,9 +18,7 @@ export type PollView = {
   closesAt: string;
   deadline: string | null;
   kind: "dates" | "weekly";
-  /** The timezone a weekly poll's times were entered in. */
   zone: string | null;
-  /** How long the meeting is, in minutes, or null for any length. */
   duration: number | null;
   lastEnd: string;
   final: FinalTime | null;

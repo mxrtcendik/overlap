@@ -74,7 +74,14 @@ export function PollView({ poll: stored }: { poll: PollViewData }) {
   );
 
   function applyYou(nextName: string, nextNote: string, next: Answer) {
-    setYou({ name: nextName, note: nextNote || null, slots: next.slots, maybe: next.maybe, yours: true });
+    setYou((current) => ({
+      name: nextName,
+      note: nextNote || null,
+      required: current?.required ?? false,
+      slots: next.slots,
+      maybe: next.maybe,
+      yours: true,
+    }));
   }
 
   async function flush() {

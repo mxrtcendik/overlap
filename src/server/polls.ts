@@ -15,7 +15,15 @@ import { isTimeZone } from "../lib/time/format";
 
 export type { FinalTime, PollView, VoterView };
 
-export type StoredVoter = { id: string; ref: string; name: string; note: string | null; slots: string[]; maybe: string[] };
+export type StoredVoter = {
+  id: string;
+  ref: string;
+  name: string;
+  note: string | null;
+  required: boolean;
+  slots: string[];
+  maybe: string[];
+};
 
 export type StoredPoll = {
   id: string;
@@ -63,6 +71,7 @@ export function toPollView(poll: StoredPoll, voterId: string | null, options: { 
     voters: poll.voters.map((voter) => ({
       name: voter.name,
       note: voter.note,
+      required: voter.required,
       slots: voter.slots,
       maybe: voter.maybe,
       yours: voterId !== null && voter.id === voterId,
@@ -91,7 +100,7 @@ async function findPoll(match: SQL): Promise<StoredPoll | null> {
     },
     with: {
       voters: {
-        columns: { id: true, name: true, note: true },
+        columns: { id: true, name: true, note: true, required: true },
         orderBy: [asc(voters.createdAt), asc(voters.id)],
         with: { marks: { columns: { slot: true, level: true } } },
       },
@@ -120,6 +129,7 @@ async function findPoll(match: SQL): Promise<StoredPoll | null> {
         ref: await voterRef(voter.id),
         name: voter.name,
         note: voter.note,
+        required: voter.required,
         slots: voter.marks.filter((mark) => mark.level === LEVEL.yes).map((mark) => mark.slot),
         maybe: voter.marks.filter((mark) => mark.level === LEVEL.ifNeeded).map((mark) => mark.slot),
       })),
@@ -258,7 +268,7 @@ export async function saveVote(
   const nextId = randomToken(16);
   const [inserted] = await db.batch([
     db.insert(voters).select(
-      sql`SELECT ${nextId}, ${poll.id}, ${name}, ${Date.now()}, ${note ?? null}
+      sql`SELECT ${nextId}, ${poll.id}, ${name}, ${Date.now()}, ${note ?? null}, ${false}
         WHERE (SELECT COUNT(*) FROM ${voters} WHERE ${voters.pollId} = ${poll.id}) < ${MAX_VOTERS}`,
     ),
     insertMarks(db, nextId, LEVEL.yes, chosen),
@@ -388,6 +398,17 @@ export async function removeAnswer(token: string, ref: string): Promise<Done | F
   const voter = poll.voters.find((candidate) => candidate.ref === ref);
   if (!voter) return { ok: false, status: 404, error: "That answer has already been removed." };
   await deleteVoter(voter.id, poll.id);
+  return { ok: true, id: poll.id };
+}
+
+export async function setRequired(token: string, ref: string, input: unknown): Promise<Done | Failure> {
+  if (typeof input !== "boolean") return { ok: false, status: 400, error: "That change couldn’t be saved." };
+  const poll = await getPollByOwnerToken(token);
+  if (!poll) return NOT_FOUND;
+  const voter = poll.voters.find((candidate) => candidate.ref === ref);
+  if (!voter) return { ok: false, status: 404, error: "That answer has been removed." };
+  const db = await getDb();
+  await db.update(voters).set({ required: input }).where(and(eq(voters.id, voter.id), eq(voters.pollId, poll.id)));
   return { ok: true, id: poll.id };
 }
 

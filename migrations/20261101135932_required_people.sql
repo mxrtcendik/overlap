@@ -1,0 +1,1 @@
+ALTER TABLE `voters` ADD `required` integer DEFAULT false NOT NULL;
