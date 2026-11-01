@@ -10,6 +10,9 @@
   --accent: #3f6f52;
   --on-accent: #fffcf7;
   --danger: #8a3a2a;
+  --ease-ui: cubic-bezier(0.23, 1, 0.32, 1);
+  --press: 160ms;
+  --quick: 120ms;
   color-scheme: light;
 }
 
@@ -71,11 +74,7 @@ body {
     background: var(--paper);
     padding: 0.5rem 0.75rem;
     color: var(--foreground);
-    transition: border-color 120ms ease-out;
-  }
-
-  .field:hover {
-    border-color: var(--line-strong);
+    transition: border-color var(--quick) ease;
   }
 
   .field:focus-visible {
@@ -88,22 +87,19 @@ body {
     display: inline-flex;
     align-items: center;
     gap: 0.5rem;
+    border: 1px solid transparent;
     background: var(--foreground);
     padding: 0.5rem 0.875rem;
     font-size: 0.875rem;
     line-height: 1.25rem;
     color: var(--background);
     transition:
-      opacity 120ms ease-out,
-      transform 120ms ease-out;
-  }
-
-  .btn:hover:not(:disabled) {
-    opacity: 0.86;
+      opacity var(--quick) ease,
+      transform var(--press) var(--ease-ui);
   }
 
   .btn:active:not(:disabled) {
-    transform: scale(0.98);
+    transform: scale(0.97);
   }
 
   .btn-danger {
@@ -122,13 +118,8 @@ body {
     text-decoration-color: transparent;
     text-underline-offset: 4px;
     transition:
-      color 120ms ease-out,
-      text-decoration-color 120ms ease-out;
-  }
-
-  .link-quiet:hover:not(:disabled) {
-    color: var(--foreground);
-    text-decoration-color: var(--line-strong);
+      color var(--quick) ease,
+      text-decoration-color var(--quick) ease;
   }
 
   .link-quiet:disabled {
@@ -144,21 +135,54 @@ body {
     border: 1px solid var(--line);
     color: var(--foreground);
     transition:
-      border-color 120ms ease-out,
-      opacity 120ms ease-out;
+      border-color var(--quick) ease,
+      opacity var(--quick) ease,
+      transform var(--press) var(--ease-ui);
   }
 
-  .month-nav:hover:not(:disabled) {
-    border-color: var(--line-strong);
+  .month-nav:active:not(:disabled) {
+    transform: scale(0.94);
   }
 
   .month-nav:disabled {
     opacity: 0.35;
   }
 
-  .link-danger:hover:not(:disabled) {
-    color: var(--danger);
-    text-decoration-color: currentColor;
+  @media (hover: hover) and (pointer: fine) {
+    .field:hover,
+    .month-nav:hover:not(:disabled) {
+      border-color: var(--line-strong);
+    }
+
+    .btn:hover:not(:disabled) {
+      opacity: 0.86;
+    }
+
+    .link-quiet:hover:not(:disabled) {
+      color: var(--foreground);
+      text-decoration-color: var(--line-strong);
+    }
+
+    .link-danger:hover:not(:disabled) {
+      color: var(--danger);
+      text-decoration-color: currentColor;
+    }
+
+    button.slot:hover:not([aria-disabled="true"]) {
+      border-color: var(--line-strong);
+    }
+  }
+
+  [role="alert"],
+  .appear {
+    transition:
+      opacity 200ms var(--ease-ui),
+      translate 200ms var(--ease-ui);
+
+    @starting-style {
+      opacity: 0;
+      translate: 0 -4px;
+    }
   }
 
   .slot {
@@ -169,18 +193,14 @@ body {
     border: 1px solid var(--line);
     background: color-mix(in oklab, var(--accent) var(--heat, 0%), var(--paper));
     transition:
-      background-color 240ms ease-out,
-      border-color 120ms ease-out,
-      opacity 160ms ease-out;
+      background-color 240ms ease,
+      border-color var(--quick) ease,
+      opacity var(--press) ease;
   }
 
   button.slot:not([aria-disabled="true"]) {
     cursor: pointer;
     touch-action: none;
-  }
-
-  button.slot:hover:not([aria-disabled="true"]) {
-    border-color: var(--line-strong);
   }
 
   .slot[data-dim="true"] {
@@ -200,8 +220,8 @@ body {
     transform: scale(0.92);
     pointer-events: none;
     transition:
-      transform 160ms ease-out,
-      opacity 160ms ease-out;
+      transform var(--press) var(--ease-ui),
+      opacity var(--press) var(--ease-ui);
   }
 
   .slot-fill[data-on="true"] {
@@ -239,7 +259,22 @@ body {
   .slot-fill,
   .btn,
   .field,
-  .slot {
+  .slot,
+  .month-nav {
     transition: none;
+  }
+
+  .btn:active:not(:disabled),
+  .month-nav:active:not(:disabled) {
+    transform: none;
+  }
+
+  [role="alert"],
+  .appear {
+    transition: opacity 200ms ease;
+
+    @starting-style {
+      translate: none;
+    }
   }
 }

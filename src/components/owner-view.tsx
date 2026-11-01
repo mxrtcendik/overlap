@@ -281,7 +281,7 @@ export function OwnerView({ poll, hasResponses }: { poll: PollView; hasResponses
 
       <div className="mt-16">
         {confirming ? (
-          <div className="border-l-2 border-danger pl-4">
+          <div className="appear border-l-2 border-danger pl-4">
             <p>Delete this poll and all its answers? This can’t be undone.</p>
             <div className="mt-3 flex items-center gap-5">
               <button type="button" disabled={pending} onClick={() => void onDelete()} className="btn btn-danger">

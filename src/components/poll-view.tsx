@@ -169,7 +169,7 @@ export function PollView({ poll }: { poll: PollViewData }) {
         </form>
       )}
       {poll.closed ? null : confirmingRemove ? (
-        <div className="mt-4 max-w-xl border-l-2 border-danger pl-4">
+        <div className="appear mt-4 max-w-xl border-l-2 border-danger pl-4">
           <p className="text-sm">Remove your answer? Your name and times are deleted from this poll.</p>
           <div className="mt-3 flex items-center gap-5">
             <button type="button" disabled={pending} onClick={() => void removeAnswer()} className="btn btn-danger">
