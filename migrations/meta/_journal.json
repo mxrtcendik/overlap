@@ -15,6 +15,13 @@
       "when": 1793527953843,
       "tag": "20261101101233_drop_rate_buckets",
       "breakpoints": true
+    },
+    {
+      "idx": 2,
+      "version": "6",
+      "when": 1793531913442,
+      "tag": "20261101111833_voting_deadline",
+      "breakpoints": true
     }
   ]
 }

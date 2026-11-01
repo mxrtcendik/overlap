@@ -19,13 +19,14 @@ import { expiresAtFor, forgetPoll, rememberPoll, useMyPolls } from "@/lib/my-pol
 import { json, messageOf, request } from "@/lib/request";
 import { parseFinal } from "@/lib/slots";
 import type { PollView, VoterView } from "@/lib/types";
-import { useLiveUpdates } from "@/lib/use-live-updates";
+import { useLiveUpdates, useRefreshAt } from "@/lib/use-live-updates";
 import { CopyLink, ShareBar } from "./copy-link";
 import { CreatedNotice } from "./created-notice";
 import { Availability } from "./availability";
 import { FinalTime } from "./final-time";
 import { SentenceBlock } from "./poll-summary";
 import { ScheduleFields } from "./schedule-fields";
+import { VotingControls } from "./voting-controls";
 
 export function OwnerView({ poll, hasResponses }: { poll: PollView; hasResponses: boolean }) {
   const router = useRouter();
@@ -39,11 +40,12 @@ export function OwnerView({ poll, hasResponses }: { poll: PollView; hasResponses
     setTitle(null);
   }
   const title = titleDraft ?? poll.title;
-  const [error, setError] = useState<{ at: "final" | "answers" | "settings"; message: string } | null>(null);
+  const [error, setError] = useState<{ at: "final" | "answers" | "voting" | "settings"; message: string } | null>(null);
   const [pending, setPending] = useState(false);
   const [confirming, setConfirming] = useState(false);
   const [deleted, setDeleted] = useState(false);
   useLiveUpdates(poll.id, !deleted);
+  useRefreshAt(poll.closed || deleted ? null : poll.closesAt);
   const justCreated = useJustCreated(location ? (new URL(location.href).pathname.split("/")[2] ?? null) : null);
   const savedOnDevice = useMyPolls().some((saved) => saved.id === poll.id);
 
@@ -116,6 +118,21 @@ export function OwnerView({ poll, hasResponses }: { poll: PollView; hasResponses
     }
   }
 
+  async function onDeadline(deadline: "now" | string | null): Promise<boolean> {
+    setPending(true);
+    setError(null);
+    try {
+      await send("PATCH", { deadline });
+      router.refresh();
+      return true;
+    } catch (caught) {
+      setError({ at: "voting", message: messageOf(caught) });
+      return false;
+    } finally {
+      setPending(false);
+    }
+  }
+
   async function onRemove(ref: string) {
     setPending(true);
     setError(null);
@@ -179,6 +196,7 @@ export function OwnerView({ poll, hasResponses }: { poll: PollView; hasResponses
         slots={poll.slots}
         votes={poll.voters}
         closed={poll.closed}
+        deadline={poll.deadline}
         emptyText="No answers yet. Share the public link to collect them."
       />
       {location && !justCreated ? <ShareBar title={poll.title} href={`${location.origin}/p/${poll.id}`} /> : null}
@@ -215,6 +233,22 @@ export function OwnerView({ poll, hasResponses }: { poll: PollView; hasResponses
           onCancel={() => setDraft([])}
         />
       ) : null}
+      <section aria-labelledby="voting-heading" className="mt-16 border-t border-line pt-10">
+        <h2 id="voting-heading" className="text-sm text-muted">
+          Voting
+        </h2>
+        <div className="mt-4">
+          <VotingControls
+            slots={poll.slots}
+            closed={poll.closed}
+            deadline={poll.deadline}
+            pending={pending}
+            error={error?.at === "voting" ? error.message : null}
+            onChange={onDeadline}
+          />
+        </div>
+      </section>
+
       {location ? (
         <section aria-labelledby="secret-heading" className="mt-16 border-t border-line pt-10">
           <h2 id="secret-heading" className="inline-flex items-center gap-2 text-sm text-muted">
@@ -263,7 +297,11 @@ export function OwnerView({ poll, hasResponses }: { poll: PollView; hasResponses
           <p className="text-sm text-muted">Days can’t change once people have answered. Removing every answer unlocks them.</p>
         ) : (
           <>
-            {poll.final ? <p className="mb-4 text-sm text-muted">Saving new days clears the final time.</p> : null}
+            {poll.final || poll.deadline ? (
+              <p className="mb-4 text-sm text-muted">
+                Saving new days clears {poll.final && poll.deadline ? "the final time and the deadline" : poll.final ? "the final time" : "the deadline"}.
+              </p>
+            ) : null}
             <DaysEditor key={poll.slots.join("|")} slots={poll.slots} pending={pending} onSave={onDays} />
           </>
         )}

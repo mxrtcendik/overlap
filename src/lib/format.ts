@@ -93,6 +93,11 @@ export function rangeLabel(start: number, end: number, timeZone: string, clock: 
   return { day, time: `${clockTime(from, clock)} – ${to.weekday}, ${to.month} ${to.day}, ${clockTime(to, clock)}` };
 }
 
+export function momentLabel(ms: number, timeZone: string, clock: Clock = "h12"): string {
+  const parts = localParts(ms, timeZone);
+  return `${parts.weekday}, ${parts.month} ${parts.day}, ${clockTime(parts, clock)}`;
+}
+
 export function minutesLabel(minutes: number, clock: Clock): string {
   if (minutes === 24 * 60) return clock === "h23" ? "24:00" : "Midnight";
   return clockTime({ hour: Math.floor(minutes / 60), minute: minutes % 60 }, clock);

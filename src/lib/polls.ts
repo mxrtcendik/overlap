@@ -4,6 +4,7 @@ import { and, asc, eq, gt, notExists, sql, type SQL } from "drizzle-orm";
 import { LEVEL, marks, polls, voters } from "@/db/schema";
 import { MAX_NAME, MAX_TITLE, MAX_VOTERS, RETAIN_MS, SLOT_MS } from "./constants";
 import { getDb, type Database } from "./db";
+import { parseDeadline } from "./deadline";
 import { parseFinal, parseSlots } from "./slots";
 import { cleanText } from "./text";
 import { isToken, randomToken, sha256 } from "./tokens";
@@ -18,6 +19,8 @@ export type StoredPoll = {
   title: string;
   slots: string[];
   closed: boolean;
+  closesAt: number;
+  deadline: number | null;
   final: FinalTime | null;
   voters: StoredVoter[];
 };
@@ -43,6 +46,8 @@ export function toPollView(poll: StoredPoll, voterId: string | null, options: { 
     title: poll.title,
     slots: poll.slots,
     closed: poll.closed,
+    closesAt: new Date(poll.closesAt).toISOString(),
+    deadline: poll.deadline === null ? null : new Date(poll.deadline).toISOString(),
     final: poll.final,
     voters: poll.voters.map((voter) => ({
       name: voter.name,
@@ -59,7 +64,7 @@ async function findPoll(match: SQL): Promise<StoredPoll | null> {
   const now = Date.now();
   const poll = await db.query.polls.findFirst({
     where: and(match, gt(polls.deleteAt, now)),
-    columns: { id: true, title: true, slots: true, closesAt: true, finalStart: true, finalEnd: true },
+    columns: { id: true, title: true, slots: true, closesAt: true, deadline: true, finalStart: true, finalEnd: true },
     with: {
       voters: {
         columns: { id: true, name: true },
@@ -75,6 +80,8 @@ async function findPoll(match: SQL): Promise<StoredPoll | null> {
     title: poll.title,
     slots: poll.slots,
     closed: poll.closesAt <= now,
+    closesAt: poll.closesAt,
+    deadline: poll.deadline,
     final:
       poll.finalStart !== null && poll.finalEnd !== null
         ? { start: new Date(poll.finalStart).toISOString(), end: new Date(poll.finalEnd).toISOString() }
@@ -225,7 +232,14 @@ export async function updateSlots(token: string, slotsInput: unknown): Promise<D
   const db = await getDb();
   const updated = await db
     .update(polls)
-    .set({ slots: parsed.slots, closesAt: closes, deleteAt: closes + RETAIN_MS, finalStart: null, finalEnd: null })
+    .set({
+      slots: parsed.slots,
+      closesAt: closes,
+      deadline: null,
+      deleteAt: closes + RETAIN_MS,
+      finalStart: null,
+      finalEnd: null,
+    })
     .where(
       and(
         eq(polls.ownerHash, hash),
@@ -239,6 +253,16 @@ export async function updateSlots(token: string, slotsInput: unknown): Promise<D
   const existing = await db.select({ id: polls.id }).from(polls).where(eq(polls.ownerHash, hash)).get();
   if (!existing) return NOT_FOUND;
   return { ok: false, status: 409, error: "Days can’t change once people have answered." };
+}
+
+export async function updateDeadline(token: string, input: unknown): Promise<Done | Failure> {
+  const poll = await getPollByOwnerToken(token);
+  if (!poll) return NOT_FOUND;
+  const parsed = parseDeadline(input, { now: Date.now(), lastEnd: closesAt(poll.slots) });
+  if (!parsed.ok) return parsed;
+  const db = await getDb();
+  await db.update(polls).set({ deadline: parsed.deadline, closesAt: parsed.closesAt }).where(eq(polls.id, poll.id));
+  return { ok: true, id: poll.id };
 }
 
 export async function updateFinal(token: string, input: unknown): Promise<Done | Failure> {

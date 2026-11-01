@@ -1,6 +1,6 @@
 import assert from "node:assert/strict";
 import { describe, it } from "node:test";
-import { clockTime, detectClock, detectWeekStart, minutesLabel, rangeLabel, timeZoneLabel } from "../src/lib/format";
+import { clockTime, detectClock, detectWeekStart, minutesLabel, momentLabel, rangeLabel, timeZoneLabel } from "../src/lib/format";
 
 const at = (hour: number, minute = 0) => Date.UTC(2030, 0, 7, hour, minute);
 
@@ -30,6 +30,13 @@ describe("first day of the week", () => {
     assert.equal(detectWeekStart("en-US"), 0);
     assert.equal(detectWeekStart("en-GB"), 1);
     assert.equal(detectWeekStart("tr-TR"), 1);
+  });
+});
+
+describe("momentLabel", () => {
+  it("names the day and the time in the given zone and clock", () => {
+    assert.equal(momentLabel(at(14), "UTC"), "Mon, Jan 7, 2:00 PM");
+    assert.equal(momentLabel(at(22, 30), "Europe/Istanbul", "h23"), "Tue, Jan 8, 01:30");
   });
 });
 

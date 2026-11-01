@@ -2,6 +2,8 @@
 
 import { useMemo } from "react";
 import { usePrefs, useTimeZone } from "@/lib/browser";
+import { SLOT_MS } from "@/lib/constants";
+import { momentLabel } from "@/lib/format";
 import { overlapSummary, summaryParts, type Summary, type Vote } from "@/lib/sentence";
 import { TimeZoneNote } from "./time-zone";
 
@@ -21,11 +23,13 @@ export function SentenceBlock({
   slots,
   votes,
   closed,
+  deadline,
   emptyText,
 }: {
   slots: string[];
   votes: Vote[];
   closed: boolean;
+  deadline: string | null;
   emptyText: string;
 }) {
   const timeZone = useTimeZone();
@@ -39,13 +43,24 @@ export function SentenceBlock({
         {summary ? <SummaryText summary={summary} emptyText={emptyText} /> : null}
       </p>
       <TimeZoneNote lead="Times are shown in" times={times} />
-      {closed ? (
-        <p className="mt-4 inline-block border border-line px-2 py-0.5 text-xs text-muted">
-          Voting has ended. The last time on this poll has passed.
-        </p>
-      ) : null}
+      <VotingStatus closed={closed} deadline={deadline} lastEnd={Math.max(...times) + SLOT_MS} />
     </div>
   );
+}
+
+function VotingStatus({ closed, deadline, lastEnd }: { closed: boolean; deadline: string | null; lastEnd: number }) {
+  const timeZone = useTimeZone();
+  const prefs = usePrefs();
+  const at = deadline === null ? null : Date.parse(deadline);
+  const when = at !== null && timeZone && prefs ? momentLabel(at, timeZone, prefs.clock) : null;
+  let text: string | null = null;
+  if (closed) {
+    text = at !== null && at < lastEnd && when ? `Voting closed ${when}.` : "Voting has ended. The last time on this poll has passed.";
+  } else if (when) {
+    text = `Voting closes ${when}.`;
+  }
+  if (!text) return null;
+  return <p className="mt-4 inline-block border border-line px-2 py-0.5 text-xs text-muted tabular-nums">{text}</p>;
 }
 
 export function Status({ state }: { state: "saving" | "saved" }) {

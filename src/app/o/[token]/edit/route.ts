@@ -1,7 +1,7 @@
 import { NextResponse } from "next/server";
 import { announceChange } from "@/lib/announce";
 import { jsonError, readJson } from "@/lib/http";
-import { deleteOwned, updateFinal, updateSlots, updateTitle } from "@/lib/polls";
+import { deleteOwned, updateDeadline, updateFinal, updateSlots, updateTitle } from "@/lib/polls";
 import { allowWrite } from "@/lib/rate";
 import { isToken } from "@/lib/tokens";
 
@@ -16,7 +16,13 @@ export async function PATCH(request: Request, { params }: Params) {
     }
     const body = await readJson(request);
     if (!body || typeof body !== "object") return jsonError("That change couldn’t be saved.", 400);
-    const record = body as { title?: unknown; slots?: unknown; final?: unknown };
+    const record = body as { title?: unknown; slots?: unknown; final?: unknown; deadline?: unknown };
+    if ("deadline" in record) {
+      const result = await updateDeadline(token, record.deadline);
+      if (!result.ok) return jsonError(result.error, result.status);
+      await announceChange(result.id);
+      return NextResponse.json({ ok: true });
+    }
     if ("final" in record) {
       const result = await updateFinal(token, record.final);
       if (!result.ok) return jsonError(result.error, result.status);

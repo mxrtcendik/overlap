@@ -10,6 +10,7 @@ export const polls = sqliteTable(
     slots: text("slots", { mode: "json" }).notNull().$type<string[]>(),
     createdAt: integer("created_at").notNull(),
     closesAt: integer("closes_at").notNull(),
+    deadline: integer("deadline"),
     deleteAt: integer("delete_at").notNull(),
     finalStart: integer("final_start"),
     finalEnd: integer("final_end"),

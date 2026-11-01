@@ -123,3 +123,16 @@ export function useLiveUpdates(pollId: string, enabled = true) {
     };
   }, [pollId, enabled, router]);
 }
+
+const MAX_TIMER_MS = 2 ** 31 - 1;
+
+export function useRefreshAt(iso: string | null) {
+  const router = useRouter();
+  useEffect(() => {
+    if (!iso) return;
+    const wait = Date.parse(iso) - Date.now() + 1000;
+    if (wait <= 0 || wait > MAX_TIMER_MS) return;
+    const timer = setTimeout(() => startTransition(() => router.refresh()), wait);
+    return () => clearTimeout(timer);
+  }, [iso, router]);
+}

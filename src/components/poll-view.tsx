@@ -5,7 +5,7 @@ import { slotsIn } from "@/lib/availability";
 import { MAX_NAME } from "@/lib/constants";
 import { json, messageOf, request, UserFacingError } from "@/lib/request";
 import type { PollView as PollViewData, VoterView } from "@/lib/types";
-import { useLiveUpdates } from "@/lib/use-live-updates";
+import { useLiveUpdates, useRefreshAt } from "@/lib/use-live-updates";
 import { Availability } from "./availability";
 import { CalendarFill } from "./calendar-fill";
 import { FinalTime } from "./final-time";
@@ -18,6 +18,7 @@ const NO_ANSWER: Answer = { slots: [], maybe: [] };
 
 export function PollView({ poll }: { poll: PollViewData }) {
   useLiveUpdates(poll.id);
+  useRefreshAt(poll.closed ? null : poll.closesAt);
   const [you, setYou] = useState<VoterView | null>(() => poll.voters.find((voter) => voter.yours) ?? null);
   const voters = useMemo(() => {
     if (!you) return poll.voters.filter((voter) => !voter.yours);
@@ -144,6 +145,7 @@ export function PollView({ poll }: { poll: PollViewData }) {
         slots={poll.slots}
         votes={voters}
         closed={poll.closed}
+        deadline={poll.deadline}
         emptyText="No answers yet. Be the first."
       />
 

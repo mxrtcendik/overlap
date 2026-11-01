@@ -13,6 +13,8 @@ export type PollView = {
   title: string;
   slots: string[];
   closed: boolean;
+  closesAt: string;
+  deadline: string | null;
   final: FinalTime | null;
   voters: VoterView[];
 };
