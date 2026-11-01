@@ -5,8 +5,10 @@ import { useRouter } from "next/navigation";
 import { deviceTimeZone, markCreated, useTimeZone } from "@/lib/browser";
 import { MAX_TITLE } from "@/lib/constants";
 import { expiresAtFor, rememberPoll } from "@/lib/my-polls";
-import { json, messageOf, request } from "@/lib/request";
+import { json, messageOf, request, UserFacingError } from "@/lib/request";
 import { buildSlots } from "@/lib/schedule";
+import { CREATE_ACTION } from "@/lib/turnstile-check";
+import { useTurnstile } from "@/lib/use-turnstile";
 import { ScheduleFields } from "./schedule-fields";
 
 export function CreateForm() {
@@ -18,6 +20,7 @@ export function CreateForm() {
   const [end, setEnd] = useState(17 * 60);
   const [error, setError] = useState<string | null>(null);
   const [pending, setPending] = useState(false);
+  const { container: turnstileRef, getToken, reset: resetTurnstile } = useTurnstile(CREATE_ACTION);
 
   async function onSubmit(event: FormEvent) {
     event.preventDefault();
@@ -29,9 +32,13 @@ export function CreateForm() {
     setError(null);
     const slots = buildSlots(dates, start, end, timeZone ?? deviceTimeZone());
     try {
+      const token = await getToken();
+      if (!token) {
+        throw new UserFacingError("We couldn’t confirm you’re not a bot. Check your connection and try again.");
+      }
       const data = await request<{ id: string; ownerToken: string }>("/api/polls", {
         method: "POST",
-        ...json({ title, slots }),
+        ...json({ title, slots, "cf-turnstile-response": token }),
       });
       rememberPoll({ id: data.id, token: data.ownerToken, title: title.trim(), expiresAt: expiresAtFor(slots) });
       const marked = markCreated(data.ownerToken);
@@ -39,6 +46,7 @@ export function CreateForm() {
     } catch (caught) {
       setError(messageOf(caught));
       setPending(false);
+      resetTurnstile();
     }
   }
 
@@ -64,6 +72,7 @@ export function CreateForm() {
           {error}
         </p>
       ) : null}
+      <div ref={turnstileRef} className="mt-6 max-w-sm empty:mt-0" />
       <button type="submit" disabled={pending} className="mt-8 btn">
         {pending ? "Creating…" : "Create poll"}
       </button>

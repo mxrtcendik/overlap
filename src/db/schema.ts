@@ -47,16 +47,6 @@ export const marks = sqliteTable(
   ],
 );
 
-export const rateBuckets = sqliteTable(
-  "rate_buckets",
-  {
-    id: text("id").primaryKey(),
-    hits: integer("hits").notNull(),
-    expiresAt: integer("expires_at").notNull(),
-  },
-  (table) => [index("rate_buckets_expires_at").on(table.expiresAt)],
-);
-
 export const pollsRelations = relations(polls, ({ many }) => ({ voters: many(voters) }));
 
 export const votersRelations = relations(voters, ({ one, many }) => ({

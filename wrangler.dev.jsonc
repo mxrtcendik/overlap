@@ -11,6 +11,11 @@
       "migrations_dir": "migrations"
     }
   ],
+  "ratelimits": [
+    { "name": "CREATE_LIMITER", "namespace_id": "4101", "simple": { "limit": 5, "period": 60 } },
+    { "name": "VOTE_LIMITER", "namespace_id": "4102", "simple": { "limit": 60, "period": 60 } },
+    { "name": "OWNER_LIMITER", "namespace_id": "4103", "simple": { "limit": 30, "period": 60 } }
+  ],
   "services": [
     {
       "binding": "WORKER_SELF_REFERENCE",

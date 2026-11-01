@@ -34,11 +34,15 @@ To change the schema, edit `schema.ts`, run `bun run db:generate` to write the S
 
 Create a D1 database named overlap, put its id in `wrangler.jsonc`, apply the migrations with `--remote`, and run `bun run deploy`. Set `SITE_URL` to the public address, such as `https://overlap.example.com`, when building, so the home page's link preview uses absolute URLs. Poll pages use the address of each request instead.
 
-The Worker entry point is `worker.ts`. It serves the Next.js app that OpenNext builds and adds an hourly Cron Trigger that deletes expired polls and old rate-limit counters. Deleting a poll removes its answers through foreign keys.
+Poll creation is checked with Cloudflare Turnstile. Store the widget's secret with `wrangler secret put TURNSTILE_SECRET`, and set `TURNSTILE_HOSTNAMES` to the site's hostnames, comma-separated and without localhost. The site key is in `src/lib/use-turnstile.ts`. Locally, `.dev.vars` holds Cloudflare's public test secret, which the server accepts only in development; copy `.dev.vars.example` to start.
+
+The Worker entry point is `worker.ts`. It serves the Next.js app that OpenNext builds and adds an hourly Cron Trigger that deletes expired polls. Deleting a poll removes its answers through foreign keys.
 
 Each poll has a Durable Object, `PollRoom`, that holds the WebSockets of the pages open on it. After a vote or an owner edit is saved, the route tells the room, and the room sends each page a message that only says “changed”. The page then renders again on the server, so the room never holds poll data and each person still gets their own view. Sockets use the hibernation API, and keepalive pings are answered without waking the object, so an idle poll costs nothing. `worker.ts` accepts a socket only from the site’s own origin and only for a poll that exists. While a socket is down, a visible page checks every 20 seconds and reconnects with backoff. The first deploy creates the Durable Object class from the migration in `wrangler.jsonc`.
 
 Every response carries a Content Security Policy, HSTS in production, and headers that stop the site from being framed or sniffed. Poll routes add `X-Robots-Tag: noindex`.
+
+The Turnstile widget stays invisible unless Cloudflare needs a click to tell a person from a bot, and its script loads only once the create form is on screen, so reading the landing page never contacts Cloudflare. The server checks each token once, for the poll-creation action and the site's own hostname, and refuses anything less, including a failed call to Cloudflare.
 
 ## Caps
 
@@ -46,4 +50,4 @@ The title can be 80 characters. A poll can cover 14 days, and the hours on those
 
 People can remove their own answer until voting ends. The owner can remove any answer at any time; the owner page names answers by a hash of the voter id, because the id itself is the voter’s cookie. The days and hours can change while the poll has no answers. Changing them clears the final time. The title can change until the poll is deleted. Voting stops when the last slot ends. The grid stays visible and becomes read-only. The poll is deleted 30 days after that.
 
-Writes are rate limited per network: 30 new polls per hour, 120 vote saves per 10 minutes, and 60 owner saves per 10 minutes.
+Writes are rate limited per network with Cloudflare's Rate Limiting binding: 5 new polls, 60 vote saves and 30 owner saves a minute. The counters live in Cloudflare, not the database, and are keyed by a hash of the address.

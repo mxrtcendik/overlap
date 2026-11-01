@@ -1,7 +1,6 @@
 import { cookies } from "next/headers";
 import { NextResponse } from "next/server";
 import { announceChange } from "@/lib/announce";
-import { getDb } from "@/lib/db";
 import { jsonError, readJson } from "@/lib/http";
 import { deleteOwnVote, saveVote } from "@/lib/polls";
 import { allowWrite } from "@/lib/rate";
@@ -13,9 +12,8 @@ export async function POST(request: Request, { params }: Params) {
   const { id } = await params;
   if (!isToken(id)) return jsonError("This poll doesn’t exist.", 404);
   try {
-    const db = await getDb();
-    if (!(await allowWrite(db, request, "vote"))) {
-      return jsonError("You’re saving too quickly. Try again in a few minutes.", 429);
+    if (!(await allowWrite(request, "vote"))) {
+      return jsonError("You’re saving too quickly. Try again in a minute.", 429);
     }
     const jar = await cookies();
     const result = await saveVote(id, jar.get("voter")?.value ?? null, await readJson(request));
@@ -39,9 +37,8 @@ export async function DELETE(request: Request, { params }: Params) {
   const { id } = await params;
   if (!isToken(id)) return jsonError("This poll doesn’t exist.", 404);
   try {
-    const db = await getDb();
-    if (!(await allowWrite(db, request, "vote"))) {
-      return jsonError("You’re saving too quickly. Try again in a few minutes.", 429);
+    if (!(await allowWrite(request, "vote"))) {
+      return jsonError("You’re saving too quickly. Try again in a minute.", 429);
     }
     const jar = await cookies();
     const result = await deleteOwnVote(id, jar.get("voter")?.value ?? null);

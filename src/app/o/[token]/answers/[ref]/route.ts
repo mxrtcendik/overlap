@@ -1,6 +1,5 @@
 import { NextResponse } from "next/server";
 import { announceChange } from "@/lib/announce";
-import { getDb } from "@/lib/db";
 import { jsonError } from "@/lib/http";
 import { removeAnswer } from "@/lib/polls";
 import { allowWrite } from "@/lib/rate";
@@ -13,9 +12,8 @@ export async function DELETE(request: Request, { params }: Params) {
   if (!isToken(token)) return jsonError("This poll doesn’t exist.", 404);
   if (!/^[0-9a-f]{16}$/.test(ref)) return jsonError("That answer has already been removed.", 404);
   try {
-    const db = await getDb();
-    if (!(await allowWrite(db, request, "owner"))) {
-      return jsonError("You’re saving too quickly. Try again in a few minutes.", 429);
+    if (!(await allowWrite(request, "owner"))) {
+      return jsonError("You’re saving too quickly. Try again in a minute.", 429);
     }
     const result = await removeAnswer(token, ref);
     if (!result.ok) return jsonError(result.error, result.status);

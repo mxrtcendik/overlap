@@ -1,11 +1,14 @@
 import "server-only";
-import { sql } from "drizzle-orm";
-import { rateBuckets } from "@/db/schema";
-import { RATE_LIMITS } from "./constants";
-import type { Database } from "./db";
+import { getCloudflareContext } from "@opennextjs/cloudflare";
 import { sha256 } from "./tokens";
 
-type Action = keyof typeof RATE_LIMITS;
+const LIMITERS = {
+  create: "CREATE_LIMITER",
+  vote: "VOTE_LIMITER",
+  owner: "OWNER_LIMITER",
+} as const;
+
+type Action = keyof typeof LIMITERS;
 
 export function clientIp(request: Request): string {
   const cf = request.headers.get("cf-connecting-ip");
@@ -15,16 +18,13 @@ export function clientIp(request: Request): string {
   return "local";
 }
 
-export async function allowWrite(db: Database, request: Request, action: Action): Promise<boolean> {
-  const { max, windowSec } = RATE_LIMITS[action];
-  const now = Date.now();
-  const windowId = Math.floor(now / (windowSec * 1000));
-  const id = await sha256(`${action}:${windowId}:${clientIp(request)}`);
-  const row = await db
-    .insert(rateBuckets)
-    .values({ id, hits: 1, expiresAt: (windowId + 1) * windowSec * 1000 })
-    .onConflictDoUpdate({ target: rateBuckets.id, set: { hits: sql`${rateBuckets.hits} + 1` } })
-    .returning({ hits: rateBuckets.hits })
-    .get();
-  return (row?.hits ?? 1) <= max;
+export async function allowWrite(request: Request, action: Action): Promise<boolean> {
+  const { env } = await getCloudflareContext({ async: true });
+  const limiter = env[LIMITERS[action]] as RateLimit | undefined;
+  if (!limiter) {
+    console.error(JSON.stringify({ event: "rate_limiter_missing", action }));
+    return true;
+  }
+  const { success } = await limiter.limit({ key: await sha256(`${action}:${clientIp(request)}`) });
+  return success;
 }
