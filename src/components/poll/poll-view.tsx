@@ -11,6 +11,8 @@ import { VOTE_ACTION } from "@/lib/turnstile";
 import { currentWeek, IDENTITY, projectPoll } from "@/lib/time/week-projection";
 import { Availability } from "./availability";
 import { CalendarFill } from "./calendar-fill";
+import { deviceTimeZone, useTimeZone } from "@/client/browser";
+import { EmailSubscription } from "../common/email-subscription";
 import { FinalTime } from "./final-time";
 import type { Brush } from "./poll-grid";
 import { SentenceBlock, Status } from "./poll-summary";
@@ -19,7 +21,7 @@ type Answer = { slots: string[]; maybe: string[] };
 
 const NO_ANSWER: Answer = { slots: [], maybe: [] };
 
-export function PollView({ poll: stored }: { poll: PollViewData }) {
+export function PollView({ poll: stored, canEmail = false }: { poll: PollViewData; canEmail?: boolean }) {
   const [now] = useState(() => Date.now());
   const projection = useMemo(
     () => (stored.kind === "weekly" && stored.zone ? currentWeek(stored.slots, stored.zone, now) : IDENTITY),
@@ -27,6 +29,7 @@ export function PollView({ poll: stored }: { poll: PollViewData }) {
   );
   const poll = useMemo(() => projectPoll(stored, projection), [stored, projection]);
   useLiveUpdates(poll.id);
+  const viewerZone = useTimeZone();
   const weekly = poll.kind === "weekly";
   useRefreshAt(poll.closed ? null : poll.closesAt);
   const [you, setYou] = useState<VoterView | null>(() => poll.voters.find((voter) => voter.yours) ?? null);
@@ -266,6 +269,23 @@ export function PollView({ poll: stored }: { poll: PollViewData }) {
         <p className="mt-3 text-sm text-danger" role="alert">
           {error}
         </p>
+      ) : null}
+      {canEmail && saved && you && !poll.closed && !poll.final ? (
+        <div className="mt-5 max-w-xl">
+          <EmailSubscription
+            label="Email me the final time"
+            current={you.email ?? null}
+            activeText={(address) => `The final time will be emailed to ${address}.`}
+            hint="Only that one email. Your address is deleted with the poll, and the owner never sees it."
+            onSave={async (email) => {
+              await request(`/p/${poll.id}/notify`, {
+                method: "POST",
+                ...json({ email, zone: viewerZone ?? deviceTimeZone() }),
+              });
+              setYou((current) => (current ? { ...current, email } : current));
+            }}
+          />
+        </div>
       ) : null}
 
       <div className="mt-8">

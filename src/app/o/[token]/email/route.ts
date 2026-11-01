@@ -1,4 +1,3 @@
-import { getCloudflareContext } from "@opennextjs/cloudflare";
 import { NextResponse } from "next/server";
 import { linksEmail, readEmail } from "@/lib/email";
 import { isToken } from "@/lib/tokens";
@@ -7,6 +6,7 @@ import { jsonError, readJson } from "@/server/http";
 import { getPollByOwnerToken } from "@/server/polls";
 import { allowWrite } from "@/server/rate-limit";
 import { verifyTurnstile } from "@/server/turnstile";
+import { canSendMail, sendMail } from "@/server/mail";
 
 export async function POST(request: Request, { params }: { params: Promise<{ token: string }> }) {
   const { token } = await params;
@@ -24,14 +24,11 @@ export async function POST(request: Request, { params }: { params: Promise<{ tok
     const poll = await getPollByOwnerToken(token);
     if (!poll) return jsonError("This poll doesn’t exist.", 404);
 
-    const { env } = await getCloudflareContext({ async: true });
-    const mailer = env.EMAIL as SendEmail | undefined;
-    const sender = env.EMAIL_FROM as string | undefined;
-    if (!mailer || !sender) return jsonError("Email isn’t available right now.", 503);
+    if (!(await canSendMail())) return jsonError("Email isn’t available right now.", 503);
 
     const origin = new URL(request.url).origin;
     const message = linksEmail({ title: poll.title, publicUrl: `${origin}/p/${poll.id}`, secretUrl: `${origin}/o/${token}` });
-    await mailer.send({ from: { name: "Overlap", email: sender }, to, ...message });
+    await sendMail({ to, ...message });
     console.log(JSON.stringify({ event: "links_emailed" }));
     return NextResponse.json({ ok: true });
   } catch (error) {

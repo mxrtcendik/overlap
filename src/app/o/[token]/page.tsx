@@ -1,8 +1,8 @@
-import { getCloudflareContext } from "@opennextjs/cloudflare";
 import { connection } from "next/server";
 import type { Metadata } from "next";
 import { notFound } from "next/navigation";
 import { OwnerView } from "@/components/poll/owner-view";
+import { canSendMail } from "@/server/mail";
 import { Shell } from "@/components/common/shell";
 import { getPollByOwnerToken, toPollView } from "@/server/polls";
 
@@ -25,13 +25,13 @@ export default async function OwnerPage({ params }: Params) {
   const { token } = await params;
   const poll = await getPollByOwnerToken(token);
   if (!poll) notFound();
-  const { env } = await getCloudflareContext({ async: true });
+  const canEmail = await canSendMail();
   return (
     <Shell wide>
       <OwnerView
-        poll={toPollView(poll, null, { refs: true })}
+        poll={toPollView(poll, null, { refs: true, owner: true })}
         hasResponses={poll.voters.length > 0}
-        canEmail={Boolean(env.EMAIL && env.EMAIL_FROM)}
+        canEmail={canEmail}
       />
     </Shell>
   );

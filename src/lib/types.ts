@@ -2,6 +2,7 @@ export type VoterView = {
   name: string;
   note: string | null;
   required: boolean;
+  email?: string | null;
   slots: string[];
   maybe: string[];
   yours: boolean;
@@ -20,6 +21,7 @@ export type PollView = {
   kind: "dates" | "weekly";
   zone: string | null;
   duration: number | null;
+  notifyEmail?: string | null;
   lastEnd: string;
   final: FinalTime | null;
   voters: VoterView[];

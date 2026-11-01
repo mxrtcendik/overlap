@@ -37,3 +37,23 @@ describe("linksEmail", () => {
     assert.ok(!email.html.includes("<script>"));
   });
 });
+
+import { finalTimeEmail, newAnswerEmail } from "../src/lib/email";
+
+describe("notification emails", () => {
+  it("names who answered and how many have", () => {
+    const first = newAnswerEmail({ title: "Retro", name: "Ada", count: 1, publicUrl: "https://overlap.example.com/p/abc" });
+    assert.equal(first.subject, "Ada answered “Retro”");
+    assert.match(first.text, /That’s the first answer\./);
+    const later = newAnswerEmail({ title: "Retro", name: "Bruno", count: 3, publicUrl: "https://overlap.example.com/p/abc" });
+    assert.match(later.text, /That’s 3 answers so far\./);
+  });
+
+  it("states the final time and escapes the title", () => {
+    const email = finalTimeEmail({ title: "<b>Retro</b>", day: "Tue, Nov 3", time: "2:00–3:00 PM", pollUrl: "https://overlap.example.com/p/abc" });
+    assert.equal(email.subject, "“<b>Retro</b>” is set for Tue, Nov 3");
+    assert.match(email.text, /Tue, Nov 3, 2:00–3:00 PM/);
+    assert.ok(email.html.includes("&lt;b&gt;Retro&lt;/b&gt;"));
+    assert.ok(!email.html.includes("<b>Retro</b>"));
+  });
+});

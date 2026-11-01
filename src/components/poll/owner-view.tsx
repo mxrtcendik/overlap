@@ -24,6 +24,7 @@ import { useLiveUpdates, useRefreshAt } from "@/client/use-live-updates";
 import { CopyLink, ShareBar } from "./copy-link";
 import { CreatedNotice } from "./created-notice";
 import { EmailLinks } from "./email-links";
+import { EmailSubscription } from "../common/email-subscription";
 import { Availability } from "./availability";
 import { FinalTime } from "./final-time";
 import { SentenceBlock } from "./poll-summary";
@@ -342,6 +343,20 @@ export function OwnerView({
         <h2 id="settings-heading" className="text-sm text-muted">
           Poll settings
         </h2>
+        {canEmail ? (
+          <div className="mt-6 max-w-xl">
+            <EmailSubscription
+              label="Email me when someone answers"
+              current={poll.notifyEmail ?? null}
+              activeText={(address) => `New answers are emailed to ${address}.`}
+              hint="One email per new person. The address is deleted with the poll."
+              onSave={async (email) => {
+                await send("PATCH", { notify: email });
+                router.refresh();
+              }}
+            />
+          </div>
+        ) : null}
         <div className="mt-6 max-w-xl">
           <DurationField
             value={poll.duration}

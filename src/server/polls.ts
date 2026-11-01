@@ -8,6 +8,7 @@ import { parseDeadline } from "../lib/poll/deadline";
 import { longestRun, parseDuration } from "../lib/poll/duration";
 import { parseFinal, parseSlots } from "../lib/poll/slots";
 import { cleanText, parseNote } from "../lib/text";
+import { readEmail } from "../lib/email";
 import { isToken, randomToken, sha256 } from "../lib/tokens";
 import type { FinalTime, PollView, VoterView } from "../lib/types";
 import { WEEK_MS, WEEKLY_OPEN_MS, type PollKind } from "../lib/time/weekly";
@@ -21,6 +22,8 @@ export type StoredVoter = {
   name: string;
   note: string | null;
   required: boolean;
+  email: string | null;
+  emailZone: string | null;
   slots: string[];
   maybe: string[];
 };
@@ -35,6 +38,7 @@ export type StoredPoll = {
   kind: PollKind;
   zone: string | null;
   duration: number | null;
+  notifyEmail: string | null;
   lastEnd: number;
   final: FinalTime | null;
   voters: StoredVoter[];
@@ -55,7 +59,7 @@ function insertMarks(db: Database, voterId: string, level: (typeof LEVEL)[keyof 
   );
 }
 
-export function toPollView(poll: StoredPoll, voterId: string | null, options: { refs?: boolean } = {}): PollView {
+export function toPollView(poll: StoredPoll, voterId: string | null, options: { refs?: boolean; owner?: boolean } = {}): PollView {
   return {
     id: poll.id,
     title: poll.title,
@@ -66,12 +70,14 @@ export function toPollView(poll: StoredPoll, voterId: string | null, options: { 
     kind: poll.kind,
     zone: poll.zone,
     duration: poll.duration,
+    ...(options.owner ? { notifyEmail: poll.notifyEmail } : {}),
     lastEnd: new Date(poll.lastEnd).toISOString(),
     final: poll.final,
     voters: poll.voters.map((voter) => ({
       name: voter.name,
       note: voter.note,
       required: voter.required,
+      ...(voterId !== null && voter.id === voterId ? { email: voter.email } : {}),
       slots: voter.slots,
       maybe: voter.maybe,
       yours: voterId !== null && voter.id === voterId,
@@ -91,6 +97,7 @@ async function findPoll(match: SQL): Promise<StoredPoll | null> {
       kind: true,
       zone: true,
       duration: true,
+      notifyEmail: true,
       slots: true,
       createdAt: true,
       closesAt: true,
@@ -100,7 +107,7 @@ async function findPoll(match: SQL): Promise<StoredPoll | null> {
     },
     with: {
       voters: {
-        columns: { id: true, name: true, note: true, required: true },
+        columns: { id: true, name: true, note: true, required: true, email: true, emailZone: true },
         orderBy: [asc(voters.createdAt), asc(voters.id)],
         with: { marks: { columns: { slot: true, level: true } } },
       },
@@ -118,6 +125,7 @@ async function findPoll(match: SQL): Promise<StoredPoll | null> {
     kind: poll.kind,
     zone: poll.zone,
     duration: poll.duration,
+    notifyEmail: poll.notifyEmail,
     lastEnd: naturalEnd(poll.kind, poll.slots, poll.createdAt),
     final:
       poll.finalStart !== null && poll.finalEnd !== null
@@ -130,6 +138,8 @@ async function findPoll(match: SQL): Promise<StoredPoll | null> {
         name: voter.name,
         note: voter.note,
         required: voter.required,
+        email: voter.email,
+        emailZone: voter.emailZone,
         slots: voter.marks.filter((mark) => mark.level === LEVEL.yes).map((mark) => mark.slot),
         maybe: voter.marks.filter((mark) => mark.level === LEVEL.ifNeeded).map((mark) => mark.slot),
       })),
@@ -227,7 +237,7 @@ export async function saveVote(
   voterId: string | null,
   body: unknown,
   allowNewVoter: () => Promise<boolean> = async () => true,
-): Promise<{ ok: true; voterId: string } | Failure> {
+): Promise<{ ok: true; voterId: string; isNew: boolean; poll: StoredPoll; name: string } | Failure> {
   const poll = await getPoll(pollId);
   if (!poll) return NOT_FOUND;
   if (poll.closed) return { ok: false, status: 403, error: "Voting has ended for this poll." };
@@ -259,7 +269,7 @@ export async function saveVote(
       insertMarks(db, known.id, LEVEL.yes, chosen),
       insertMarks(db, known.id, LEVEL.ifNeeded, maybe),
     ]);
-    return { ok: true, voterId: known.id };
+    return { ok: true, voterId: known.id, isNew: false, poll, name };
   }
 
   if (!(await allowNewVoter())) {
@@ -268,7 +278,7 @@ export async function saveVote(
   const nextId = randomToken(16);
   const [inserted] = await db.batch([
     db.insert(voters).select(
-      sql`SELECT ${nextId}, ${poll.id}, ${name}, ${Date.now()}, ${note ?? null}, ${false}
+      sql`SELECT ${nextId}, ${poll.id}, ${name}, ${Date.now()}, ${note ?? null}, ${false}, ${null}, ${null}
         WHERE (SELECT COUNT(*) FROM ${voters} WHERE ${voters.pollId} = ${poll.id}) < ${MAX_VOTERS}`,
     ),
     insertMarks(db, nextId, LEVEL.yes, chosen),
@@ -277,7 +287,36 @@ export async function saveVote(
   if ((inserted.meta.changes ?? 0) === 0) {
     return { ok: false, status: 409, error: `This poll is full. It already has ${MAX_VOTERS} answers.` };
   }
-  return { ok: true, voterId: nextId };
+  return { ok: true, voterId: nextId, isNew: true, poll, name };
+}
+
+export async function updateNotify(token: string, input: unknown): Promise<Done | Failure> {
+  const email = input === null ? null : readEmail(input);
+  if (input !== null && !email) return { ok: false, status: 400, error: "Enter one email address." };
+  const db = await getDb();
+  const updated = await db
+    .update(polls)
+    .set({ notifyEmail: email })
+    .where(eq(polls.ownerHash, await ownerHash(token)))
+    .returning({ id: polls.id })
+    .get();
+  if (!updated) return NOT_FOUND;
+  return { ok: true, id: updated.id };
+}
+
+export async function setVoterEmail(pollId: string, voterId: string | null, input: unknown, zoneInput: unknown): Promise<Done | Failure> {
+  const poll = await getPoll(pollId);
+  if (!poll) return NOT_FOUND;
+  const known = voterId ? poll.voters.find((voter) => voter.id === voterId) : undefined;
+  if (!known) return { ok: false, status: 404, error: "Save your answer first." };
+  const email = input === null ? null : readEmail(input);
+  if (input !== null && !email) return { ok: false, status: 400, error: "Enter one email address." };
+  const db = await getDb();
+  await db
+    .update(voters)
+    .set({ email, emailZone: email ? parseZone(zoneInput) : null })
+    .where(and(eq(voters.id, known.id), eq(voters.pollId, poll.id)));
+  return { ok: true, id: poll.id };
 }
 
 type Done = { ok: true; id: string };
@@ -358,7 +397,10 @@ export async function updateDeadline(token: string, input: unknown): Promise<Don
   return { ok: true, id: poll.id };
 }
 
-export async function updateFinal(token: string, input: unknown): Promise<Done | Failure> {
+export async function updateFinal(
+  token: string,
+  input: unknown,
+): Promise<(Done & { poll: StoredPoll; final: { start: number; end: number } | null }) | Failure> {
   const poll = await getPollByOwnerToken(token);
   if (!poll) return NOT_FOUND;
   const parsed = parseFinal(poll.slots, input);
@@ -368,7 +410,7 @@ export async function updateFinal(token: string, input: unknown): Promise<Done |
     .update(polls)
     .set({ finalStart: parsed.final?.start ?? null, finalEnd: parsed.final?.end ?? null })
     .where(eq(polls.id, poll.id));
-  return { ok: true, id: poll.id };
+  return { ok: true, id: poll.id, poll, final: parsed.final ?? null };
 }
 
 export async function deleteOwned(token: string): Promise<Done | Failure> {

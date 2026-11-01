@@ -43,3 +43,43 @@ export function linksEmail(poll: { title: string; publicUrl: string; secretUrl: 
 </body></html>`;
   return { subject, text, html };
 }
+
+function shell(lines: { heading: string; body: string[]; link?: { label: string; url: string }; footer: string }): string {
+  const paragraph = (text: string) => `<p style="margin:0 0 16px">${escapeHtml(text)}</p>`;
+  const link = lines.link
+    ? `<p style="margin:0 0 32px"><a href="${escapeHtml(lines.link.url)}" style="color:#221f1b">${escapeHtml(lines.link.label)}</a></p>`
+    : "";
+  return `<!doctype html>
+<html><body style="margin:0;padding:32px 16px;background:#f4f3ef;color:#221f1b;font-family:-apple-system,'Segoe UI',Helvetica,Arial,sans-serif;font-size:15px;line-height:1.6">
+<div style="max-width:520px;margin:0 auto">
+<p style="font-size:13px;color:#6d675f;margin:0 0 24px">overlap</p>
+<p style="font-size:20px;margin:0 0 24px">${escapeHtml(lines.heading)}</p>
+${lines.body.map(paragraph).join("\n")}
+${link}
+<p style="margin:0;font-size:13px;color:#6d675f">${escapeHtml(lines.footer)}</p>
+</div>
+</body></html>`;
+}
+
+export function newAnswerEmail(input: { title: string; name: string; count: number; publicUrl: string }) {
+  const subject = `${input.name} answered “${input.title}”`;
+  const body = [`${input.count === 1 ? "That’s the first answer." : `That’s ${input.count} answers so far.`} Open your secret link to see who can make what.`];
+  const footer = "You get this because you asked to hear about new answers. Turn it off on your secret link.";
+  return {
+    subject,
+    text: [`${input.name} answered “${input.title}”.`, "", ...body, "", input.publicUrl, "", footer].join("\n"),
+    html: shell({ heading: `${input.name} answered “${input.title}”.`, body, link: { label: "Open the poll", url: input.publicUrl }, footer }),
+  };
+}
+
+export function finalTimeEmail(input: { title: string; day: string; time: string; pollUrl: string }) {
+  const subject = `“${input.title}” is set for ${input.day}`;
+  const when = `${input.day}, ${input.time}`;
+  const body = [`The time for “${input.title}” is ${when}.`, "The calendar file attached adds it to your calendar."];
+  const footer = "You get this because you asked for the final time when you answered. Overlap deletes your address with the poll.";
+  return {
+    subject,
+    text: [...body, "", input.pollUrl, "", footer].join("\n"),
+    html: shell({ heading: when, body, link: { label: "Open the poll", url: input.pollUrl }, footer }),
+  };
+}

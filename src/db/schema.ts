@@ -10,6 +10,7 @@ export const polls = sqliteTable(
     kind: text("kind").$type<"dates" | "weekly">().notNull().default("dates"),
     zone: text("zone"),
     duration: integer("duration"),
+    notifyEmail: text("notify_email"),
     slots: text("slots", { mode: "json" }).notNull().$type<string[]>(),
     createdAt: integer("created_at").notNull(),
     closesAt: integer("closes_at").notNull(),
@@ -32,6 +33,8 @@ export const voters = sqliteTable(
     createdAt: integer("created_at").notNull(),
     note: text("note"),
     required: integer("required", { mode: "boolean" }).notNull().default(false),
+    email: text("email"),
+    emailZone: text("email_zone"),
   },
   (table) => [index("voters_poll_id").on(table.pollId, table.createdAt)],
 );

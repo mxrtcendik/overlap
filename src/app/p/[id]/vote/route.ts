@@ -6,6 +6,8 @@ import { deleteOwnVote, saveVote } from "@/server/polls";
 import { allowWrite } from "@/server/rate-limit";
 import { verifyTurnstile } from "@/server/turnstile";
 import { VOTE_ACTION } from "@/lib/turnstile";
+import { newAnswerEmail } from "@/lib/email";
+import { sendLater } from "@/server/mail";
 import { isToken } from "@/lib/tokens";
 
 type Params = { params: Promise<{ id: string }> };
@@ -30,6 +32,11 @@ export async function POST(request: Request, { params }: Params) {
       maxAge: 60 * 60 * 24 * 400,
     });
     await announceChange(id);
+    if (result.isNew && result.poll.notifyEmail) {
+      const publicUrl = `${new URL(request.url).origin}/p/${id}`;
+      const message = newAnswerEmail({ title: result.poll.title, name: result.name, count: result.poll.voters.length + 1, publicUrl });
+      await sendLater([{ to: result.poll.notifyEmail, ...message }], "answer_emailed");
+    }
     return NextResponse.json({ ok: true });
   } catch (error) {
     console.error(JSON.stringify({ event: "vote_failed", message: error instanceof Error ? error.message : "error" }));

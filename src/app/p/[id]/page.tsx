@@ -4,6 +4,7 @@ import type { Metadata } from "next";
 import { notFound } from "next/navigation";
 import { PollView } from "@/components/poll/poll-view";
 import { Analytics } from "@/components/common/analytics";
+import { canSendMail } from "@/server/mail";
 import { Shell } from "@/components/common/shell";
 import { pollDescription, requestOrigin } from "@/server/poll-meta";
 import { getPoll, toPollView } from "@/server/polls";
@@ -36,7 +37,7 @@ export default async function PublicPollPage({ params }: Params) {
   const jar = await cookies();
   return (
     <Shell wide>
-      <PollView poll={toPollView(poll, jar.get("voter")?.value ?? null)} />
+      <PollView poll={toPollView(poll, jar.get("voter")?.value ?? null)} canEmail={await canSendMail()} />
       <Analytics />
     </Shell>
   );
