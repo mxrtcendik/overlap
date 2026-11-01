@@ -3,7 +3,7 @@ import { describe, it } from "node:test";
 import { escapeText, foldLine, googleCalendarUrl, icsFileName, toIcs, utcStamp } from "../src/lib/calendar";
 
 const event = {
-  uid: "abc@overlap",
+  uid: "abc@overlap.cendik.dev",
   title: "Design review; launch, v2",
   start: Date.UTC(2026, 10, 4, 11, 0),
   end: Date.UTC(2026, 10, 4, 12, 0),

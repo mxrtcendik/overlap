@@ -22,7 +22,7 @@ export async function generateMetadata({ params }: Params): Promise<Metadata> {
     title: poll.title,
     description,
     robots,
-    openGraph: { type: "website", siteName: "overlap", title: poll.title, description, url: `/p/${poll.id}` },
+    openGraph: { type: "website", siteName: "Overlap", title: poll.title, description, url: `/p/${poll.id}` },
     twitter: { card: "summary_large_image", title: poll.title, description },
   };
 }

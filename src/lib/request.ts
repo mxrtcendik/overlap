@@ -5,7 +5,7 @@ export async function request<T = unknown>(path: string, init?: RequestInit): Pr
   try {
     response = await fetch(path, init);
   } catch {
-    throw new UserFacingError("Couldn’t reach overlap. Check your connection and try again.");
+    throw new UserFacingError("Couldn’t reach Overlap. Check your connection and try again.");
   }
   const data = (await response.json().catch(() => null)) as (T & { error?: string }) | null;
   if (!response.ok) throw new UserFacingError(data?.error ?? "Something went wrong. Try again.");

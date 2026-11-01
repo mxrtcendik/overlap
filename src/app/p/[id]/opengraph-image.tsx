@@ -5,7 +5,7 @@ import { getPoll } from "@/lib/polls";
 import { pollDescription } from "@/lib/poll-meta";
 import { bestTime, tallySlots } from "@/lib/sentence";
 
-export const alt = "A overlap poll with a grid of who is free when.";
+export const alt = "An Overlap poll with a grid of who is free when.";
 export const size = OG_SIZE;
 export const contentType = "image/png";
 export const dynamic = "force-dynamic";

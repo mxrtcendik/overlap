@@ -11,7 +11,7 @@ export async function GET(request: Request, { params }: Params) {
   const url = `${new URL(request.url).origin}/p/${poll.id}`;
   const start = Date.parse(poll.final.start);
   const body = toIcs({
-    uid: `${poll.id}@overlap`,
+    uid: `${poll.id}@overlap.cendik.dev`,
     title: poll.title,
     start,
     end: Date.parse(poll.final.end),

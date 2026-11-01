@@ -39,7 +39,7 @@ export function toIcs(event: CalendarEvent): string {
   const lines = [
     "BEGIN:VCALENDAR",
     "VERSION:2.0",
-    "PRODID:-//overlap//EN",
+    "PRODID:-//Overlap//EN",
     "CALSCALE:GREGORIAN",
     "METHOD:PUBLISH",
     "BEGIN:VEVENT",
@@ -48,7 +48,7 @@ export function toIcs(event: CalendarEvent): string {
     `DTSTART:${utcStamp(event.start)}`,
     `DTEND:${utcStamp(event.end)}`,
     `SUMMARY:${escapeText(event.title)}`,
-    `DESCRIPTION:${escapeText(`Picked with overlap: ${event.url}`)}`,
+    `DESCRIPTION:${escapeText(`Picked with Overlap: ${event.url}`)}`,
     `URL:${event.url}`,
     "END:VEVENT",
     "END:VCALENDAR",
@@ -61,7 +61,7 @@ export function googleCalendarUrl(event: Pick<CalendarEvent, "title" | "start" |
     action: "TEMPLATE",
     text: event.title,
     dates: `${utcStamp(event.start)}/${utcStamp(event.end)}`,
-    details: `Picked with overlap: ${event.url}`,
+    details: `Picked with Overlap: ${event.url}`,
   });
   return `https://calendar.google.com/calendar/render?${params.toString()}`;
 }

@@ -32,9 +32,9 @@ To change the schema, edit `schema.ts`, run `bun run db:generate` to write the S
 
 ## Deploy
 
-Create a D1 database named overlap, put its id in `wrangler.jsonc`, apply the migrations with `--remote`, and run `bun run deploy`. Set `SITE_URL` to the public address, such as `https://overlap.example.com`, when building, so the home page's link preview uses absolute URLs. Poll pages use the address of each request instead.
+Create a D1 database named overlap, put its id in `wrangler.jsonc`, apply the migrations with `--remote`, and run `bun run deploy`. The site lives at https://overlap.cendik.dev, which production builds use for the home page's absolute preview URLs; set `SITE_URL` when building to use another address. Poll pages use the address of each request instead.
 
-Poll creation is checked with Cloudflare Turnstile. Store the widget's secret with `wrangler secret put TURNSTILE_SECRET`, and set `TURNSTILE_HOSTNAMES` to the site's hostnames, comma-separated and without localhost. The site key is in `src/lib/use-turnstile.ts`. Locally, `.dev.vars` holds Cloudflare's public test secret, which the server accepts only in development; copy `.dev.vars.example` to start.
+Poll creation is checked with Cloudflare Turnstile. Store the widget's secret with `wrangler secret put TURNSTILE_SECRET`, `TURNSTILE_HOSTNAMES` in `wrangler.jsonc` lists the hostnames tokens may come from, comma-separated and without localhost. The site key is in `src/lib/use-turnstile.ts`. Locally, `.dev.vars` holds Cloudflare's public test secret, which the server accepts only in development; copy `.dev.vars.example` to start.
 
 The Worker entry point is `worker.ts`. It serves the Next.js app that OpenNext builds and adds an hourly Cron Trigger that deletes expired polls. Deleting a poll removes its answers through foreign keys.
 

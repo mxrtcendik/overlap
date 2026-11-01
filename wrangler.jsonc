@@ -18,6 +18,9 @@
       "enabled": true
     }
   },
+  "vars": {
+    "TURNSTILE_HOSTNAMES": "overlap.cendik.dev"
+  },
   "d1_databases": [
     {
       "binding": "DB",
