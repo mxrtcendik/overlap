@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from "react";
 import { useCanShare } from "@/client/browser";
+import { QrCode } from "./qr-code";
 
 type CopyState = "idle" | "copied" | "failed";
 
@@ -48,6 +49,7 @@ export function CopyLabel({ idle, copied }: { idle: string; copied: boolean }) {
 
 export function ShareBar({ title, href }: { title: string; href: string }) {
   const [state, report] = useCopyState();
+  const [showQr, setShowQr] = useState(false);
   const canShare = useCanShare();
 
   return (
@@ -70,11 +72,20 @@ export function ShareBar({ title, href }: { title: string; href: string }) {
               Share…
             </button>
           ) : null}
+          <button type="button" className="link-quiet" aria-expanded={showQr} onClick={() => setShowQr((open) => !open)}>
+            QR code
+          </button>
           <button type="button" className="btn" onClick={async () => report(await copyText(href))}>
             <CopyLabel idle="Copy link" copied={state === "copied"} />
           </button>
         </span>
       </div>
+      {showQr ? (
+        <div className="appear mt-4 flex flex-wrap items-end gap-4">
+          <QrCode value={href} />
+          <p className="max-w-48 text-xs text-muted">Point a phone camera here to open the public link.</p>
+        </div>
+      ) : null}
       {state === "failed" ? (
         <p className="mt-2 text-sm text-danger" role="alert">
           Your browser blocked copying. Select the link and copy it yourself.
