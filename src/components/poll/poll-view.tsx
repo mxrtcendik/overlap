@@ -191,7 +191,7 @@ export function PollView({ poll }: { poll: PollViewData }) {
             />
           </label>
           <label className="text-sm text-muted">
-            Note <span className="text-muted/70">(optional)</span>
+            Note <span className="text-muted">(optional)</span>
             <input
               value={note}
               onChange={(event) => setNoteValue(event.target.value)}
