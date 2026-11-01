@@ -12,11 +12,13 @@ export function FinalTime({
   onClear,
   pending = false,
   weekly = false,
+  zone = null,
 }: {
   pollId: string;
   title: string;
   final: FinalTimeData;
   weekly?: boolean;
+  zone?: string | null;
   onClear?: () => void;
   pending?: boolean;
 }) {
@@ -48,7 +50,7 @@ export function FinalTime({
         </a>
         {publicUrl ? (
           <a
-            href={googleCalendarUrl({ title, start, end, url: publicUrl, weekly })}
+            href={googleCalendarUrl({ title, start, end, url: publicUrl, weekly, zone })}
             target="_blank"
             rel="noopener noreferrer"
             className="link-quiet"

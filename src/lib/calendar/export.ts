@@ -1,3 +1,5 @@
+import { wallParts } from "../time/format";
+
 export type CalendarEvent = {
   uid: string;
   title: string;
@@ -6,10 +8,17 @@ export type CalendarEvent = {
   url: string;
   stamp: number;
   weekly?: boolean;
+  zone?: string | null;
 };
 
 export function utcStamp(ms: number): string {
   return new Date(ms).toISOString().replace(/[-:]/g, "").replace(/\.\d{3}/, "");
+}
+
+export function wallStamp(ms: number, zone: string): string {
+  const parts = wallParts(ms, zone);
+  const pad = (value: number) => String(value).padStart(2, "0");
+  return `${parts.year}${pad(parts.month)}${pad(parts.day)}T${pad(parts.hour)}${pad(parts.minute)}00`;
 }
 
 export function escapeText(text: string): string {
@@ -46,8 +55,9 @@ export function toIcs(event: CalendarEvent): string {
     "BEGIN:VEVENT",
     `UID:${event.uid}`,
     `DTSTAMP:${utcStamp(event.stamp)}`,
-    `DTSTART:${utcStamp(event.start)}`,
-    `DTEND:${utcStamp(event.end)}`,
+    ...(event.weekly && event.zone
+      ? [`DTSTART;TZID=${event.zone}:${wallStamp(event.start, event.zone)}`, `DTEND;TZID=${event.zone}:${wallStamp(event.end, event.zone)}`]
+      : [`DTSTART:${utcStamp(event.start)}`, `DTEND:${utcStamp(event.end)}`]),
     ...(event.weekly ? ["RRULE:FREQ=WEEKLY"] : []),
     `SUMMARY:${escapeText(event.title)}`,
     `DESCRIPTION:${escapeText(`Picked with Overlap: ${event.url}`)}`,
@@ -58,13 +68,17 @@ export function toIcs(event: CalendarEvent): string {
   return lines.map(foldLine).join("\r\n") + "\r\n";
 }
 
-export function googleCalendarUrl(event: Pick<CalendarEvent, "title" | "start" | "end" | "url" | "weekly">): string {
+export function googleCalendarUrl(event: Pick<CalendarEvent, "title" | "start" | "end" | "url" | "weekly" | "zone">): string {
+  const zone = event.weekly ? event.zone : null;
   const params = new URLSearchParams({
     action: "TEMPLATE",
     text: event.title,
-    dates: `${utcStamp(event.start)}/${utcStamp(event.end)}`,
+    dates: zone
+      ? `${wallStamp(event.start, zone)}/${wallStamp(event.end, zone)}`
+      : `${utcStamp(event.start)}/${utcStamp(event.end)}`,
     details: `Picked with Overlap: ${event.url}`,
   });
+  if (zone) params.set("ctz", zone);
   if (event.weekly) params.set("recur", "RRULE:FREQ=WEEKLY");
   return `https://calendar.google.com/calendar/render?${params.toString()}`;
 }

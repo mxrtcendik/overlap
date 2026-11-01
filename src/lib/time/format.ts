@@ -2,6 +2,15 @@ import { weekdayName } from "./weekly";
 
 export type Clock = "h12" | "h23";
 
+export function isTimeZone(name: string): boolean {
+  try {
+    new Intl.DateTimeFormat("en-US", { timeZone: name });
+    return true;
+  } catch {
+    return false;
+  }
+}
+
 export type LocalParts = {
   weekday: string;
   month: string;

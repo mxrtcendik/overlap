@@ -16,7 +16,7 @@ export async function PATCH(request: Request, { params }: Params) {
     }
     const body = await readJson(request);
     if (!body || typeof body !== "object") return jsonError("That change couldn’t be saved.", 400);
-    const record = body as { title?: unknown; slots?: unknown; final?: unknown; deadline?: unknown };
+    const record = body as { title?: unknown; slots?: unknown; zone?: unknown; final?: unknown; deadline?: unknown };
     if ("deadline" in record) {
       const result = await updateDeadline(token, record.deadline);
       if (!result.ok) return jsonError(result.error, result.status);
@@ -30,7 +30,7 @@ export async function PATCH(request: Request, { params }: Params) {
       return NextResponse.json({ ok: true });
     }
     if ("slots" in record) {
-      const result = await updateSlots(token, record.slots);
+      const result = await updateSlots(token, record.slots, record.zone);
       if (!result.ok) return jsonError(result.error, result.status);
       await announceChange(result.id);
       return NextResponse.json({ ok: true });

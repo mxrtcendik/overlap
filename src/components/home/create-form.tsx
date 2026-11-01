@@ -32,7 +32,8 @@ export function CreateForm() {
     }
     setPending(true);
     setError(null);
-    const slots = buildSlots(dates, start, end, timeZone ?? deviceTimeZone());
+    const zone = timeZone ?? deviceTimeZone();
+    const slots = buildSlots(dates, start, end, zone);
     try {
       const token = await getToken();
       if (!token) {
@@ -40,7 +41,7 @@ export function CreateForm() {
       }
       const data = await request<{ id: string; ownerToken: string }>("/api/polls", {
         method: "POST",
-        ...json({ title, slots, kind, "cf-turnstile-response": token }),
+        ...json({ title, slots, kind, zone, "cf-turnstile-response": token }),
       });
       const lastEnd = kind === "weekly" ? new Date(Date.now() + WEEKLY_OPEN_MS).toISOString() : undefined;
       rememberPoll({ id: data.id, token: data.ownerToken, title: title.trim(), expiresAt: expiresAtFor(slots, lastEnd) });

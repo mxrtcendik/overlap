@@ -17,6 +17,8 @@ export type PollView = {
   closesAt: string;
   deadline: string | null;
   kind: "dates" | "weekly";
+  /** The timezone a weekly poll's times were entered in. */
+  zone: string | null;
   lastEnd: string;
   final: FinalTime | null;
   voters: VoterView[];

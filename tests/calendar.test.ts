@@ -49,3 +49,21 @@ describe("calendar export", () => {
     assert.equal(icsFileName("???"), "event.ics");
   });
 });
+
+describe("weekly events keep their wall-clock time", () => {
+  const weekly = { uid: "w@overlap.cendik.dev", title: "Run", start: Date.parse("2026-10-19T22:00:00Z"), end: Date.parse("2026-10-19T23:00:00Z"), url: "https://overlap.cendik.dev/p/w", stamp: 0, weekly: true, zone: "America/New_York" };
+
+  it("writes local times with a TZID and a weekly rule", () => {
+    const ics = toIcs(weekly);
+    assert.ok(ics.includes("DTSTART;TZID=America/New_York:20261019T180000"));
+    assert.ok(ics.includes("DTEND;TZID=America/New_York:20261019T190000"));
+    assert.ok(ics.includes("RRULE:FREQ=WEEKLY"));
+  });
+
+  it("gives Google the zone and local times", () => {
+    const url = new URL(googleCalendarUrl(weekly));
+    assert.equal(url.searchParams.get("dates"), "20261019T180000/20261019T190000");
+    assert.equal(url.searchParams.get("ctz"), "America/New_York");
+    assert.equal(url.searchParams.get("recur"), "RRULE:FREQ=WEEKLY");
+  });
+});

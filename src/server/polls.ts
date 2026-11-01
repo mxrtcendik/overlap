@@ -10,6 +10,7 @@ import { cleanText, parseNote } from "../lib/text";
 import { isToken, randomToken, sha256 } from "../lib/tokens";
 import type { FinalTime, PollView, VoterView } from "../lib/types";
 import { WEEK_MS, WEEKLY_OPEN_MS, type PollKind } from "../lib/time/weekly";
+import { isTimeZone } from "../lib/time/format";
 
 export type { FinalTime, PollView, VoterView };
 
@@ -23,6 +24,7 @@ export type StoredPoll = {
   closesAt: number;
   deadline: number | null;
   kind: PollKind;
+  zone: string | null;
   lastEnd: number;
   final: FinalTime | null;
   voters: StoredVoter[];
@@ -52,6 +54,7 @@ export function toPollView(poll: StoredPoll, voterId: string | null, options: { 
     closesAt: new Date(poll.closesAt).toISOString(),
     deadline: poll.deadline === null ? null : new Date(poll.deadline).toISOString(),
     kind: poll.kind,
+    zone: poll.zone,
     lastEnd: new Date(poll.lastEnd).toISOString(),
     final: poll.final,
     voters: poll.voters.map((voter) => ({
@@ -74,6 +77,7 @@ async function findPoll(match: SQL): Promise<StoredPoll | null> {
       id: true,
       title: true,
       kind: true,
+      zone: true,
       slots: true,
       createdAt: true,
       closesAt: true,
@@ -99,6 +103,7 @@ async function findPoll(match: SQL): Promise<StoredPoll | null> {
     closesAt: poll.closesAt,
     deadline: poll.deadline,
     kind: poll.kind,
+    zone: poll.zone,
     lastEnd: naturalEnd(poll.kind, poll.slots, poll.createdAt),
     final:
       poll.finalStart !== null && poll.finalEnd !== null
@@ -133,6 +138,10 @@ function naturalEnd(kind: PollKind, slots: string[], createdAt: number): number 
   return kind === "weekly" ? createdAt + WEEKLY_OPEN_MS : closesAt(slots);
 }
 
+function parseZone(input: unknown): string | null {
+  return typeof input === "string" && input.length <= 64 && isTimeZone(input) ? input : null;
+}
+
 function parseKind(input: unknown): PollKind | null {
   if (input === undefined || input === "dates") return "dates";
   return input === "weekly" ? "weekly" : null;
@@ -149,6 +158,7 @@ export async function createPoll(
   titleInput: unknown,
   slotsInput: unknown,
   kindInput?: unknown,
+  zoneInput?: unknown,
 ): Promise<{ ok: true; id: string; ownerToken: string } | { ok: false; error: string }> {
   const kind = parseKind(kindInput);
   if (!kind) return { ok: false, error: "That kind of poll doesn’t exist." };
@@ -172,6 +182,7 @@ export async function createPoll(
     ownerHash: await ownerHash(ownerToken),
     title,
     kind,
+    zone: parseZone(zoneInput),
     slots: parsed.slots,
     createdAt: now,
     closesAt: closes,
@@ -268,7 +279,7 @@ export async function updateTitle(token: string, titleInput: unknown): Promise<D
   return { ok: true, id: updated.id };
 }
 
-export async function updateSlots(token: string, slotsInput: unknown): Promise<Done | Failure> {
+export async function updateSlots(token: string, slotsInput: unknown, zoneInput?: unknown): Promise<Done | Failure> {
   const parsed = parseSlots(slotsInput);
   if (!parsed.ok) return { ok: false, status: 400, error: parsed.error };
   if (closesAt(parsed.slots) <= Date.now()) return { ok: false, status: 400, error: ALL_PAST };
@@ -286,6 +297,7 @@ export async function updateSlots(token: string, slotsInput: unknown): Promise<D
       slots: parsed.slots,
       closesAt: closes,
       deadline: null,
+      zone: parseZone(zoneInput) ?? current.zone,
       deleteAt: closes + RETAIN_MS,
       finalStart: null,
       finalEnd: null,

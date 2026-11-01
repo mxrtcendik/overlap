@@ -29,12 +29,13 @@ import { FinalTime } from "./final-time";
 import { SentenceBlock } from "./poll-summary";
 import { ScheduleFields } from "../common/schedule-fields";
 import { VotingControls } from "./voting-controls";
+import { currentWeek, IDENTITY, projectPoll, storedRange } from "@/lib/time/week-projection";
 import { answersCsv } from "@/lib/poll/csv";
 import { icsFileName } from "@/lib/calendar/export";
 import { datesForWeekdays, weekdayOf } from "@/lib/time/weekly";
 
 export function OwnerView({
-  poll,
+  poll: stored,
   hasResponses,
   canEmail = false,
 }: {
@@ -42,6 +43,12 @@ export function OwnerView({
   hasResponses: boolean;
   canEmail?: boolean;
 }) {
+  const [now] = useState(() => Date.now());
+  const projection = useMemo(
+    () => (stored.kind === "weekly" && stored.zone ? currentWeek(stored.slots, stored.zone, now) : IDENTITY),
+    [stored.kind, stored.zone, stored.slots, now],
+  );
+  const poll = useMemo(() => projectPoll(stored, projection), [stored, projection]);
   const router = useRouter();
   const location = usePageLocation();
   const timeZone = useTimeZone();
@@ -107,7 +114,8 @@ export function OwnerView({
     setPending(true);
     setError(null);
     try {
-      await send("PATCH", { slots: buildSlots(dates, start, end, timeZone ?? deviceTimeZone()) });
+      const zone = timeZone ?? deviceTimeZone();
+      await send("PATCH", { slots: buildSlots(dates, start, end, zone), zone });
       router.refresh();
     } catch (caught) {
       setError({ at: "settings", message: messageOf(caught) });
@@ -121,7 +129,9 @@ export function OwnerView({
     setError(null);
     try {
       await send("PATCH", {
-        final: final ? { start: new Date(final.start).toISOString(), end: new Date(final.end).toISOString() } : null,
+        final: final
+          ? (({ start, end }) => ({ start: new Date(start).toISOString(), end: new Date(end).toISOString() }))(storedRange(final, projection))
+          : null,
       });
       setDraft([]);
       router.refresh();
@@ -205,6 +215,7 @@ export function OwnerView({
           final={poll.final}
           pending={pending}
           weekly={weekly}
+          zone={poll.zone}
           onClear={() => void setFinal(null)}
         />
       ) : null}

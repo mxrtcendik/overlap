@@ -36,6 +36,13 @@
       "when": 1793532468424,
       "tag": "20261101112748_poll_kind",
       "breakpoints": true
+    },
+    {
+      "idx": 5,
+      "version": "6",
+      "when": 1793539282018,
+      "tag": "20261101132122_poll_zone",
+      "breakpoints": true
     }
   ]
 }

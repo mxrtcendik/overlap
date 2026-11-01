@@ -1,6 +1,6 @@
 import ICAL from "ical.js";
 import { SLOT_MS } from "../constants";
-import { zonedToUtc } from "../time/format";
+import { isTimeZone, zonedToUtc } from "../time/format";
 
 export type Busy = { start: number; end: number };
 
@@ -25,14 +25,6 @@ const WINDOWS_ZONES: Record<string, string> = {
   "AUS Eastern Standard Time": "Australia/Sydney",
 };
 
-function isTimeZone(name: string): boolean {
-  try {
-    new Intl.DateTimeFormat("en-US", { timeZone: name });
-    return true;
-  } catch {
-    return false;
-  }
-}
 
 function knownZone(tzid: string | null | undefined): string | null {
   if (!tzid) return null;

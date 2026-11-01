@@ -15,14 +15,8 @@ export function deviceTimeZone(): string {
   return Intl.DateTimeFormat().resolvedOptions().timeZone;
 }
 
-export function isTimeZone(value: string): boolean {
-  try {
-    new Intl.DateTimeFormat("en-US", { timeZone: value });
-    return true;
-  } catch {
-    return false;
-  }
-}
+export { isTimeZone } from "@/lib/time/format";
+import { isTimeZone } from "@/lib/time/format";
 
 function readZoneOverride(): string | null {
   if (zoneOverride === undefined) {

@@ -8,6 +8,7 @@ import type { PollView as PollViewData, VoterView } from "@/lib/types";
 import { useLiveUpdates, useRefreshAt } from "@/client/use-live-updates";
 import { useTurnstile } from "@/client/use-turnstile";
 import { VOTE_ACTION } from "@/lib/turnstile";
+import { currentWeek, IDENTITY, projectPoll } from "@/lib/time/week-projection";
 import { Availability } from "./availability";
 import { CalendarFill } from "./calendar-fill";
 import { FinalTime } from "./final-time";
@@ -18,7 +19,13 @@ type Answer = { slots: string[]; maybe: string[] };
 
 const NO_ANSWER: Answer = { slots: [], maybe: [] };
 
-export function PollView({ poll }: { poll: PollViewData }) {
+export function PollView({ poll: stored }: { poll: PollViewData }) {
+  const [now] = useState(() => Date.now());
+  const projection = useMemo(
+    () => (stored.kind === "weekly" && stored.zone ? currentWeek(stored.slots, stored.zone, now) : IDENTITY),
+    [stored.kind, stored.zone, stored.slots, now],
+  );
+  const poll = useMemo(() => projectPoll(stored, projection), [stored, projection]);
   useLiveUpdates(poll.id);
   const weekly = poll.kind === "weekly";
   useRefreshAt(poll.closed ? null : poll.closesAt);
@@ -91,7 +98,13 @@ export function PollView({ poll }: { poll: PollViewData }) {
         try {
           await request(`/p/${poll.id}/vote`, {
             method: "POST",
-            ...json({ name: nextName, note: nextNote, slots: next.slots, maybe: next.maybe, "cf-turnstile-response": token ?? undefined }),
+            ...json({
+              name: nextName,
+              note: nextNote,
+              slots: next.slots.map(projection.toStored),
+              maybe: next.maybe.map(projection.toStored),
+              "cf-turnstile-response": token ?? undefined,
+            }),
           });
         } finally {
           if (first) resetTurnstile();
@@ -166,7 +179,7 @@ export function PollView({ poll }: { poll: PollViewData }) {
   return (
     <>
       <h1 className="text-[1.75rem] leading-9 tracking-[-0.02em] text-balance">{poll.title}</h1>
-      {poll.final ? <FinalTime pollId={poll.id} title={poll.title} final={poll.final} weekly={weekly} /> : null}
+      {poll.final ? <FinalTime pollId={poll.id} title={poll.title} final={poll.final} weekly={weekly} zone={poll.zone} /> : null}
       <SentenceBlock
         slots={poll.slots}
         votes={voters}
