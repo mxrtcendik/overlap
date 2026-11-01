@@ -27,6 +27,7 @@ export const voters = sqliteTable(
       .references(() => polls.id, { onDelete: "cascade" }),
     name: text("name").notNull(),
     createdAt: integer("created_at").notNull(),
+    note: text("note"),
   },
   (table) => [index("voters_poll_id").on(table.pollId, table.createdAt)],
 );

@@ -2,7 +2,7 @@
 
 import { useMemo, useRef, useState, type FormEvent } from "react";
 import { slotsIn } from "@/lib/availability";
-import { MAX_NAME } from "@/lib/constants";
+import { MAX_NAME, MAX_NOTE } from "@/lib/constants";
 import { json, messageOf, request, UserFacingError } from "@/lib/request";
 import type { PollView as PollViewData, VoterView } from "@/lib/types";
 import { useLiveUpdates, useRefreshAt } from "@/lib/use-live-updates";
@@ -27,6 +27,7 @@ export function PollView({ poll }: { poll: PollViewData }) {
     return listed ? merged : [...merged, you];
   }, [poll.voters, you]);
   const [name, setName] = useState(you?.name ?? "");
+  const [note, setNote] = useState(you?.note ?? "");
   const [answer, setAnswer] = useState<Answer>(you ? { slots: you.slots, maybe: you.maybe } : NO_ANSWER);
   const [brush, setBrush] = useState<Brush>("yes");
   const [saved, setSaved] = useState(Boolean(you));
@@ -34,6 +35,7 @@ export function PollView({ poll }: { poll: PollViewData }) {
   const [pending, setPending] = useState(false);
   const [confirmingRemove, setConfirmingRemove] = useState(false);
   const nameRef = useRef(you?.name ?? "");
+  const noteRef = useRef(you?.note ?? "");
   const answerRef = useRef<Answer>(you ? { slots: you.slots, maybe: you.maybe } : NO_ANSWER);
   const inflight = useRef(false);
   const queued = useRef<Answer | null>(null);
@@ -41,6 +43,11 @@ export function PollView({ poll }: { poll: PollViewData }) {
   function setNameValue(value: string) {
     nameRef.current = value;
     setName(value);
+  }
+
+  function setNoteValue(value: string) {
+    noteRef.current = value;
+    setNote(value);
   }
 
   const finalOutline = useMemo(
@@ -54,8 +61,8 @@ export function PollView({ poll }: { poll: PollViewData }) {
     [poll.final, poll.slots],
   );
 
-  function applyYou(nextName: string, next: Answer) {
-    setYou({ name: nextName, slots: next.slots, maybe: next.maybe, yours: true });
+  function applyYou(nextName: string, nextNote: string, next: Answer) {
+    setYou({ name: nextName, note: nextNote || null, slots: next.slots, maybe: next.maybe, yours: true });
   }
 
   async function flush() {
@@ -66,14 +73,16 @@ export function PollView({ poll }: { poll: PollViewData }) {
       while (queued.current) {
         const next = queued.current;
         const nextName = nameRef.current.trim().replace(/\s+/g, " ");
+        const nextNote = noteRef.current.trim().replace(/\s+/g, " ");
         queued.current = null;
         if (!nextName) throw new UserFacingError("Enter your name first.");
         setNameValue(nextName);
+        setNoteValue(nextNote);
         await request(`/p/${poll.id}/vote`, {
           method: "POST",
-          ...json({ name: nextName, slots: next.slots, maybe: next.maybe }),
+          ...json({ name: nextName, note: nextNote, slots: next.slots, maybe: next.maybe }),
         });
-        applyYou(nextName, next);
+        applyYou(nextName, nextNote, next);
         setSaved(true);
         setError(null);
       }
@@ -136,6 +145,7 @@ export function PollView({ poll }: { poll: PollViewData }) {
   }
 
   const nameChanged = Boolean(you) && name.trim() !== you?.name;
+  const noteChanged = Boolean(you) && note.trim().replace(/\s+/g, " ") !== (you?.note ?? "");
 
   return (
     <>
@@ -162,9 +172,20 @@ export function PollView({ poll }: { poll: PollViewData }) {
               className="field mt-1 w-56"
             />
           </label>
-          {!saved || nameChanged ? (
+          <label className="text-sm text-muted">
+            Note <span className="text-muted/70">(optional)</span>
+            <input
+              value={note}
+              onChange={(event) => setNoteValue(event.target.value)}
+              maxLength={MAX_NOTE}
+              placeholder="Remote only"
+              autoComplete="off"
+              className="field mt-1 w-64 placeholder:text-muted/60"
+            />
+          </label>
+          {!saved || nameChanged || noteChanged ? (
             <button type="submit" className="btn">
-              {saved ? "Save name" : "Save answer"}
+              {!saved ? "Save answer" : nameChanged && noteChanged ? "Save changes" : nameChanged ? "Save name" : "Save note"}
             </button>
           ) : null}
           {pending ? <Status state="saving" /> : null}

@@ -46,7 +46,7 @@ The Turnstile widget stays invisible unless Cloudflare needs a click to tell a p
 
 ## Caps
 
-The title can be 80 characters. A poll can cover 14 days, and the hours on those days can span at most 12 hours. Slots are 30 minutes. A name can be 40 characters. A poll can have 40 names. At least one slot must still be ahead when the poll is created or its days change.
+The title can be 80 characters. A poll can cover 14 days, and the hours on those days can span at most 12 hours. Slots are 30 minutes. A name can be 40 characters, and the optional note beside it, such as “Remote only”, 80. A poll can have 40 names. At least one slot must still be ahead when the poll is created or its days change.
 
 People can remove their own answer until voting ends. The owner can remove any answer at any time; the owner page names answers by a hash of the voter id, because the id itself is the voter’s cookie. The days and hours can change while the poll has no answers. Changing them clears the final time. The title can change until the poll is deleted. Voting stops when the last slot ends, or earlier if the owner closes it or sets a deadline; a closed poll can be reopened while its last time is still ahead, and an open page turns read-only the moment voting closes. The grid stays visible and becomes read-only. The poll is deleted 30 days after that.
 

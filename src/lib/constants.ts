@@ -1,6 +1,7 @@
 export const SLOT_MS = 30 * 60 * 1000;
 export const MAX_TITLE = 80;
 export const MAX_NAME = 40;
+export const MAX_NOTE = 80;
 export const MAX_DAYS = 14;
 export const MAX_SLOTS_PER_DAY = 24;
 export const MAX_SLOTS = MAX_DAYS * MAX_SLOTS_PER_DAY;

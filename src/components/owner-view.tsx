@@ -379,7 +379,10 @@ function Answers({
                 </div>
               ) : (
                 <div className="flex items-baseline justify-between gap-4">
-                  <span className="min-w-0 truncate text-sm">{voter.name}</span>
+                  <span className="min-w-0 truncate text-sm">
+                    {voter.name}
+                    {voter.note ? <span className="text-muted"> · {voter.note}</span> : null}
+                  </span>
                   <span className="flex shrink-0 items-baseline gap-5">
                     <span className="font-mono text-xs text-muted tabular-nums">
                       {times === 0 ? "No times" : times === 1 ? "1 time" : `${times} times`}

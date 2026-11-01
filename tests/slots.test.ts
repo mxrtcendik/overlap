@@ -1,7 +1,7 @@
 import assert from "node:assert/strict";
 import { describe, it } from "node:test";
 import { parseSlots } from "../src/lib/slots";
-import { cleanText } from "../src/lib/text";
+import { cleanText, parseNote } from "../src/lib/text";
 
 function day(offset: number, hour = 15): string {
   return new Date(Date.UTC(2026, 0, 1 + offset, hour, 0, 0)).toISOString();
@@ -50,5 +50,25 @@ describe("cleanText", () => {
     assert.equal(cleanText("   ", 40), null);
     assert.equal(cleanText("a".repeat(41), 40), null);
     assert.equal(cleanText("a".repeat(80), 80), "a".repeat(80));
+  });
+});
+
+describe("parseNote", () => {
+  it("keeps the note as it is when none is sent", () => {
+    assert.deepEqual(parseNote(undefined, 80), { ok: true, note: undefined });
+  });
+
+  it("clears it with null or blank text", () => {
+    assert.deepEqual(parseNote(null, 80), { ok: true, note: null });
+    assert.deepEqual(parseNote("   ", 80), { ok: true, note: null });
+  });
+
+  it("cleans a note like a name", () => {
+    assert.deepEqual(parseNote("  Remote\n only  ", 80), { ok: true, note: "Remote only" });
+  });
+
+  it("refuses notes that are too long or not text", () => {
+    assert.deepEqual(parseNote("x".repeat(81), 80), { ok: false });
+    assert.deepEqual(parseNote(42, 80), { ok: false });
   });
 });

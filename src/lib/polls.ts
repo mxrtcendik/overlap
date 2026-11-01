@@ -2,17 +2,17 @@ import "server-only";
 import { cache } from "react";
 import { and, asc, eq, gt, notExists, sql, type SQL } from "drizzle-orm";
 import { LEVEL, marks, polls, voters } from "@/db/schema";
-import { MAX_NAME, MAX_TITLE, MAX_VOTERS, RETAIN_MS, SLOT_MS } from "./constants";
+import { MAX_NAME, MAX_NOTE, MAX_TITLE, MAX_VOTERS, RETAIN_MS, SLOT_MS } from "./constants";
 import { getDb, type Database } from "./db";
 import { parseDeadline } from "./deadline";
 import { parseFinal, parseSlots } from "./slots";
-import { cleanText } from "./text";
+import { cleanText, parseNote } from "./text";
 import { isToken, randomToken, sha256 } from "./tokens";
 import type { FinalTime, PollView, VoterView } from "./types";
 
 export type { FinalTime, PollView, VoterView };
 
-export type StoredVoter = { id: string; ref: string; name: string; slots: string[]; maybe: string[] };
+export type StoredVoter = { id: string; ref: string; name: string; note: string | null; slots: string[]; maybe: string[] };
 
 export type StoredPoll = {
   id: string;
@@ -51,6 +51,7 @@ export function toPollView(poll: StoredPoll, voterId: string | null, options: { 
     final: poll.final,
     voters: poll.voters.map((voter) => ({
       name: voter.name,
+      note: voter.note,
       slots: voter.slots,
       maybe: voter.maybe,
       yours: voterId !== null && voter.id === voterId,
@@ -67,7 +68,7 @@ async function findPoll(match: SQL): Promise<StoredPoll | null> {
     columns: { id: true, title: true, slots: true, closesAt: true, deadline: true, finalStart: true, finalEnd: true },
     with: {
       voters: {
-        columns: { id: true, name: true },
+        columns: { id: true, name: true, note: true },
         orderBy: [asc(voters.createdAt), asc(voters.id)],
         with: { marks: { columns: { slot: true, level: true } } },
       },
@@ -91,6 +92,7 @@ async function findPoll(match: SQL): Promise<StoredPoll | null> {
         id: voter.id,
         ref: await voterRef(voter.id),
         name: voter.name,
+        note: voter.note,
         slots: voter.marks.filter((mark) => mark.level === LEVEL.yes).map((mark) => mark.slot),
         maybe: voter.marks.filter((mark) => mark.level === LEVEL.ifNeeded).map((mark) => mark.slot),
       })),
@@ -169,6 +171,9 @@ export async function saveVote(
   }
   const name = cleanText(nameInput, MAX_NAME);
   if (!name) return { ok: false, status: 400, error: "Names can be up to 40 characters." };
+  const noteResult = parseNote((body as { note?: unknown }).note, MAX_NOTE);
+  if (!noteResult.ok) return { ok: false, status: 400, error: `Notes can be up to ${MAX_NOTE} characters.` };
+  const note = noteResult.note;
   const chosen = subset(poll.slots, (body as { slots?: unknown }).slots);
   const maybeInput = (body as { maybe?: unknown }).maybe;
   const maybe = maybeInput === undefined ? [] : subset(poll.slots, maybeInput);
@@ -181,7 +186,7 @@ export async function saveVote(
 
   if (known) {
     await db.batch([
-      db.update(voters).set({ name }).where(and(eq(voters.id, known.id), eq(voters.pollId, poll.id))),
+      db.update(voters).set(note === undefined ? { name } : { name, note }).where(and(eq(voters.id, known.id), eq(voters.pollId, poll.id))),
       db.delete(marks).where(eq(marks.voterId, known.id)),
       insertMarks(db, known.id, LEVEL.yes, chosen),
       insertMarks(db, known.id, LEVEL.ifNeeded, maybe),
@@ -192,7 +197,7 @@ export async function saveVote(
   const nextId = randomToken(16);
   const [inserted] = await db.batch([
     db.insert(voters).select(
-      sql`SELECT ${nextId}, ${poll.id}, ${name}, ${Date.now()}
+      sql`SELECT ${nextId}, ${poll.id}, ${name}, ${Date.now()}, ${note ?? null}
         WHERE (SELECT COUNT(*) FROM ${voters} WHERE ${voters.pollId} = ${poll.id}) < ${MAX_VOTERS}`,
     ),
     insertMarks(db, nextId, LEVEL.yes, chosen),

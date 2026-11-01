@@ -8,7 +8,7 @@ import { describeRun, rangeLabel, type Clock } from "@/lib/format";
 import type { VoterView } from "@/lib/types";
 import { PollGrid, type Brush } from "./poll-grid";
 
-type Voter = Pick<VoterView, "name" | "slots" | "maybe" | "yours">;
+type Voter = Pick<VoterView, "name" | "slots" | "maybe" | "yours"> & { note?: string | null };
 
 export function Availability({
   slots,
@@ -186,6 +186,7 @@ function SlotDetail({ iso, voters, timeZone, clock }: { iso: string; voters: Vot
               <span className={level ? undefined : "line-through decoration-line-strong"}>{voter.name}</span>
               {level === "maybe" ? <span className="text-muted">if needed</span> : null}
               {voter.yours ? <span className="text-muted">· you</span> : null}
+              {voter.note ? <span className="min-w-0 truncate text-xs text-muted">· {voter.note}</span> : null}
               <span className="sr-only">{level === "yes" ? "free" : level === "maybe" ? "" : "not free"}</span>
             </li>
           );
@@ -220,7 +221,7 @@ function People({
               <button
                 type="button"
                 aria-pressed={on}
-                aria-label={`${voter.name}${voter.yours ? ", you" : ""}. Show their times on the grid.`}
+                aria-label={`${voter.name}${voter.yours ? ", you" : ""}${voter.note ? `, “${voter.note}”` : ""}. Show their times on the grid.`}
                 className={`border bg-paper px-2.5 py-1 transition-[border-color,box-shadow] duration-[var(--quick)] ${
                   on
                     ? "border-foreground shadow-[inset_0_0_0_0.5px_var(--foreground)]"
@@ -241,6 +242,7 @@ function People({
               >
                 {voter.name}
                 {voter.yours ? <span className="text-muted"> · you</span> : null}
+                {voter.note ? <span className="text-muted"> · {voter.note}</span> : null}
               </button>
             </li>
           );
