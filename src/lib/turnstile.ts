@@ -1,5 +1,6 @@
 export const CREATE_ACTION = "create-poll";
 export const VOTE_ACTION = "first-answer";
+export const EMAIL_ACTION = "email-links";
 
 const MAX_TOKEN = 2048;
 

@@ -23,6 +23,7 @@ import type { PollView, VoterView } from "@/lib/types";
 import { useLiveUpdates, useRefreshAt } from "@/client/use-live-updates";
 import { CopyLink, ShareBar } from "./copy-link";
 import { CreatedNotice } from "./created-notice";
+import { EmailLinks } from "./email-links";
 import { Availability } from "./availability";
 import { FinalTime } from "./final-time";
 import { SentenceBlock } from "./poll-summary";
@@ -30,7 +31,15 @@ import { ScheduleFields } from "../common/schedule-fields";
 import { VotingControls } from "./voting-controls";
 import { datesForWeekdays, weekdayOf } from "@/lib/time/weekly";
 
-export function OwnerView({ poll, hasResponses }: { poll: PollView; hasResponses: boolean }) {
+export function OwnerView({
+  poll,
+  hasResponses,
+  canEmail = false,
+}: {
+  poll: PollView;
+  hasResponses: boolean;
+  canEmail?: boolean;
+}) {
   const router = useRouter();
   const location = usePageLocation();
   const timeZone = useTimeZone();
@@ -178,6 +187,7 @@ export function OwnerView({ poll, hasResponses }: { poll: PollView; hasResponses
           title={poll.title}
           publicUrl={`${location.origin}/p/${poll.id}`}
           savedOnDevice={savedOnDevice}
+          canEmail={canEmail}
           onDone={dismissCreated}
         />
       ) : null}
@@ -269,6 +279,7 @@ export function OwnerView({ poll, hasResponses }: { poll: PollView; hasResponses
             href={location.href}
             secret
           />
+          {canEmail && !justCreated ? <EmailLinks className="mt-6 max-w-xl" /> : null}
         </section>
       ) : null}
 

@@ -9,7 +9,7 @@ Pick a few days, send one link, and see which time works for everyone.
 
 Overlap is a small scheduling poll. You choose some days and a window of hours, share the link, and everyone drags across the times they can make. The page then tells you the answer in one sentence, like *"Tue 11:30 AM–1:00 PM works for everyone"*, shown in each person's own timezone.
 
-There are no accounts. Creating a poll gives you two links: a public one to share, and a secret one that's the only way to edit or delete the poll.
+There are no accounts. Creating a poll gives you two links: a public one to share, and a secret one that's the only way to edit or delete the poll. You can email both to yourself; the address is used once and never stored.
 
 ## What it does
 
@@ -111,7 +111,8 @@ GitHub Actions runs the checks, both builds and the browser tests on every push.
 2. Apply the migrations: `bunx wrangler d1 migrations apply overlap --remote`.
 3. Store the Turnstile secret: `bunx wrangler secret put TURNSTILE_SECRET`.
 4. Check that `TURNSTILE_HOSTNAMES` in `wrangler.jsonc` lists your domain.
-5. `bun run deploy`.
+5. To send the link emails, set up Cloudflare Email Sending for the domain, so the `EMAIL` binding can send from `links@overlap.cendik.dev`. Without it the email form stays hidden.
+6. `bun run deploy`.
 
 Production builds use https://overlap.cendik.dev for absolute preview URLs. Set `SITE_URL` while building to use another address.
 
@@ -124,6 +125,7 @@ Production builds use https://overlap.cendik.dev for absolute preview URLs. Set 
 | People per poll | 40 |
 | Title / name / note | 80 / 40 / 80 characters |
 | New polls | 5 a minute per network |
+| Link emails | 3 a minute per network |
 | Saved answers | 60 a minute per network |
 
 The days and hours can change while nobody has answered yet. People can remove their own answer until voting ends, and the owner can remove any answer at any time.

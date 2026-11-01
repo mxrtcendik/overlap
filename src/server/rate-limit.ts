@@ -6,6 +6,7 @@ const LIMITERS = {
   create: "CREATE_LIMITER",
   vote: "VOTE_LIMITER",
   owner: "OWNER_LIMITER",
+  email: "EMAIL_LIMITER",
 } as const;
 
 type Action = keyof typeof LIMITERS;

@@ -3,16 +3,19 @@
 import { useEffect, useRef } from "react";
 import { useCanShare } from "@/client/browser";
 import { copyText, CopyLabel, useCopyState } from "./copy-link";
+import { EmailLinks } from "./email-links";
 
 export function CreatedNotice({
   title,
   publicUrl,
   savedOnDevice,
+  canEmail,
   onDone,
 }: {
   title: string;
   publicUrl: string;
   savedOnDevice: boolean;
+  canEmail: boolean;
   onDone: () => void;
 }) {
   const heading = useRef<HTMLHeadingElement>(null);
@@ -70,6 +73,7 @@ export function CreatedNotice({
           {savedOnDevice ? ", and it’s also saved in this browser." : "."}
         </span>
       </p>
+      {canEmail ? <EmailLinks className="mt-4" /> : null}
     </section>
   );
 }

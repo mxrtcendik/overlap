@@ -52,3 +52,24 @@ test("removes someone's answer from the owner page", async ({ page, request }) =
 
   await expect(page.getByRole("heading", { name: "Answers" })).toHaveCount(0);
 });
+
+test("emails both links to the owner", async ({ page, request }) => {
+  const { ownerToken } = await createPoll(request);
+  await page.goto(`/o/${ownerToken}`);
+  const secret = page.locator("section", { has: page.getByRole("heading", { name: "Secret link" }) });
+
+  await secret.getByLabel("Email me both links").fill("owner@example.com");
+  await secret.getByRole("button", { name: "Send" }).click();
+
+  await expect(secret.getByText("Sent to owner@example.com. We didn’t keep the address.")).toBeVisible();
+});
+
+test("refuses link emails without a token or a valid address", async ({ request }) => {
+  const { ownerToken } = await createPoll(request);
+  const noToken = await request.post(`/o/${ownerToken}/email`, { data: { email: "owner@example.com" } });
+  expect(noToken.status()).toBe(403);
+  const badAddress = await request.post(`/o/${ownerToken}/email`, {
+    data: { email: "not an address", "cf-turnstile-response": TEST_TOKEN },
+  });
+  expect(badAddress.status()).toBe(400);
+});
