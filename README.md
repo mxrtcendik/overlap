@@ -24,6 +24,12 @@ Open http://localhost:3000. The local database is D1, stored by Wrangler on this
 
 Live updates need a Durable Object, which `next dev` can’t run, so under `bun run dev` open pages check for changes every 20 seconds instead. `bun run preview` has the real thing.
 
+## Database
+
+The schema lives in `src/db/schema.ts` as Drizzle tables, and every query is built with Drizzle, so rows are typed from the schema down to the page. A poll is loaded with its voters and their marks in one statement. Writes that must happen together, such as replacing someone’s answer, run as a D1 batch, which is one transaction.
+
+To change the schema, edit `schema.ts`, run `bun run db:generate` to write the SQL migration into `migrations/`, and apply it with `bun run db:migrate`. Migrations 0001 to 0003 predate Drizzle and were written by hand; `migrations/meta` holds Drizzle’s snapshot of the schema they produce.
+
 ## Deploy
 
 Create a D1 database named overlap, put its id in `wrangler.jsonc`, apply the migrations with `--remote`, and run `bun run deploy`. Set `SITE_URL` to the public address, such as `https://overlap.example.com`, when building, so the home page's link preview uses absolute URLs. Poll pages use the address of each request instead.

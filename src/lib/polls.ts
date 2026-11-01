@@ -1,7 +1,9 @@
 import "server-only";
 import { cache } from "react";
+import { and, asc, eq, gt, notExists, sql, type SQL } from "drizzle-orm";
+import { LEVEL, marks, polls, voters } from "@/db/schema";
 import { MAX_NAME, MAX_TITLE, MAX_VOTERS, RETAIN_MS, SLOT_MS } from "./constants";
-import { getDb } from "./db";
+import { getDb, type Database } from "./db";
 import { parseFinal, parseSlots } from "./slots";
 import { cleanText } from "./text";
 import { isToken, randomToken, sha256 } from "./tokens";
@@ -20,16 +22,6 @@ export type StoredPoll = {
   voters: StoredVoter[];
 };
 
-type PollRow = {
-  id: string;
-  title: string;
-  slots: string;
-  closes_at: number;
-  delete_at: number;
-  final_start: number | null;
-  final_end: number | null;
-};
-
 type Failure = { ok: false; status: number; error: string };
 
 const NOT_FOUND: Failure = { ok: false, status: 404, error: "This poll doesn’t exist." };
@@ -38,12 +30,12 @@ const ownerHash = (token: string) => sha256(token);
 
 const voterRef = async (voterId: string) => (await sha256(`voter:${voterId}`)).slice(0, 16);
 
-const YES = 2;
-const IF_NEEDED = 1;
-
-const INSERT_MARKS = `INSERT INTO marks (voter_id, slot, level)
-  SELECT ?, value, ? FROM json_each(?)
-  WHERE EXISTS (SELECT 1 FROM voters WHERE id = ?)`;
+function insertMarks(db: Database, voterId: string, level: (typeof LEVEL)[keyof typeof LEVEL], slots: string[]) {
+  return db.insert(marks).select(
+    sql`SELECT ${voterId}, value, ${level} FROM json_each(${JSON.stringify(slots)})
+      WHERE EXISTS (SELECT 1 FROM ${voters} WHERE ${voters.id} = ${voterId})`,
+  );
+}
 
 export function toPollView(poll: StoredPoll, voterId: string | null, options: { refs?: boolean } = {}): PollView {
   return {
@@ -62,71 +54,50 @@ export function toPollView(poll: StoredPoll, voterId: string | null, options: { 
   };
 }
 
-function parseStoredSlots(raw: string): string[] {
-  try {
-    const parsed = JSON.parse(raw) as unknown;
-    return Array.isArray(parsed) ? parsed.filter((slot): slot is string => typeof slot === "string") : [];
-  } catch {
-    return [];
-  }
-}
-
-export const getPoll = cache(async (id: string): Promise<StoredPoll | null> => {
-  if (!isToken(id)) return null;
+async function findPoll(match: SQL): Promise<StoredPoll | null> {
   const db = await getDb();
   const now = Date.now();
-  const poll = await db
-    .prepare("SELECT id, title, slots, closes_at, delete_at, final_start, final_end FROM polls WHERE id = ?")
-    .bind(id)
-    .first<PollRow>();
-  if (!poll || poll.delete_at <= now) return null;
-
-  const [voters, marks] = await db.batch([
-    db.prepare("SELECT id, name FROM voters WHERE poll_id = ? ORDER BY created_at ASC, id ASC").bind(id),
-    db
-      .prepare(
-        "SELECT marks.voter_id, marks.slot, marks.level FROM marks JOIN voters ON voters.id = marks.voter_id WHERE voters.poll_id = ?",
-      )
-      .bind(id),
-  ]);
-
-  const marksByVoter = new Map<string, { slots: string[]; maybe: string[] }>();
-  for (const mark of marks.results as { voter_id: string; slot: string; level: number }[]) {
-    const lists = marksByVoter.get(mark.voter_id) ?? { slots: [], maybe: [] };
-    (mark.level === IF_NEEDED ? lists.maybe : lists.slots).push(mark.slot);
-    marksByVoter.set(mark.voter_id, lists);
-  }
+  const poll = await db.query.polls.findFirst({
+    where: and(match, gt(polls.deleteAt, now)),
+    columns: { id: true, title: true, slots: true, closesAt: true, finalStart: true, finalEnd: true },
+    with: {
+      voters: {
+        columns: { id: true, name: true },
+        orderBy: [asc(voters.createdAt), asc(voters.id)],
+        with: { marks: { columns: { slot: true, level: true } } },
+      },
+    },
+  });
+  if (!poll) return null;
 
   return {
     id: poll.id,
     title: poll.title,
-    slots: parseStoredSlots(poll.slots),
-    closed: poll.closes_at <= now,
+    slots: poll.slots,
+    closed: poll.closesAt <= now,
     final:
-      poll.final_start !== null && poll.final_end !== null
-        ? { start: new Date(poll.final_start).toISOString(), end: new Date(poll.final_end).toISOString() }
+      poll.finalStart !== null && poll.finalEnd !== null
+        ? { start: new Date(poll.finalStart).toISOString(), end: new Date(poll.finalEnd).toISOString() }
         : null,
     voters: await Promise.all(
-      (voters.results as { id: string; name: string }[]).map(async (voter) => ({
+      poll.voters.map(async (voter) => ({
         id: voter.id,
         ref: await voterRef(voter.id),
         name: voter.name,
-        slots: marksByVoter.get(voter.id)?.slots ?? [],
-        maybe: marksByVoter.get(voter.id)?.maybe ?? [],
+        slots: voter.marks.filter((mark) => mark.level === LEVEL.yes).map((mark) => mark.slot),
+        maybe: voter.marks.filter((mark) => mark.level === LEVEL.ifNeeded).map((mark) => mark.slot),
       })),
     ),
   };
-});
+}
 
-export const getPollByOwnerToken = cache(async (token: string): Promise<StoredPoll | null> => {
-  if (!isToken(token)) return null;
-  const db = await getDb();
-  const row = await db
-    .prepare("SELECT id FROM polls WHERE owner_hash = ?")
-    .bind(await ownerHash(token))
-    .first<{ id: string }>();
-  return row ? getPoll(row.id) : null;
-});
+export const getPoll = cache(async (id: string): Promise<StoredPoll | null> =>
+  isToken(id) ? findPoll(eq(polls.id, id)) : null,
+);
+
+export const getPollByOwnerToken = cache(async (token: string): Promise<StoredPoll | null> =>
+  isToken(token) ? findPoll(eq(polls.ownerHash, await ownerHash(token))) : null,
+);
 
 function closesAt(slots: string[]): number {
   return Math.max(...slots.map((slot) => Date.parse(slot))) + SLOT_MS;
@@ -152,13 +123,15 @@ export async function createPoll(
   const ownerToken = randomToken(24);
   const now = Date.now();
   const closes = closesAt(parsed.slots);
-  await db
-    .prepare(
-      `INSERT INTO polls (id, owner_hash, title, slots, created_at, closes_at, delete_at)
-       VALUES (?, ?, ?, ?, ?, ?, ?)`,
-    )
-    .bind(id, await ownerHash(ownerToken), title, JSON.stringify(parsed.slots), now, closes, closes + RETAIN_MS)
-    .run();
+  await db.insert(polls).values({
+    id,
+    ownerHash: await ownerHash(ownerToken),
+    title,
+    slots: parsed.slots,
+    createdAt: now,
+    closesAt: closes,
+    deleteAt: closes + RETAIN_MS,
+  });
   return { ok: true, id, ownerToken };
 }
 
@@ -196,33 +169,27 @@ export async function saveVote(
   if (maybe.some((slot) => chosen.includes(slot))) {
     return { ok: false, status: 400, error: "A time can be marked as yes or if needed, not both." };
   }
-  const chosenJson = JSON.stringify(chosen);
-  const maybeJson = JSON.stringify(maybe);
-
   const db = await getDb();
   const known = poll.voters.find((voter) => voter.id === voterId) ?? null;
 
   if (known) {
     await db.batch([
-      db.prepare("UPDATE voters SET name = ? WHERE id = ? AND poll_id = ?").bind(name, known.id, poll.id),
-      db.prepare("DELETE FROM marks WHERE voter_id = ?").bind(known.id),
-      db.prepare(INSERT_MARKS).bind(known.id, YES, chosenJson, known.id),
-      db.prepare(INSERT_MARKS).bind(known.id, IF_NEEDED, maybeJson, known.id),
+      db.update(voters).set({ name }).where(and(eq(voters.id, known.id), eq(voters.pollId, poll.id))),
+      db.delete(marks).where(eq(marks.voterId, known.id)),
+      insertMarks(db, known.id, LEVEL.yes, chosen),
+      insertMarks(db, known.id, LEVEL.ifNeeded, maybe),
     ]);
     return { ok: true, voterId: known.id };
   }
 
   const nextId = randomToken(16);
   const [inserted] = await db.batch([
-    db
-      .prepare(
-        `INSERT INTO voters (id, poll_id, name, created_at)
-         SELECT ?, ?, ?, ?
-         WHERE (SELECT COUNT(*) FROM voters WHERE poll_id = ?) < ?`,
-      )
-      .bind(nextId, poll.id, name, Date.now(), poll.id, MAX_VOTERS),
-    db.prepare(INSERT_MARKS).bind(nextId, YES, chosenJson, nextId),
-    db.prepare(INSERT_MARKS).bind(nextId, IF_NEEDED, maybeJson, nextId),
+    db.insert(voters).select(
+      sql`SELECT ${nextId}, ${poll.id}, ${name}, ${Date.now()}
+        WHERE (SELECT COUNT(*) FROM ${voters} WHERE ${voters.pollId} = ${poll.id}) < ${MAX_VOTERS}`,
+    ),
+    insertMarks(db, nextId, LEVEL.yes, chosen),
+    insertMarks(db, nextId, LEVEL.ifNeeded, maybe),
   ]);
   if ((inserted.meta.changes ?? 0) === 0) {
     return { ok: false, status: 409, error: `This poll is full. It already has ${MAX_VOTERS} answers.` };
@@ -240,9 +207,11 @@ export async function updateTitle(token: string, titleInput: unknown): Promise<D
   if (!title) return { ok: false, status: 400, error: "Titles can be up to 80 characters." };
   const db = await getDb();
   const updated = await db
-    .prepare("UPDATE polls SET title = ? WHERE owner_hash = ? RETURNING id")
-    .bind(title, await ownerHash(token))
-    .first<{ id: string }>();
+    .update(polls)
+    .set({ title })
+    .where(eq(polls.ownerHash, await ownerHash(token)))
+    .returning({ id: polls.id })
+    .get();
   if (!updated) return NOT_FOUND;
   return { ok: true, id: updated.id };
 }
@@ -255,18 +224,19 @@ export async function updateSlots(token: string, slotsInput: unknown): Promise<D
   const hash = await ownerHash(token);
   const db = await getDb();
   const updated = await db
-    .prepare(
-      `UPDATE polls
-       SET slots = ?, closes_at = ?, delete_at = ?, final_start = NULL, final_end = NULL
-       WHERE owner_hash = ?
-         AND NOT EXISTS (SELECT 1 FROM voters WHERE voters.poll_id = polls.id)
-       RETURNING id`,
+    .update(polls)
+    .set({ slots: parsed.slots, closesAt: closes, deleteAt: closes + RETAIN_MS, finalStart: null, finalEnd: null })
+    .where(
+      and(
+        eq(polls.ownerHash, hash),
+        notExists(db.select({ id: voters.id }).from(voters).where(eq(voters.pollId, polls.id))),
+      ),
     )
-    .bind(JSON.stringify(parsed.slots), closes, closes + RETAIN_MS, hash)
-    .first<{ id: string }>();
+    .returning({ id: polls.id })
+    .get();
   if (updated) return { ok: true, id: updated.id };
 
-  const existing = await db.prepare("SELECT 1 FROM polls WHERE owner_hash = ?").bind(hash).first();
+  const existing = await db.select({ id: polls.id }).from(polls).where(eq(polls.ownerHash, hash)).get();
   if (!existing) return NOT_FOUND;
   return { ok: false, status: 409, error: "Days can’t change once people have answered." };
 }
@@ -278,18 +248,19 @@ export async function updateFinal(token: string, input: unknown): Promise<Done |
   if (!parsed.ok) return { ok: false, status: 400, error: parsed.error };
   const db = await getDb();
   await db
-    .prepare("UPDATE polls SET final_start = ?, final_end = ? WHERE id = ?")
-    .bind(parsed.final?.start ?? null, parsed.final?.end ?? null, poll.id)
-    .run();
+    .update(polls)
+    .set({ finalStart: parsed.final?.start ?? null, finalEnd: parsed.final?.end ?? null })
+    .where(eq(polls.id, poll.id));
   return { ok: true, id: poll.id };
 }
 
 export async function deleteOwned(token: string): Promise<Done | Failure> {
   const db = await getDb();
   const deleted = await db
-    .prepare("DELETE FROM polls WHERE owner_hash = ? RETURNING id")
-    .bind(await ownerHash(token))
-    .first<{ id: string }>();
+    .delete(polls)
+    .where(eq(polls.ownerHash, await ownerHash(token)))
+    .returning({ id: polls.id })
+    .get();
   if (!deleted) return NOT_FOUND;
   return { ok: true, id: deleted.id };
 }
@@ -300,7 +271,7 @@ export async function deleteOwnVote(pollId: string, voterId: string | null): Pro
   if (poll.closed) return { ok: false, status: 403, error: "Voting has ended, so answers can’t change." };
   const known = voterId ? poll.voters.find((voter) => voter.id === voterId) : undefined;
   if (!known) return { ok: false, status: 404, error: "There’s no answer from you on this poll." };
-  await (await getDb()).prepare("DELETE FROM voters WHERE id = ? AND poll_id = ?").bind(known.id, poll.id).run();
+  await deleteVoter(known.id, poll.id);
   return { ok: true, id: poll.id };
 }
 
@@ -309,6 +280,11 @@ export async function removeAnswer(token: string, ref: string): Promise<Done | F
   if (!poll) return NOT_FOUND;
   const voter = poll.voters.find((candidate) => candidate.ref === ref);
   if (!voter) return { ok: false, status: 404, error: "That answer has already been removed." };
-  await (await getDb()).prepare("DELETE FROM voters WHERE id = ? AND poll_id = ?").bind(voter.id, poll.id).run();
+  await deleteVoter(voter.id, poll.id);
   return { ok: true, id: poll.id };
+}
+
+async function deleteVoter(voterId: string, pollId: string): Promise<void> {
+  const db = await getDb();
+  await db.delete(voters).where(and(eq(voters.id, voterId), eq(voters.pollId, pollId)));
 }

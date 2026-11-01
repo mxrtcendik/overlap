@@ -1,0 +1,69 @@
+import { relations, sql } from "drizzle-orm";
+import { check, index, integer, primaryKey, sqliteTable, text } from "drizzle-orm/sqlite-core";
+
+export const polls = sqliteTable(
+  "polls",
+  {
+    id: text("id").primaryKey(),
+    ownerHash: text("owner_hash").notNull().unique(),
+    title: text("title").notNull(),
+    slots: text("slots", { mode: "json" }).notNull().$type<string[]>(),
+    createdAt: integer("created_at").notNull(),
+    closesAt: integer("closes_at").notNull(),
+    deleteAt: integer("delete_at").notNull(),
+    finalStart: integer("final_start"),
+    finalEnd: integer("final_end"),
+  },
+  (table) => [index("polls_delete_at").on(table.deleteAt)],
+);
+
+export const voters = sqliteTable(
+  "voters",
+  {
+    id: text("id").primaryKey(),
+    pollId: text("poll_id")
+      .notNull()
+      .references(() => polls.id, { onDelete: "cascade" }),
+    name: text("name").notNull(),
+    createdAt: integer("created_at").notNull(),
+  },
+  (table) => [index("voters_poll_id").on(table.pollId, table.createdAt)],
+);
+
+export const LEVEL = { ifNeeded: 1, yes: 2 } as const;
+
+export const marks = sqliteTable(
+  "marks",
+  {
+    voterId: text("voter_id")
+      .notNull()
+      .references(() => voters.id, { onDelete: "cascade" }),
+    slot: text("slot").notNull(),
+    level: integer("level").$type<(typeof LEVEL)[keyof typeof LEVEL]>().notNull().default(LEVEL.yes),
+  },
+  (table) => [
+    primaryKey({ columns: [table.voterId, table.slot] }),
+    check("marks_level", sql`${table.level} IN (1, 2)`),
+  ],
+);
+
+export const rateBuckets = sqliteTable(
+  "rate_buckets",
+  {
+    id: text("id").primaryKey(),
+    hits: integer("hits").notNull(),
+    expiresAt: integer("expires_at").notNull(),
+  },
+  (table) => [index("rate_buckets_expires_at").on(table.expiresAt)],
+);
+
+export const pollsRelations = relations(polls, ({ many }) => ({ voters: many(voters) }));
+
+export const votersRelations = relations(voters, ({ one, many }) => ({
+  poll: one(polls, { fields: [voters.pollId], references: [polls.id] }),
+  marks: many(marks),
+}));
+
+export const marksRelations = relations(marks, ({ one }) => ({
+  voter: one(voters, { fields: [marks.voterId], references: [voters.id] }),
+}));

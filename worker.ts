@@ -1,6 +1,9 @@
 // eslint-disable-next-line @typescript-eslint/ban-ts-comment
 // @ts-ignore
 import { default as nextHandler } from "./.open-next/worker.js";
+import { and, eq, gt } from "drizzle-orm";
+import { createDb } from "./src/db";
+import { polls } from "./src/db/schema";
 import { isSameOrigin, livePollId } from "./src/lib/live";
 import { purgeExpired } from "./src/lib/purge";
 
@@ -15,9 +18,11 @@ async function openLive(request: Request, env: CloudflareEnv, pollId: string): P
   if (!isSameOrigin(request.url, request.headers.get("Origin"))) {
     return new Response("Forbidden.", { status: 403 });
   }
-  const live = await env.DB.prepare("SELECT 1 FROM polls WHERE id = ? AND delete_at > ?")
-    .bind(pollId, Date.now())
-    .first();
+  const live = await createDb(env.DB)
+    .select({ id: polls.id })
+    .from(polls)
+    .where(and(eq(polls.id, pollId), gt(polls.deleteAt, Date.now())))
+    .get();
   if (!live) return new Response("This poll doesn’t exist.", { status: 404 });
   return env.POLL_ROOM.get(env.POLL_ROOM.idFromName(pollId)).fetch(request);
 }
@@ -31,7 +36,7 @@ export default {
 
   async scheduled(_controller, env, ctx) {
     ctx.waitUntil(
-      purgeExpired(env.DB).then((removed) => console.log(JSON.stringify({ event: "purge", ...removed }))),
+      purgeExpired(createDb(env.DB)).then((removed) => console.log(JSON.stringify({ event: "purge", ...removed }))),
     );
   },
 } satisfies ExportedHandler<CloudflareEnv>;
