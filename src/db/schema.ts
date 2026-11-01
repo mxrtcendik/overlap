@@ -9,6 +9,7 @@ export const polls = sqliteTable(
     title: text("title").notNull(),
     kind: text("kind").$type<"dates" | "weekly">().notNull().default("dates"),
     zone: text("zone"),
+    duration: integer("duration"),
     slots: text("slots", { mode: "json" }).notNull().$type<string[]>(),
     createdAt: integer("created_at").notNull(),
     closesAt: integer("closes_at").notNull(),

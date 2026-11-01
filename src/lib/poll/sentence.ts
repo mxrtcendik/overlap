@@ -1,5 +1,6 @@
 import { MAX_VOTERS, SLOT_MS } from "../constants";
 import { describeRun, type Clock } from "../time/format";
+import { topWindows } from "./availability";
 
 export type Marks = { slots: string[]; maybe?: string[] };
 export type Vote = Marks & { name: string };
@@ -62,7 +63,11 @@ export function bestRun(slots: string[], counts: Map<string, number>): Run | nul
 
 export type BestTime = { start: number; end: number; yes: number; maybe: number };
 
-export function bestTime(slots: string[], votes: Marks[]): BestTime | null {
+export function bestTime(slots: string[], votes: Marks[], duration: number | null = null): BestTime | null {
+  if (duration) {
+    const [top] = topWindows(slots, votes, duration, 1);
+    return top ? { start: top.start, end: top.end, yes: top.people.length - top.maybe.length, maybe: top.maybe.length } : null;
+  }
   const tallies = tallySlots(slots, votes);
   const scores = new Map([...tallies].map(([slot, tally]) => [slot, slotScore(tally)]));
   const run = bestRun(slots, scores);
@@ -85,12 +90,13 @@ export function overlapSummary(input: {
   timeZone: string;
   clock?: Clock;
   weekly?: boolean;
+  duration?: number | null;
 }): Summary {
   const people = input.votes.length;
   if (people === 0) return { kind: "empty" };
   if (people === 1) return { kind: "one", name: input.votes[0].name };
 
-  const best = bestTime(input.slots, input.votes);
+  const best = bestTime(input.slots, input.votes, input.duration ?? null);
   if (!best) return { kind: "unmarked" };
 
   const when = describeRun(best.start, best.end, input.timeZone, input.slots, input.clock, input.weekly);

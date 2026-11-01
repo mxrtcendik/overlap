@@ -29,6 +29,8 @@ import { FinalTime } from "./final-time";
 import { SentenceBlock } from "./poll-summary";
 import { ScheduleFields } from "../common/schedule-fields";
 import { VotingControls } from "./voting-controls";
+import { DurationField } from "../common/duration-field";
+import { longestRun } from "@/lib/poll/duration";
 import { currentWeek, IDENTITY, projectPoll, storedRange } from "@/lib/time/week-projection";
 import { answersCsv } from "@/lib/poll/csv";
 import { icsFileName } from "@/lib/calendar/export";
@@ -90,6 +92,19 @@ export function OwnerView({
   async function send(method: "PATCH" | "DELETE", body?: unknown, route = "edit") {
     const path = `${window.location.pathname.replace(/\/$/, "")}/${route}`;
     await request(path, { method, ...(body === undefined ? {} : json(body)) });
+  }
+
+  async function onDuration(minutes: number | null) {
+    setPending(true);
+    setError(null);
+    try {
+      await send("PATCH", { duration: minutes });
+      router.refresh();
+    } catch (caught) {
+      setError({ at: "settings", message: messageOf(caught) });
+    } finally {
+      setPending(false);
+    }
   }
 
   async function onTitle(event: FormEvent) {
@@ -226,6 +241,7 @@ export function OwnerView({
         deadline={poll.deadline}
         lastEnd={poll.lastEnd}
         weekly={weekly}
+        duration={poll.duration}
         emptyText="No answers yet. Share the public link to collect them."
       />
       {location && !justCreated ? <ShareBar title={poll.title} href={`${location.origin}/p/${poll.id}`} /> : null}
@@ -243,6 +259,7 @@ export function OwnerView({
           selectLabel="Your pick"
           outline={finalOutline}
           weekly={weekly}
+          duration={poll.duration}
           onChange={setDraft}
           onPick={(segment) => void setFinal({ start: segment.start, end: segment.end })}
         />
@@ -312,7 +329,15 @@ export function OwnerView({
         <h2 id="settings-heading" className="text-sm text-muted">
           Poll settings
         </h2>
-        <form onSubmit={onTitle} className="mt-6 flex max-w-xl flex-wrap items-end gap-3">
+        <div className="mt-6 max-w-xl">
+          <DurationField
+            value={poll.duration}
+            max={longestRun(poll.slots)}
+            disabled={pending}
+            onChange={(minutes) => void onDuration(minutes)}
+          />
+        </div>
+        <form onSubmit={onTitle} className="mt-8 flex max-w-xl flex-wrap items-end gap-3">
           <label className="min-w-0 flex-1 basis-64 text-sm text-muted">
             Title
             <input

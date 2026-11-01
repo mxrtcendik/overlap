@@ -15,6 +15,7 @@ There are no accounts. Creating a poll gives you two links: a public one to shar
 - **Timezones done properly.** Everyone sees the grid in their own zone, with their own 12- or 24-hour clock and first day of the week. If you're planning from another city, you can switch the zone next to the times.
 - **"If needed" answers.** Mark a time as one you can make, or one you'd rather not but could. The best time is the one most people can make, and among those, the one the fewest only "could".
 - **Fill in from your calendar.** Pick an `.ics` export from Google Calendar, Outlook or Apple Calendar and every time it leaves free gets marked. The file is read in the browser and never uploaded.
+- **Meeting length.** Say the meeting takes 90 minutes, and the best times are stretches everyone can stay for the whole of it.
 - **Notes.** A short line next to your name, like "Remote only".
 - **Export.** The owner can download every answer as a CSV, with times in their own timezone.
 - **Weekly polls.** Ask about days of the week instead of dates when something repeats. The answer then reads "Mondays 6:00–7:00 PM".

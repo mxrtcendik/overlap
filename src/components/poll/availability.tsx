@@ -21,6 +21,7 @@ export function Availability({
   outline,
   selectLabel,
   weekly = false,
+  duration = null,
   onChange,
   onPick,
 }: {
@@ -34,6 +35,7 @@ export function Availability({
   outline?: { slots: Set<string>; label: string } | null;
   selectLabel?: string;
   weekly?: boolean;
+  duration?: number | null;
   onChange?: (next: string[], nextMaybe: string[]) => void;
   onPick?: (segment: Segment) => void;
 }) {
@@ -47,7 +49,7 @@ export function Availability({
     () => hovered ?? (pinnedVoter ? new Set([...pinnedVoter.slots, ...pinnedVoter.maybe]) : null),
     [hovered, pinnedVoter],
   );
-  const segments = useMemo(() => topSegments(slots, voters), [slots, voters]);
+  const segments = useMemo(() => topSegments(slots, voters, 3, duration), [slots, voters, duration]);
 
   return (
     <div className="flex flex-col gap-10 lg:flex-row lg:items-start lg:gap-12">
@@ -64,6 +66,7 @@ export function Availability({
           outline={outline}
           selectLabel={selectLabel}
           weekly={weekly}
+          duration={duration}
           onChange={onChange}
           onInspect={setInspected}
         />

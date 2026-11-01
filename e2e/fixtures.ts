@@ -16,7 +16,14 @@ export const test = base.extend({
 
 export { expect };
 
-type PollOptions = { title?: string; days?: number[]; from?: number; to?: number; kind?: "dates" | "weekly" };
+type PollOptions = {
+  title?: string;
+  days?: number[];
+  from?: number;
+  to?: number;
+  kind?: "dates" | "weekly";
+  duration?: number;
+};
 
 export function slotsFor({ days = [1, 2], from = 9, to = 12 }: PollOptions = {}): string[] {
   const now = new Date();
@@ -35,7 +42,13 @@ export async function createPoll(
 ): Promise<{ id: string; ownerToken: string; slots: string[] }> {
   const slots = slotsFor(options);
   const response = await request.post("/api/polls", {
-    data: { title: options.title ?? "Team sync", slots, kind: options.kind, "cf-turnstile-response": TEST_TOKEN },
+    data: {
+      title: options.title ?? "Team sync",
+      slots,
+      kind: options.kind,
+      duration: options.duration,
+      "cf-turnstile-response": TEST_TOKEN,
+    },
   });
   expect(response.ok(), await response.text()).toBe(true);
   return { ...(await response.json()), slots };

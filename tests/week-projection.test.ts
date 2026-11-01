@@ -29,6 +29,7 @@ describe("projectPoll", () => {
     deadline: null,
     kind: "weekly",
     zone,
+    duration: null,
     lastEnd: "2026-12-31T00:00:00.000Z",
     final: { start: october[0], end: "2026-10-19T23:00:00.000Z" },
     voters: [{ name: "Ada", note: null, slots: [october[0]], maybe: [october[1]], yours: false }],

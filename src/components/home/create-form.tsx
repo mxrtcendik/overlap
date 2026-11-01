@@ -10,6 +10,7 @@ import { buildSlots } from "@/lib/time/schedule";
 import { CREATE_ACTION } from "@/lib/turnstile";
 import { useTurnstile } from "@/client/use-turnstile";
 import { WEEKLY_OPEN_MS, type PollKind } from "@/lib/time/weekly";
+import { DurationField } from "../common/duration-field";
 import { ScheduleFields } from "../common/schedule-fields";
 
 export function CreateForm() {
@@ -20,6 +21,8 @@ export function CreateForm() {
   const [dates, setDates] = useState<string[]>([]);
   const [start, setStart] = useState(9 * 60);
   const [end, setEnd] = useState(17 * 60);
+  const [duration, setDuration] = useState<number | null>(null);
+  const fitting = duration !== null && duration <= end - start ? duration : null;
   const [error, setError] = useState<string | null>(null);
   const [pending, setPending] = useState(false);
   const { container: turnstileRef, getToken, reset: resetTurnstile } = useTurnstile(CREATE_ACTION);
@@ -41,7 +44,7 @@ export function CreateForm() {
       }
       const data = await request<{ id: string; ownerToken: string }>("/api/polls", {
         method: "POST",
-        ...json({ title, slots, kind, zone, "cf-turnstile-response": token }),
+        ...json({ title, slots, kind, zone, duration: fitting, "cf-turnstile-response": token }),
       });
       const lastEnd = kind === "weekly" ? new Date(Date.now() + WEEKLY_OPEN_MS).toISOString() : undefined;
       rememberPoll({ id: data.id, token: data.ownerToken, title: title.trim(), expiresAt: expiresAtFor(slots, lastEnd) });
@@ -86,6 +89,9 @@ export function CreateForm() {
           onStart={setStart}
           onEnd={setEnd}
         />
+      </div>
+      <div className="mt-6">
+        <DurationField value={fitting} max={end - start} onChange={setDuration} />
       </div>
       {error ? (
         <p className="mt-4 text-sm text-danger" role="alert">

@@ -24,7 +24,7 @@ export default async function Image({ params }: Params) {
   if (poll.final) {
     for (const slot of slotsIn(poll.slots, Date.parse(poll.final.start), Date.parse(poll.final.end))) outlined.add(slot);
   } else if (poll.voters.length > 1) {
-    const run = bestTime(poll.slots, poll.voters);
+    const run = bestTime(poll.slots, poll.voters, poll.duration);
     if (run) for (const slot of slotsIn(poll.slots, run.start, run.end)) outlined.add(slot);
   }
 

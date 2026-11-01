@@ -88,6 +88,7 @@ export function PollGrid({
   outline = null,
   selectLabel = "You",
   weekly = false,
+  duration = null,
   onChange,
   onInspect,
 }: {
@@ -102,6 +103,7 @@ export function PollGrid({
   outline?: { slots: Set<string>; label: string } | null;
   selectLabel?: string;
   weekly?: boolean;
+  duration?: number | null;
   onChange?: (next: string[], nextMaybe: string[]) => void;
   onInspect?: (iso: string | null) => void;
 }) {
@@ -185,7 +187,7 @@ export function PollGrid({
 
   const best = new Set<string>(outline?.slots);
   const outlineLabel = outline?.label ?? "Best time";
-  const run = !outline && voters.length > 1 ? bestTime(slots, voters) : null;
+  const run = !outline && voters.length > 1 ? bestTime(slots, voters, duration) : null;
   if (run) {
     for (const slot of slots) {
       const time = Date.parse(slot);

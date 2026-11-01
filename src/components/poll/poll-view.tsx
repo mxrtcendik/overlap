@@ -187,6 +187,7 @@ export function PollView({ poll: stored }: { poll: PollViewData }) {
         deadline={poll.deadline}
         lastEnd={poll.lastEnd}
         weekly={weekly}
+        duration={poll.duration}
         emptyText="No answers yet. Be the first."
       />
 
@@ -280,6 +281,7 @@ export function PollView({ poll: stored }: { poll: PollViewData }) {
           readOnly={poll.closed}
           outline={finalOutline}
           weekly={weekly}
+          duration={poll.duration}
           onChange={change}
         />
       </div>

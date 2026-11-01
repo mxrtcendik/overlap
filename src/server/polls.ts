@@ -5,6 +5,7 @@ import { LEVEL, marks, polls, voters } from "@/db/schema";
 import { MAX_NAME, MAX_NOTE, MAX_TITLE, MAX_VOTERS, RETAIN_MS, SLOT_MS } from "../lib/constants";
 import { getDb, type Database } from "./db";
 import { parseDeadline } from "../lib/poll/deadline";
+import { longestRun, parseDuration } from "../lib/poll/duration";
 import { parseFinal, parseSlots } from "../lib/poll/slots";
 import { cleanText, parseNote } from "../lib/text";
 import { isToken, randomToken, sha256 } from "../lib/tokens";
@@ -25,6 +26,7 @@ export type StoredPoll = {
   deadline: number | null;
   kind: PollKind;
   zone: string | null;
+  duration: number | null;
   lastEnd: number;
   final: FinalTime | null;
   voters: StoredVoter[];
@@ -55,6 +57,7 @@ export function toPollView(poll: StoredPoll, voterId: string | null, options: { 
     deadline: poll.deadline === null ? null : new Date(poll.deadline).toISOString(),
     kind: poll.kind,
     zone: poll.zone,
+    duration: poll.duration,
     lastEnd: new Date(poll.lastEnd).toISOString(),
     final: poll.final,
     voters: poll.voters.map((voter) => ({
@@ -78,6 +81,7 @@ async function findPoll(match: SQL): Promise<StoredPoll | null> {
       title: true,
       kind: true,
       zone: true,
+      duration: true,
       slots: true,
       createdAt: true,
       closesAt: true,
@@ -104,6 +108,7 @@ async function findPoll(match: SQL): Promise<StoredPoll | null> {
     deadline: poll.deadline,
     kind: poll.kind,
     zone: poll.zone,
+    duration: poll.duration,
     lastEnd: naturalEnd(poll.kind, poll.slots, poll.createdAt),
     final:
       poll.finalStart !== null && poll.finalEnd !== null
@@ -154,12 +159,14 @@ function fitsOneWeek(slots: string[]): boolean {
 
 const ALL_PAST = "Those times have already passed. Pick a later day or time.";
 
-export async function createPoll(
-  titleInput: unknown,
-  slotsInput: unknown,
-  kindInput?: unknown,
-  zoneInput?: unknown,
-): Promise<{ ok: true; id: string; ownerToken: string } | { ok: false; error: string }> {
+export async function createPoll(input: {
+  title: unknown;
+  slots: unknown;
+  kind?: unknown;
+  zone?: unknown;
+  duration?: unknown;
+}): Promise<{ ok: true; id: string; ownerToken: string } | { ok: false; error: string }> {
+  const { title: titleInput, slots: slotsInput, kind: kindInput, zone: zoneInput } = input;
   const kind = parseKind(kindInput);
   if (!kind) return { ok: false, error: "That kind of poll doesn’t exist." };
   if (typeof titleInput !== "string" || titleInput.trim() === "") {
@@ -171,6 +178,8 @@ export async function createPoll(
   if (!parsed.ok) return parsed;
   if (closesAt(parsed.slots) <= Date.now()) return { ok: false, error: ALL_PAST };
   if (kind === "weekly" && !fitsOneWeek(parsed.slots)) return { ok: false, error: "A weekly poll covers one week." };
+  const length = parseDuration(input.duration, parsed.slots);
+  if (!length.ok) return length;
 
   const db = await getDb();
   const id = randomToken(16);
@@ -183,6 +192,7 @@ export async function createPoll(
     title,
     kind,
     zone: parseZone(zoneInput),
+    duration: length.duration,
     slots: parsed.slots,
     createdAt: now,
     closesAt: closes,
@@ -262,6 +272,16 @@ export async function saveVote(
 
 type Done = { ok: true; id: string };
 
+export async function updateDuration(token: string, input: unknown): Promise<Done | Failure> {
+  const poll = await getPollByOwnerToken(token);
+  if (!poll) return NOT_FOUND;
+  const length = parseDuration(input, poll.slots);
+  if (!length.ok) return { ok: false, status: 400, error: length.error };
+  const db = await getDb();
+  await db.update(polls).set({ duration: length.duration }).where(eq(polls.id, poll.id));
+  return { ok: true, id: poll.id };
+}
+
 export async function updateTitle(token: string, titleInput: unknown): Promise<Done | Failure> {
   if (typeof titleInput !== "string" || titleInput.trim() === "") {
     return { ok: false, status: 400, error: "Enter a title." };
@@ -298,6 +318,7 @@ export async function updateSlots(token: string, slotsInput: unknown, zoneInput?
       closesAt: closes,
       deadline: null,
       zone: parseZone(zoneInput) ?? current.zone,
+      duration: current.duration !== null && current.duration <= longestRun(parsed.slots) ? current.duration : null,
       deleteAt: closes + RETAIN_MS,
       finalStart: null,
       finalEnd: null,

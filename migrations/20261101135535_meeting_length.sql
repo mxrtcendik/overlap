@@ -1,0 +1,1 @@
+ALTER TABLE `polls` ADD `duration` integer;
