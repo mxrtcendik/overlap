@@ -213,6 +213,10 @@ body {
       opacity var(--press) ease;
   }
 
+  .slot[data-wide="true"] {
+    width: 100%;
+  }
+
   button.slot:not([aria-disabled="true"]) {
     cursor: pointer;
     touch-action: none;

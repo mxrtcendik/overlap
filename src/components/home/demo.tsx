@@ -113,7 +113,7 @@ export function Demo() {
         </span>
       </p>
       <div ref={gridRef} className="mt-4">
-        <PollGrid slots={demo.slots} voters={voters} selected={mine} readOnly={false} onChange={changeMine} />
+        <PollGrid slots={demo.slots} voters={voters} selected={mine} readOnly={false} dayView={false} onChange={changeMine} />
       </div>
       <figcaption className="mt-4 flex items-baseline justify-between gap-4 text-xs text-muted">
         <span>Drag across the grid to add yourself. Nothing here is saved.</span>

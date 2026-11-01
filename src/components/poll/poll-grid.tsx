@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useMemo, useRef, useState, type KeyboardEvent, type PointerEvent } from "react";
+import { useEffect, useMemo, useRef, useState, useSyncExternalStore, type KeyboardEvent, type PointerEvent } from "react";
 import { usePrefs, useTimeZone } from "@/client/browser";
 import { SLOT_MS } from "@/lib/constants";
 import { clockTime, localParts, type Clock } from "@/lib/time/format";
@@ -69,6 +69,19 @@ function buildLayout(slots: string[], timeZone: string, clock: Clock): Layout {
   return { columns, rows, grid, first };
 }
 
+const NARROW = "(max-width: 639px)";
+const DAY_VIEW_AFTER = 5;
+
+function subscribeNarrow(onChange: () => void) {
+  const query = window.matchMedia(NARROW);
+  query.addEventListener("change", onChange);
+  return () => query.removeEventListener("change", onChange);
+}
+
+function useNarrow(): boolean {
+  return useSyncExternalStore(subscribeNarrow, () => window.matchMedia(NARROW).matches, () => false);
+}
+
 const KEYS: Record<string, Pos> = {
   ArrowUp: { c: 0, r: -1 },
   ArrowDown: { c: 0, r: 1 },
@@ -89,6 +102,7 @@ export function PollGrid({
   selectLabel = "You",
   weekly = false,
   duration = null,
+  dayView = true,
   onChange,
   onInspect,
 }: {
@@ -104,6 +118,7 @@ export function PollGrid({
   selectLabel?: string;
   weekly?: boolean;
   duration?: number | null;
+  dayView?: boolean;
   onChange?: (next: string[], nextMaybe: string[]) => void;
   onInspect?: (iso: string | null) => void;
 }) {
@@ -118,6 +133,8 @@ export function PollGrid({
   const cellRefs = useRef(new Map<string, HTMLButtonElement>());
   const scrollerRef = useRef<HTMLDivElement>(null);
   const [moreRight, setMoreRight] = useState(false);
+  const narrow = useNarrow();
+  const [pickedDay, setPickedDay] = useState<number | null>(null);
 
   useEffect(() => {
     const scroller = scrollerRef.current;
@@ -195,6 +212,21 @@ export function PollGrid({
     }
   }
 
+  const dayMode = dayView && narrow && layout.columns.length > DAY_VIEW_AFTER;
+  const bestDay = run ? layout.grid.findIndex((column) => column.some((iso) => iso && Date.parse(iso) === run.start)) : -1;
+  const day = Math.min(pickedDay ?? (bestDay >= 0 ? bestDay : 0), layout.columns.length - 1);
+  const visible = dayMode ? [day] : layout.columns.map((_, index) => index);
+  const dayHeat = layout.grid.map((column) =>
+    Math.max(
+      0,
+      ...column.map((iso) => {
+        if (!iso) return 0;
+        const tally = tallies.get(iso) ?? { yes: 0, maybe: 0 };
+        return heatOf(tally.yes, tally.maybe, people);
+      }),
+    ),
+  );
+
   const shownYes = preview?.yes ?? selectedSet;
   const shownMaybe = preview?.maybe ?? maybeSet;
   const showMaybeKey = !readOnly && mode === "toggle" && (brush === "maybe" || shownMaybe.size > 0);
@@ -239,6 +271,14 @@ export function PollGrid({
     const step = KEYS[event.key];
     if (!step || !layout) return;
     event.preventDefault();
+    if (dayMode && step.c !== 0) {
+      const next = pos.c + step.c;
+      if (next < 0 || next >= layout.columns.length) return;
+      setPickedDay(next);
+      const iso = layout.grid[next][pos.r] ?? layout.grid[next].find(Boolean);
+      if (iso) requestAnimationFrame(() => cellRefs.current.get(iso)?.focus());
+      return;
+    }
     let { c, r } = pos;
     for (;;) {
       c += step.c;
@@ -254,6 +294,31 @@ export function PollGrid({
 
   return (
     <div>
+      {dayMode ? (
+        <div role="tablist" aria-label="Days" className="-mx-1 mb-3 flex gap-1 overflow-x-auto px-1 pb-1">
+          {layout.columns.map((column, c) => (
+            <button
+              key={column.key}
+              type="button"
+              role="tab"
+              aria-selected={c === day}
+              aria-label={weekly ? weekdayName(column.weekday) : `${column.weekday}, ${column.month} ${column.day}`}
+              onClick={() => setPickedDay(c)}
+              className={`min-w-12 shrink-0 border px-2 pt-1.5 pb-1 text-center text-xs transition-colors ${
+                c === day ? "border-foreground bg-paper text-foreground" : "border-line text-muted"
+              }`}
+            >
+              <span className="block">{column.weekday}</span>
+              {weekly ? null : <span className="block font-medium tabular-nums text-foreground">{column.day}</span>}
+              <span
+                aria-hidden="true"
+                className="mt-1 block h-1 rounded-full"
+                style={{ background: `color-mix(in oklab, var(--accent) ${dayHeat[c]}%, var(--line))` }}
+              />
+            </button>
+          ))}
+        </div>
+      ) : null}
       <div
         ref={scrollerRef}
         className="grid-scroll overflow-x-auto pb-1"
@@ -263,18 +328,19 @@ export function PollGrid({
           if (!event.currentTarget.contains(event.relatedTarget as Node | null)) onInspect?.(null);
         }}
       >
-        <table className="border-separate border-spacing-1 select-none">
+        <table className={`border-separate border-spacing-1 select-none ${dayMode ? "w-full" : ""}`}>
           <caption className="sr-only">
             Availability. Times are in your timezone. Use the arrow keys to move between times
             {readOnly ? "." : " and Space to mark one."}
           </caption>
-          <thead>
+          <thead className={dayMode ? "sr-only" : undefined}>
             <tr>
               <th scope="col" className="sticky left-0 z-20 bg-background">
                 <span className="sr-only">Time</span>
               </th>
-              {layout.columns.map((column, c) => {
-                const newMonth = c === 0 || layout.columns[c - 1].month !== column.month;
+              {visible.map((c) => {
+                const column = layout.columns[c];
+                const newMonth = c === 0 || dayMode || layout.columns[c - 1].month !== column.month;
                 return (
                   <th key={column.key} scope="col" className="px-1 pb-2 text-center text-xs font-normal">
                     {weekly ? (
@@ -298,13 +364,14 @@ export function PollGrid({
               <tr key={row.key}>
                 <th
                   scope="row"
-                  className="sticky left-0 z-20 bg-background pr-3 text-right align-top font-mono text-[11px] leading-8 font-normal whitespace-nowrap text-muted tabular-nums"
+                  className={`sticky left-0 z-20 bg-background pr-3 text-right align-top font-mono text-[11px] leading-8 font-normal whitespace-nowrap text-muted tabular-nums ${dayMode ? "w-px" : ""}`}
                 >
                   <span className={row.labeled ? undefined : "sr-only"}>{row.label}</span>
                 </th>
-                {layout.columns.map((column, c) => {
+                {visible.map((c) => {
+                  const column = layout.columns[c];
                   const iso = layout.grid[c][r];
-                  if (!iso) return <td key={column.key} className="h-8 w-10" />;
+                  if (!iso) return <td key={column.key} className={`h-8 ${dayMode ? "" : "w-10"}`} />;
                   const pos = { c, r };
                   const tally = tallies.get(iso) ?? { yes: 0, maybe: 0 };
                   const count = tally.yes + tally.maybe;
@@ -322,7 +389,7 @@ export function PollGrid({
                   const free = `${count} of ${voters.length} free${tally.maybe > 0 ? `, ${tally.maybe} if needed` : ""}`;
                   const yours = on === "maybe" ? ", yours if needed" : "";
                   return (
-                    <td key={column.key} className="p-0">
+                    <td key={column.key} className={`p-0 ${dayMode ? "w-full" : ""}`}>
                       <button
                         ref={(node) => {
                           if (node) cellRefs.current.set(iso, node);
@@ -345,6 +412,7 @@ export function PollGrid({
                           toggleOne(iso);
                         }}
                         className="slot"
+                        data-wide={dayMode ? "true" : undefined}
                         data-best={isBest ? "true" : undefined}
                         data-dim={highlight && !highlight.has(iso) ? "true" : undefined}
                         style={{ "--heat": `${heat}%` } as React.CSSProperties}
