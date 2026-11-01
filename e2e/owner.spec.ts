@@ -1,4 +1,4 @@
-import { createPoll, expect, test, vote } from "./fixtures";
+import { createPoll, expect, test, TEST_TOKEN, vote } from "./fixtures";
 
 test("picks a final time that voters can add to a calendar", async ({ page, request }) => {
   const { id, ownerToken, slots } = await createPoll(request);
@@ -27,7 +27,7 @@ test("closes voting and reopens it", async ({ page, browser, request }) => {
   await voting.getByRole("button", { name: "Close voting now" }).click();
   await expect(voting).toContainText("You closed voting");
 
-  const refused = await request.post(`/p/${id}/vote`, { data: { name: "Late", slots: [slots[0]] } });
+  const refused = await request.post(`/p/${id}/vote`, { data: { name: "Late", slots: [slots[0]], "cf-turnstile-response": TEST_TOKEN } });
   expect(refused.status()).toBe(403);
 
   const voter = await (await browser.newContext({ locale: "en-US", timezoneId: "Europe/Istanbul" })).newPage();
@@ -37,7 +37,7 @@ test("closes voting and reopens it", async ({ page, browser, request }) => {
 
   await voting.getByRole("button", { name: "Reopen voting" }).click();
   await expect(voting).toContainText("Voting is open until the last time ends");
-  const accepted = await request.post(`/p/${id}/vote`, { data: { name: "Back", slots: [slots[0]] } });
+  const accepted = await request.post(`/p/${id}/vote`, { data: { name: "Back", slots: [slots[0]], "cf-turnstile-response": TEST_TOKEN } });
   expect(accepted.ok()).toBe(true);
 });
 

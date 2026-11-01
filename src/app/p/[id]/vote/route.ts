@@ -4,6 +4,8 @@ import { announceChange } from "@/server/announce";
 import { jsonError, readJson } from "@/server/http";
 import { deleteOwnVote, saveVote } from "@/server/polls";
 import { allowWrite } from "@/server/rate-limit";
+import { verifyTurnstile } from "@/server/turnstile";
+import { VOTE_ACTION } from "@/lib/turnstile";
 import { isToken } from "@/lib/tokens";
 
 type Params = { params: Promise<{ id: string }> };
@@ -16,7 +18,9 @@ export async function POST(request: Request, { params }: Params) {
       return jsonError("You’re saving too quickly. Try again in a minute.", 429);
     }
     const jar = await cookies();
-    const result = await saveVote(id, jar.get("voter")?.value ?? null, await readJson(request));
+    const body = await readJson(request);
+    const token = body && typeof body === "object" ? (body as { "cf-turnstile-response"?: unknown })["cf-turnstile-response"] : undefined;
+    const result = await saveVote(id, jar.get("voter")?.value ?? null, body, () => verifyTurnstile(request, token, VOTE_ACTION));
     if (!result.ok) return jsonError(result.error, result.status);
     jar.set("voter", result.voterId, {
       httpOnly: true,

@@ -6,6 +6,8 @@ import { MAX_NAME, MAX_NOTE } from "@/lib/constants";
 import { json, messageOf, request, UserFacingError } from "@/client/request";
 import type { PollView as PollViewData, VoterView } from "@/lib/types";
 import { useLiveUpdates, useRefreshAt } from "@/client/use-live-updates";
+import { useTurnstile } from "@/client/use-turnstile";
+import { VOTE_ACTION } from "@/lib/turnstile";
 import { Availability } from "./availability";
 import { CalendarFill } from "./calendar-fill";
 import { FinalTime } from "./final-time";
@@ -32,6 +34,7 @@ export function PollView({ poll }: { poll: PollViewData }) {
   const [answer, setAnswer] = useState<Answer>(you ? { slots: you.slots, maybe: you.maybe } : NO_ANSWER);
   const [brush, setBrush] = useState<Brush>("yes");
   const [saved, setSaved] = useState(Boolean(you));
+  const savedRef = useRef(Boolean(you));
   const [error, setError] = useState<string | null>(null);
   const [pending, setPending] = useState(false);
   const [confirmingRemove, setConfirmingRemove] = useState(false);
@@ -40,6 +43,7 @@ export function PollView({ poll }: { poll: PollViewData }) {
   const answerRef = useRef<Answer>(you ? { slots: you.slots, maybe: you.maybe } : NO_ANSWER);
   const inflight = useRef(false);
   const queued = useRef<Answer | null>(null);
+  const { container: turnstileRef, getToken, reset: resetTurnstile } = useTurnstile(VOTE_ACTION);
 
   function setNameValue(value: string) {
     nameRef.current = value;
@@ -79,10 +83,20 @@ export function PollView({ poll }: { poll: PollViewData }) {
         if (!nextName) throw new UserFacingError("Enter your name first.");
         setNameValue(nextName);
         setNoteValue(nextNote);
-        await request(`/p/${poll.id}/vote`, {
-          method: "POST",
-          ...json({ name: nextName, note: nextNote, slots: next.slots, maybe: next.maybe }),
-        });
+        const first = !savedRef.current;
+        const token = first ? await getToken() : null;
+        if (first && !token) {
+          throw new UserFacingError("We couldn’t confirm you’re not a bot. Check your connection and try again.");
+        }
+        try {
+          await request(`/p/${poll.id}/vote`, {
+            method: "POST",
+            ...json({ name: nextName, note: nextNote, slots: next.slots, maybe: next.maybe, "cf-turnstile-response": token ?? undefined }),
+          });
+        } finally {
+          if (first) resetTurnstile();
+        }
+        savedRef.current = true;
         applyYou(nextName, nextNote, next);
         setSaved(true);
         setError(null);
@@ -134,6 +148,7 @@ export function PollView({ poll }: { poll: PollViewData }) {
       await request(`/p/${poll.id}/vote`, { method: "DELETE" });
       setYou(null);
       setSaved(false);
+      savedRef.current = false;
       answerRef.current = NO_ANSWER;
       setAnswer(NO_ANSWER);
       setConfirmingRemove(false);
@@ -195,6 +210,7 @@ export function PollView({ poll }: { poll: PollViewData }) {
           {!pending && saved && !error ? <Status state="saved" /> : null}
         </form>
       )}
+      {poll.closed ? null : <div ref={turnstileRef} className="mt-3 max-w-sm empty:mt-0" />}
       {poll.closed ? null : confirmingRemove ? (
         <div className="appear mt-4 max-w-xl border-l-2 border-danger pl-4">
           <p className="text-sm">Remove your answer? Your name and times are deleted from this poll.</p>

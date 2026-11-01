@@ -1,4 +1,5 @@
 export const CREATE_ACTION = "create-poll";
+export const VOTE_ACTION = "first-answer";
 
 const MAX_TOKEN = 2048;
 

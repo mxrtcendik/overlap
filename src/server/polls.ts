@@ -195,6 +195,7 @@ export async function saveVote(
   pollId: string,
   voterId: string | null,
   body: unknown,
+  allowNewVoter: () => Promise<boolean> = async () => true,
 ): Promise<{ ok: true; voterId: string } | Failure> {
   const poll = await getPoll(pollId);
   if (!poll) return NOT_FOUND;
@@ -230,6 +231,9 @@ export async function saveVote(
     return { ok: true, voterId: known.id };
   }
 
+  if (!(await allowNewVoter())) {
+    return { ok: false, status: 403, error: "We couldn’t confirm you’re not a bot. Reload the page and try again." };
+  }
   const nextId = randomToken(16);
   const [inserted] = await db.batch([
     db.insert(voters).select(

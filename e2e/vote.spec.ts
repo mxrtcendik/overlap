@@ -24,6 +24,10 @@ test("answers with a name and a note, then edits and removes the answer", async 
   await expect(page.getByLabel(/^Your name/)).toHaveValue("Ada");
   await expect(page.getByRole("button", { name: "Save answer" })).toBeVisible();
   await expect(page.getByText("No answers yet. Be the first.")).toBeVisible();
+
+  await page.locator(".slot").nth(1).click();
+  await page.getByRole("button", { name: "Save answer" }).click();
+  await expect(page.getByRole("status").filter({ hasText: "Saved" })).toBeVisible();
 });
 
 test("names the time that works for everyone", async ({ page, request }) => {

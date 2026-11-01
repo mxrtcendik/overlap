@@ -49,7 +49,7 @@ export async function vote(
     baseURL: `http://localhost:${process.env.E2E_PORT ?? 3000}`,
     extraHTTPHeaders: { "x-forwarded-for": randomIp() },
   });
-  const response = await voter.post(`/p/${pollId}/vote`, { data: answer });
+  const response = await voter.post(`/p/${pollId}/vote`, { data: { ...answer, "cf-turnstile-response": TEST_TOKEN } });
   expect(response.ok(), await response.text()).toBe(true);
   await voter.dispose();
 }
