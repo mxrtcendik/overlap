@@ -3,8 +3,8 @@
 Pick a few days, send one link, and see which time works for everyone.
 
 <picture>
-  <source media="(prefers-color-scheme: dark)" srcset="docs/screenshots/home-dark.png">
-  <img alt="The Overlap landing page with a live example poll" src="docs/screenshots/home-light.png">
+  <source media="(prefers-color-scheme: dark)" srcset="docs/screenshots/demo-dark.gif">
+  <img alt="Answers arrive one by one on an example poll, then a visitor drags down Wednesday to add themselves" src="docs/screenshots/demo-light.gif" width="420">
 </picture>
 
 Overlap is a small scheduling poll. You choose some days and a window of hours, share the link, and everyone drags across the times they can make. The page then tells you the answer in one sentence, like *"Tue 11:30 AM–1:00 PM works for everyone"*, shown in each person's own timezone.
@@ -108,9 +108,7 @@ The days and hours can change while nobody has answered yet. People can remove t
 
 ## How I built this
 
-I built Overlap with Claude Code as my pair programmer. Most of the code was written by the AI. My part was deciding what the product should be and keeping it on track.
-
-What that looked like in practice:
+Overlap was built with help from Claude Code, an AI coding agent. These are my contributions:
 
 - I chose the idea and its limits: no accounts, one public link and one secret link, nothing to install.
 - I set the visual direction early: warm paper background, ink-coloured text, hairline borders, a single green accent, and no gradients, glassy cards or anything that looks generated.
