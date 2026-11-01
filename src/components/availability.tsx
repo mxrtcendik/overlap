@@ -38,7 +38,13 @@ export function Availability({
   const timeZone = useTimeZone();
   const clock = usePrefs()?.clock ?? "h12";
   const [inspected, setInspected] = useState<string | null>(null);
-  const [highlight, setHighlight] = useState<Set<string> | null>(null);
+  const [hovered, setHovered] = useState<Set<string> | null>(null);
+  const [pinned, setPinned] = useState<number | null>(null);
+  const pinnedVoter = pinned === null ? undefined : voters[pinned];
+  const highlight = useMemo(
+    () => hovered ?? (pinnedVoter ? new Set([...pinnedVoter.slots, ...pinnedVoter.maybe]) : null),
+    [hovered, pinnedVoter],
+  );
   const segments = useMemo(() => topSegments(slots, voters), [slots, voters]);
 
   return (
@@ -69,7 +75,7 @@ export function Availability({
                 voters={voters}
                 timeZone={timeZone}
                 clock={clock}
-                onHighlight={setHighlight}
+                onHighlight={setHovered}
                 onPick={onPick}
               />
             </div>
@@ -77,7 +83,12 @@ export function Availability({
               <SlotDetail iso={inspected ?? slots[0]} voters={voters} timeZone={timeZone} clock={clock} />
             </div>
           </div>
-          <People voters={voters} onHighlight={setHighlight} />
+          <People
+            voters={voters}
+            pinned={pinnedVoter ? pinned : null}
+            onHighlight={setHovered}
+            onPin={(index) => setPinned((current) => (current === index ? null : index))}
+          />
         </aside>
       ) : null}
     </div>
@@ -184,24 +195,56 @@ function SlotDetail({ iso, voters, timeZone, clock }: { iso: string; voters: Vot
   );
 }
 
-function People({ voters, onHighlight }: { voters: Voter[]; onHighlight: (slots: Set<string> | null) => void }) {
+function People({
+  voters,
+  pinned,
+  onHighlight,
+  onPin,
+}: {
+  voters: Voter[];
+  pinned: number | null;
+  onHighlight: (slots: Set<string> | null) => void;
+  onPin: (index: number) => void;
+}) {
   return (
     <section className="mt-8" aria-labelledby="people-heading">
       <h2 id="people-heading" className="text-sm text-muted">
         {voters.length === 1 ? "1 person answered" : `${voters.length} people answered`}
       </h2>
       <ul className="mt-3 flex flex-wrap gap-2 text-sm">
-        {voters.map((voter, index) => (
-          <li
-            key={`${voter.name}-${index}`}
-            className="border border-line bg-paper px-2.5 py-1 transition-colors hover:border-line-strong"
-            onPointerEnter={() => onHighlight(new Set([...voter.slots, ...voter.maybe]))}
-            onPointerLeave={() => onHighlight(null)}
-          >
-            {voter.name}
-            {voter.yours ? <span className="text-muted"> · you</span> : null}
-          </li>
-        ))}
+        {voters.map((voter, index) => {
+          const show = () => onHighlight(new Set([...voter.slots, ...voter.maybe]));
+          const on = pinned === index;
+          return (
+            <li key={`${voter.name}-${index}`}>
+              <button
+                type="button"
+                aria-pressed={on}
+                aria-label={`${voter.name}${voter.yours ? ", you" : ""}. Show their times on the grid.`}
+                className={`border bg-paper px-2.5 py-1 transition-[border-color,box-shadow] duration-[var(--quick)] ${
+                  on
+                    ? "border-foreground shadow-[inset_0_0_0_0.5px_var(--foreground)]"
+                    : "border-line hover:border-line-strong"
+                }`}
+                onPointerEnter={(event) => {
+                  if (event.pointerType === "mouse") show();
+                }}
+                onPointerLeave={() => onHighlight(null)}
+                onFocus={(event) => {
+                  if (event.currentTarget.matches(":focus-visible")) show();
+                }}
+                onBlur={() => onHighlight(null)}
+                onClick={() => {
+                  onHighlight(null);
+                  onPin(index);
+                }}
+              >
+                {voter.name}
+                {voter.yours ? <span className="text-muted"> · you</span> : null}
+              </button>
+            </li>
+          );
+        })}
       </ul>
     </section>
   );
