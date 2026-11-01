@@ -99,7 +99,7 @@ Then open http://localhost:3000. The database is a local D1 that Wrangler keeps 
 | --- | --- |
 | `bun run check` | Typecheck, lint and unit tests |
 | `bun run test` | Unit tests only |
-| `bun run test:e2e` | Browser tests with Playwright, against `bun run dev` |
+| `bun run test:e2e` | Browser tests with Playwright, including axe accessibility scans in light and dark mode |
 | `bun run db:generate` | Write a migration after changing `src/db/schema.ts` |
 | `bun run db:migrate` | Apply migrations to the local database |
 | `bun run preview` | Build the Worker and run it locally |
