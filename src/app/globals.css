@@ -173,6 +173,21 @@ body {
     }
   }
 
+  .copy-idle,
+  .copy-done {
+    transition:
+      opacity 200ms var(--ease-ui),
+      filter 200ms var(--ease-ui),
+      transform 200ms var(--ease-ui);
+  }
+
+  .copy-label[data-copied="true"] .copy-idle,
+  .copy-label[data-copied="false"] .copy-done {
+    opacity: 0;
+    filter: blur(2px);
+    transform: scale(0.96);
+  }
+
   [role="alert"],
   .appear {
     transition:
@@ -266,6 +281,17 @@ body {
 
   .btn:active:not(:disabled),
   .month-nav:active:not(:disabled) {
+    transform: none;
+  }
+
+  .copy-idle,
+  .copy-done {
+    transition: opacity 200ms ease;
+  }
+
+  .copy-label[data-copied] .copy-idle,
+  .copy-label[data-copied] .copy-done {
+    filter: none;
     transform: none;
   }
 

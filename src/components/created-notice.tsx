@@ -2,7 +2,7 @@
 
 import { useEffect, useRef } from "react";
 import { useCanShare } from "@/lib/browser";
-import { copyText, useCopyState } from "./copy-link";
+import { copyText, CopyLabel, useCopyState } from "./copy-link";
 
 export function CreatedNotice({
   title,
@@ -43,7 +43,7 @@ export function CreatedNotice({
       <p className="mt-3 font-mono text-[13px] leading-6 break-all">{publicUrl}</p>
       <div className="mt-5 flex flex-wrap items-center gap-x-5 gap-y-3">
         <button type="button" className="btn" onClick={async () => report(await copyText(publicUrl))}>
-          <span aria-live="polite">{state === "copied" ? "Copied" : "Copy public link"}</span>
+          <CopyLabel idle="Copy public link" copied={state === "copied"} />
         </button>
         {canShare ? (
           <button

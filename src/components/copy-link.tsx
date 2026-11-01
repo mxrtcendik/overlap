@@ -24,6 +24,28 @@ export function useCopyState(): [CopyState, (ok: boolean) => void] {
   return [state, (ok) => setState(ok ? "copied" : "failed")];
 }
 
+export function CopyLabel({ idle, copied }: { idle: string; copied: boolean }) {
+  return (
+    <span className="copy-label grid" data-copied={copied}>
+      <span className="copy-idle col-start-1 row-start-1" aria-hidden={copied}>
+        {idle}
+      </span>
+      <span
+        className="copy-done col-start-1 row-start-1 inline-flex items-center justify-center gap-1.5"
+        aria-hidden="true"
+      >
+        <svg viewBox="0 0 12 12" className="size-3" fill="none" stroke="currentColor" strokeWidth="1.5" aria-hidden="true">
+          <path d="M2.5 6.5 5 9l4.5-6" strokeLinecap="round" strokeLinejoin="round" />
+        </svg>
+        Copied
+      </span>
+      <span className="sr-only" aria-live="polite">
+        {copied ? "Copied" : ""}
+      </span>
+    </span>
+  );
+}
+
 export function ShareBar({ title, href }: { title: string; href: string }) {
   const [state, report] = useCopyState();
   const canShare = useCanShare();
@@ -49,7 +71,7 @@ export function ShareBar({ title, href }: { title: string; href: string }) {
             </button>
           ) : null}
           <button type="button" className="btn" onClick={async () => report(await copyText(href))}>
-            <span aria-live="polite">{state === "copied" ? "Copied" : "Copy link"}</span>
+            <CopyLabel idle="Copy link" copied={state === "copied"} />
           </button>
         </span>
       </div>
@@ -93,7 +115,7 @@ export function CopyLink({
           {href}
         </a>
         <button type="button" className="link-quiet shrink-0 leading-6" onClick={async () => report(await copyText(href))}>
-          <span aria-live="polite">{state === "copied" ? "Copied" : "Copy"}</span>
+          <CopyLabel idle="Copy" copied={state === "copied"} />
         </button>
       </div>
       {state === "failed" ? (
