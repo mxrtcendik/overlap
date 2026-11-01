@@ -20,7 +20,7 @@ import { json, messageOf, request } from "@/lib/request";
 import { parseFinal } from "@/lib/slots";
 import type { PollView, VoterView } from "@/lib/types";
 import { useLiveUpdates } from "@/lib/use-live-updates";
-import { CopyLink } from "./copy-link";
+import { CopyLink, ShareBar } from "./copy-link";
 import { CreatedNotice } from "./created-notice";
 import { Availability } from "./availability";
 import { FinalTime } from "./final-time";
@@ -181,6 +181,7 @@ export function OwnerView({ poll, hasResponses }: { poll: PollView; hasResponses
         closed={poll.closed}
         emptyText="No answers yet. Share the public link to collect them."
       />
+      {location && !justCreated ? <ShareBar title={poll.title} href={`${location.origin}/p/${poll.id}`} /> : null}
       <p className="mt-8 max-w-2xl text-sm text-muted">
         {poll.final ? "To change the final time" : "To set the final time"}, drag down a day on the grid
         {poll.voters.length > 1 ? " or pick one of the best times" : ""}. Everyone with the public link will see it.
@@ -215,18 +216,13 @@ export function OwnerView({ poll, hasResponses }: { poll: PollView; hasResponses
         />
       ) : null}
       {location ? (
-        <section aria-labelledby="links-heading" className="mt-16 border-t border-line pt-10">
-          <h2 id="links-heading" className="text-sm text-muted">
-            Links
+        <section aria-labelledby="secret-heading" className="mt-16 border-t border-line pt-10">
+          <h2 id="secret-heading" className="inline-flex items-center gap-2 text-sm text-muted">
+            <span aria-hidden="true" className="inline-block size-1.5 rounded-full bg-danger" />
+            Secret link
           </h2>
           <CopyLink
-            label="Public link"
-            note="Share this with everyone you’re asking."
-            href={`${location.origin}/p/${poll.id}`}
-          />
-          <CopyLink
-            label="Secret link"
-            note="Keep this private. It’s the only way to edit or delete the poll."
+            note="This page’s address. Keep it private: it’s the only way to edit or delete the poll."
             href={location.href}
             secret
           />
@@ -246,21 +242,21 @@ export function OwnerView({ poll, hasResponses }: { poll: PollView; hasResponses
         <h2 id="settings-heading" className="text-sm text-muted">
           Poll settings
         </h2>
-        <form onSubmit={onTitle} className="mt-6 max-w-md">
-        <label className="block text-sm text-muted">
-          Title
-          <input
-            value={title}
-            onChange={(event) => setTitle(event.target.value)}
-            maxLength={MAX_TITLE}
-            required
-            className="field mt-1"
-          />
-        </label>
-        <button type="submit" disabled={pending} className="mt-3 btn">
-          Save title
-        </button>
-      </form>
+        <form onSubmit={onTitle} className="mt-6 flex max-w-xl flex-wrap items-end gap-3">
+          <label className="min-w-0 flex-1 basis-64 text-sm text-muted">
+            Title
+            <input
+              value={title}
+              onChange={(event) => setTitle(event.target.value)}
+              maxLength={MAX_TITLE}
+              required
+              className="field mt-1"
+            />
+          </label>
+          <button type="submit" disabled={pending || title.trim() === poll.title} className="btn">
+            Save title
+          </button>
+        </form>
 
       <div className="mt-10 max-w-xl">
         {hasResponses ? (
@@ -279,7 +275,7 @@ export function OwnerView({ poll, hasResponses }: { poll: PollView; hasResponses
         </p>
       ) : null}
 
-      <div className="mt-16">
+      <div className="mt-12 max-w-xl border-t border-line pt-6">
         {confirming ? (
           <div className="appear border-l-2 border-danger pl-4">
             <p>Delete this poll and all its answers? This can’t be undone.</p>
@@ -293,9 +289,12 @@ export function OwnerView({ poll, hasResponses }: { poll: PollView; hasResponses
             </div>
           </div>
         ) : (
-          <button type="button" onClick={() => setConfirming(true)} className="link-quiet link-danger">
-            Delete poll
-          </button>
+          <div className="flex flex-wrap items-baseline justify-between gap-x-6 gap-y-2">
+            <p className="text-sm text-muted">Deleting removes the poll and every answer, and both links stop working.</p>
+            <button type="button" onClick={() => setConfirming(true)} className="link-quiet link-danger shrink-0">
+              Delete poll
+            </button>
+          </div>
         )}
       </div>
       </section>

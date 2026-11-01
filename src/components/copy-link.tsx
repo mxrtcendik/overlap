@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import { useCanShare } from "@/lib/browser";
 
 type CopyState = "idle" | "copied" | "failed";
 
@@ -23,13 +24,51 @@ export function useCopyState(): [CopyState, (ok: boolean) => void] {
   return [state, (ok) => setState(ok ? "copied" : "failed")];
 }
 
+export function ShareBar({ title, href }: { title: string; href: string }) {
+  const [state, report] = useCopyState();
+  const canShare = useCanShare();
+
+  return (
+    <div className="mt-6 max-w-2xl">
+      <div className="flex flex-wrap items-center gap-x-4 gap-y-2 border-y border-line py-3">
+        <span className="text-sm text-muted">Public link</span>
+        <a
+          href={href}
+          className="min-w-0 flex-1 basis-48 truncate font-mono text-[13px] underline decoration-transparent underline-offset-4 transition-colors hover:decoration-line-strong"
+        >
+          {href.replace(/^https?:\/\//, "")}
+        </a>
+        <span className="flex items-center gap-4">
+          {canShare ? (
+            <button
+              type="button"
+              className="link-quiet"
+              onClick={() => void navigator.share({ title, text: `When can you make “${title}”?`, url: href }).catch(() => {})}
+            >
+              Share…
+            </button>
+          ) : null}
+          <button type="button" className="btn" onClick={async () => report(await copyText(href))}>
+            <span aria-live="polite">{state === "copied" ? "Copied" : "Copy link"}</span>
+          </button>
+        </span>
+      </div>
+      {state === "failed" ? (
+        <p className="mt-2 text-sm text-danger" role="alert">
+          Your browser blocked copying. Select the link and copy it yourself.
+        </p>
+      ) : null}
+    </div>
+  );
+}
+
 export function CopyLink({
   label,
   note,
   href,
   secret = false,
 }: {
-  label: string;
+  label?: string;
   note?: string;
   href: string;
   secret?: boolean;
@@ -38,10 +77,12 @@ export function CopyLink({
 
   return (
     <div className="mt-6">
-      <div className="flex items-center gap-2 text-sm">
-        {secret ? <span aria-hidden="true" className="inline-block size-1.5 rounded-full bg-danger" /> : null}
-        {label}
-      </div>
+      {label ? (
+        <div className="flex items-center gap-2 text-sm">
+          {secret ? <span aria-hidden="true" className="inline-block size-1.5 rounded-full bg-danger" /> : null}
+          {label}
+        </div>
+      ) : null}
       {note ? <p className="mt-0.5 text-sm text-muted">{note}</p> : null}
       <div className="mt-1.5 flex items-start gap-4">
         <a
