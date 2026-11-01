@@ -265,17 +265,31 @@ export function PollGrid({
           </caption>
           <thead>
             <tr>
-              <th scope="col" className="sticky left-0 z-20 bg-background">
+              <th
+                scope="col"
+                className="sticky left-0 z-20 bg-background pr-3 pb-2 text-right align-bottom text-xs font-normal"
+              >
                 <span className="sr-only">Time</span>
+                <div aria-hidden="true" className="mt-0.5 text-muted">
+                  {layout.columns[0]?.month}
+                </div>
               </th>
-              {layout.columns.map((column) => (
-                <th key={column.key} scope="col" className="px-1 pb-2 text-center text-xs font-normal">
-                  <div className="text-muted">{column.weekday}</div>
-                  <div className="mt-0.5 font-mono whitespace-nowrap tabular-nums">
-                    {column.month} {column.day}
-                  </div>
-                </th>
-              ))}
+              {layout.columns.map((column, c) => {
+                const newMonth = c > 0 && layout.columns[c - 1].month !== column.month;
+                return (
+                  <th key={column.key} scope="col" className="px-1 pb-2 text-center text-xs font-normal">
+                    <div className="text-muted">{column.weekday}</div>
+                    <div className="relative mx-auto mt-0.5 w-fit font-medium whitespace-nowrap tabular-nums">
+                      <span
+                        className={newMonth ? "absolute right-full pr-1 font-normal text-muted" : "sr-only"}
+                      >
+                        {column.month}{" "}
+                      </span>
+                      {column.day}
+                    </div>
+                  </th>
+                );
+              })}
             </tr>
           </thead>
           <tbody>
