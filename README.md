@@ -22,6 +22,7 @@ There are no accounts. Creating a poll gives you two links: a public one to shar
 - **"If needed" answers.** Mark a time as one you can make, or one you'd rather not but could. The best time is the one most people can make, and among those, the one the fewest only "could".
 - **Fill in from your calendar.** Pick an `.ics` export from Google Calendar, Outlook or Apple Calendar and every time it leaves free gets marked. The file is read in the browser and never uploaded.
 - **Notes.** A short line next to your name, like "Remote only".
+- **Export.** The owner can download every answer as a CSV, with times in their own timezone.
 - **Weekly polls.** Ask about days of the week instead of dates when something repeats. The answer then reads "Mondays 6:00–7:00 PM".
 - **A final time.** The owner picks one of the best times, or drags any stretch on the grid. Everyone can add it to their calendar, and re-importing after a change updates the event instead of duplicating it.
 - **Live.** New answers and the owner's changes show up on every open page without a reload.

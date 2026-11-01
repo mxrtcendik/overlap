@@ -29,6 +29,8 @@ import { FinalTime } from "./final-time";
 import { SentenceBlock } from "./poll-summary";
 import { ScheduleFields } from "../common/schedule-fields";
 import { VotingControls } from "./voting-controls";
+import { answersCsv } from "@/lib/poll/csv";
+import { icsFileName } from "@/lib/calendar/export";
 import { datesForWeekdays, weekdayOf } from "@/lib/time/weekly";
 
 export function OwnerView({
@@ -285,6 +287,9 @@ export function OwnerView({
 
       {poll.voters.length > 0 ? (
         <Answers
+          title={poll.title}
+          slots={poll.slots}
+          weekly={weekly}
           voters={poll.voters}
           pending={pending}
           error={error?.at === "answers" ? error.message : null}
@@ -361,17 +366,34 @@ export function OwnerView({
 }
 
 function Answers({
+  title,
+  slots,
+  weekly,
   voters,
   pending,
   error,
   onRemove,
 }: {
+  title: string;
+  slots: string[];
+  weekly: boolean;
   voters: VoterView[];
   pending: boolean;
   error: string | null;
   onRemove: (ref: string) => void;
 }) {
   const [confirming, setConfirming] = useState<string | null>(null);
+  const timeZone = useTimeZone();
+
+  function download() {
+    const csv = answersCsv({ slots, voters, timeZone: timeZone ?? deviceTimeZone(), weekly });
+    const url = URL.createObjectURL(new Blob([csv], { type: "text/csv;charset=utf-8" }));
+    const link = document.createElement("a");
+    link.href = url;
+    link.download = icsFileName(title).replace(/\.ics$/, ".csv");
+    link.click();
+    URL.revokeObjectURL(url);
+  }
 
   return (
     <section aria-labelledby="answers-heading" className="mt-16 border-t border-line pt-10">
@@ -381,6 +403,9 @@ function Answers({
       <p className="mt-2 max-w-xl text-sm text-muted">
         Remove an answer that’s a duplicate or doesn’t belong. The person can still answer again.
       </p>
+      <button type="button" className="link-quiet mt-3" onClick={download}>
+        Download as CSV
+      </button>
       <ul className="mt-5 max-w-xl border-t border-line">
         {voters.map((voter, index) => {
           const ref = voter.ref;

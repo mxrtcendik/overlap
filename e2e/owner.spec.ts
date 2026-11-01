@@ -73,3 +73,19 @@ test("refuses link emails without a token or a valid address", async ({ request 
   });
   expect(badAddress.status()).toBe(400);
 });
+
+test("downloads the answers as a CSV in the owner's timezone", async ({ page, request }) => {
+  const { id, ownerToken, slots } = await createPoll(request, { days: [1], from: 9, to: 10 });
+  await vote(id, { name: "Ada", slots: [slots[0]], maybe: [slots[1]], note: "Remote only" });
+
+  await page.goto(`/o/${ownerToken}`);
+  const download = page.waitForEvent("download");
+  await page.getByRole("button", { name: "Download as CSV" }).click();
+  const file = await download;
+  expect(file.suggestedFilename()).toBe("team-sync.csv");
+  const csv = await (await import("node:fs/promises")).readFile(await file.path(), "utf8");
+  const lines = csv.trim().split("\r\n");
+  expect(lines[0]).toBe("Date,Start,End,Can make,If needed,Ada (Remote only)");
+  expect(lines[1]).toMatch(/^\d{4}-\d{2}-\d{2},12:00,12:30,1,0,yes$/);
+  expect(lines[2]).toMatch(/,12:30,13:00,0,1,if needed$/);
+});
