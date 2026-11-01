@@ -82,6 +82,13 @@ export function Demo() {
     return mine.length > 0 ? [...others, { name: "You", slots: mine }] : others;
   }, [demo, mine, shown]);
 
+  const stages = useMemo(() => {
+    if (!demo || !timeZone || !prefs) return [];
+    return demo.voters.map((_, index) =>
+      overlapSummary({ slots: demo.slots, votes: demo.voters.slice(0, index + 1), timeZone, clock: prefs.clock }),
+    );
+  }, [demo, timeZone, prefs]);
+
   function changeMine(next: string[]) {
     setAnswered(DEMO_PEOPLE.length);
     setMine(next);
@@ -95,8 +102,15 @@ export function Demo() {
         <p className="text-sm font-medium">Team retro</p>
         <p className="text-xs text-muted">Example</p>
       </div>
-      <p className="mt-2 min-h-12 text-sm leading-6 text-balance" aria-live={filling ? "off" : "polite"}>
-        <SummaryText summary={overlapSummary({ slots: demo.slots, votes: voters, timeZone, clock: prefs.clock })} />
+      <p className="mt-2 grid text-sm leading-6 text-balance">
+        {stages.map((summary, index) => (
+          <span key={index} aria-hidden="true" className="invisible col-start-1 row-start-1">
+            <SummaryText summary={summary} />
+          </span>
+        ))}
+        <span className="col-start-1 row-start-1" aria-live={filling ? "off" : "polite"}>
+          <SummaryText summary={overlapSummary({ slots: demo.slots, votes: voters, timeZone, clock: prefs.clock })} />
+        </span>
       </p>
       <div ref={gridRef} className="mt-4">
         <PollGrid slots={demo.slots} voters={voters} selected={mine} readOnly={false} onChange={changeMine} />
