@@ -364,7 +364,7 @@ export function PollGrid({
               <tr key={row.key}>
                 <th
                   scope="row"
-                  className={`sticky left-0 z-20 bg-background pr-3 text-right align-top font-mono text-[11px] leading-8 font-normal whitespace-nowrap text-muted tabular-nums ${dayMode ? "w-px" : ""}`}
+                  className={`sticky left-0 z-20 bg-background pr-3 text-right align-top text-xs leading-8 font-normal whitespace-nowrap text-muted tabular-nums ${dayMode ? "w-px" : ""}`}
                 >
                   <span className={row.labeled ? undefined : "sr-only"}>{row.label}</span>
                 </th>
@@ -382,9 +382,9 @@ export function PollGrid({
                       ? "text-background"
                       : on === "maybe"
                         ? "text-foreground"
-                        : heat >= 58
-                          ? "text-on-accent"
-                          : "text-foreground";
+                        : heat >= 70
+                          ? "text-[var(--heat-ink-strong)]"
+                          : "text-[var(--heat-ink)]";
                   const isBest = best.has(iso);
                   const free = `${count} of ${voters.length} free${tally.maybe > 0 ? `, ${tally.maybe} if needed` : ""}`;
                   const yours = on === "maybe" ? ", yours if needed" : "";
@@ -413,6 +413,7 @@ export function PollGrid({
                         }}
                         className="slot"
                         data-wide={dayMode ? "true" : undefined}
+                        data-filled={heat > 0 ? "true" : undefined}
                         data-best={isBest ? "true" : undefined}
                         data-dim={highlight && !highlight.has(iso) ? "true" : undefined}
                         style={{ "--heat": `${heat}%` } as React.CSSProperties}
@@ -420,7 +421,7 @@ export function PollGrid({
                         <span className="slot-fill" data-on={on === "yes" ? "true" : on === "maybe" ? "maybe" : "false"} />
                         {count > 0 ? (
                           <span
-                            className={`relative z-10 font-mono text-[10px] font-medium tabular-nums ${ink} ${
+                            className={`relative z-10 text-[11px] font-medium tabular-nums ${ink} ${
                               on === "maybe" ? "rounded-[2px] bg-paper px-[3px] leading-[14px]" : ""
                             }`}
                           >
@@ -463,7 +464,12 @@ function Legend({
         Fewer
         <span className="inline-flex gap-0.5">
           {steps.map((heat) => (
-            <span key={heat} className="slot h-3 w-4" style={{ "--heat": `${heat}%` } as React.CSSProperties} />
+            <span
+              key={heat}
+              className="slot h-3 w-4"
+              data-filled="true"
+              style={{ "--heat": `${heat}%` } as React.CSSProperties}
+            />
           ))}
         </span>
         More
@@ -482,7 +488,7 @@ function Legend({
       ) : null}
       {outlineLabel ? (
         <span className="inline-flex items-center gap-2">
-          <span className="inline-block h-3 w-4 border border-foreground bg-paper" />
+          <span className="inline-block h-3 w-4 rounded-[3px] bg-paper shadow-[inset_0_0_0_1.5px_var(--foreground)]" />
           {outlineLabel}
         </span>
       ) : null}

@@ -10,6 +10,10 @@
   --accent: #3f6f52;
   --on-accent: #fffcf7;
   --danger: #8a3a2a;
+  --heat-low: #e2ece4;
+  --heat-high: #3f6f52;
+  --heat-ink: #221f1b;
+  --heat-ink-strong: #fffcf7;
   --ease-ui: cubic-bezier(0.23, 1, 0.32, 1);
   --press: 160ms;
   --quick: 120ms;
@@ -27,6 +31,10 @@
     --accent: #7cae8c;
     --on-accent: #161513;
     --danger: #e3977f;
+    --heat-low: #27342c;
+    --heat-high: #8cc09c;
+    --heat-ink: #ebe6de;
+    --heat-ink-strong: #161513;
     color-scheme: dark;
   }
 }
@@ -41,6 +49,10 @@
   --accent: #7cae8c;
   --on-accent: #161513;
   --danger: #e3977f;
+  --heat-low: #27342c;
+  --heat-high: #8cc09c;
+  --heat-ink: #ebe6de;
+  --heat-ink-strong: #161513;
   color-scheme: dark;
 }
 
@@ -219,7 +231,8 @@ body {
     height: 2rem;
     width: 2.5rem;
     border: 1px solid var(--line);
-    background: color-mix(in oklab, var(--accent) var(--heat, 0%), var(--paper));
+    border-radius: 3px;
+    background: var(--paper);
     transition:
       background-color 240ms ease,
       border-color var(--quick) ease,
@@ -239,8 +252,16 @@ body {
     opacity: 0.28;
   }
 
+  .slot[data-filled="true"] {
+    border-color: transparent;
+    background: color-mix(in oklab, var(--heat-high) var(--heat), var(--heat-low));
+  }
+
   .slot[data-best="true"] {
-    border-color: var(--foreground);
+    border-color: transparent;
+    box-shadow:
+      inset 0 0 0 1.5px var(--foreground),
+      inset 0 0 0 2.5px var(--paper);
   }
 
   .slot-fill {
