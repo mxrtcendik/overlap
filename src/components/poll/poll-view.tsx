@@ -1,11 +1,11 @@
 "use client";
 
 import { useMemo, useRef, useState, type FormEvent } from "react";
-import { slotsIn } from "@/lib/availability";
+import { slotsIn } from "@/lib/poll/availability";
 import { MAX_NAME, MAX_NOTE } from "@/lib/constants";
-import { json, messageOf, request, UserFacingError } from "@/lib/request";
+import { json, messageOf, request, UserFacingError } from "@/client/request";
 import type { PollView as PollViewData, VoterView } from "@/lib/types";
-import { useLiveUpdates, useRefreshAt } from "@/lib/use-live-updates";
+import { useLiveUpdates, useRefreshAt } from "@/client/use-live-updates";
 import { Availability } from "./availability";
 import { CalendarFill } from "./calendar-fill";
 import { FinalTime } from "./final-time";

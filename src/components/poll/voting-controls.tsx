@@ -1,8 +1,8 @@
 "use client";
 
 import { useState } from "react";
-import { usePrefs, useTimeZone } from "@/lib/browser";
-import { momentLabel, timeZoneLabel, wallDate, wallParts, zonedToUtc } from "@/lib/format";
+import { usePrefs, useTimeZone } from "@/client/browser";
+import { momentLabel, timeZoneLabel, wallDate, wallParts, zonedToUtc } from "@/lib/time/format";
 
 function wallInput(ms: number, timeZone: string): string {
   const parts = wallParts(ms, timeZone);

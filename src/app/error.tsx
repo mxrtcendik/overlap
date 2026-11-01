@@ -1,6 +1,6 @@
 "use client";
 
-import { Shell } from "@/components/shell";
+import { Shell } from "@/components/common/shell";
 
 export default function Error({ reset }: { error: Error; reset: () => void }) {
   return (

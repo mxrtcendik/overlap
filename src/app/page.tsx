@@ -1,7 +1,7 @@
-import { CreateForm } from "@/components/create-form";
-import { Demo } from "@/components/demo";
-import { MyPolls } from "@/components/my-polls";
-import { Shell } from "@/components/shell";
+import { CreateForm } from "@/components/home/create-form";
+import { Demo } from "@/components/home/demo";
+import { MyPolls } from "@/components/home/my-polls";
+import { Shell } from "@/components/common/shell";
 
 const STEPS = [
   {

@@ -1,6 +1,6 @@
 import "server-only";
 import { getCloudflareContext } from "@opennextjs/cloudflare";
-import { sha256 } from "./tokens";
+import { sha256 } from "../lib/tokens";
 
 const LIMITERS = {
   create: "CREATE_LIMITER",

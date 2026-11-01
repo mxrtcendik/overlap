@@ -1,7 +1,7 @@
 "use client";
 
 import { useId, useRef, useState, type ChangeEvent } from "react";
-import { deviceTimeZone, useTimeZone } from "@/lib/browser";
+import { deviceTimeZone, useTimeZone } from "@/client/browser";
 import { SLOT_MS } from "@/lib/constants";
 
 const MAX_BYTES = 5 * 1024 * 1024;
@@ -36,7 +36,7 @@ export function CalendarFill({
     }
     setReading(true);
     try {
-      const [{ busyTimes, freeSlots }, text] = await Promise.all([import("@/lib/ics"), file.text()]);
+      const [{ busyTimes, freeSlots }, text] = await Promise.all([import("@/lib/calendar/import"), file.text()]);
       const times = slots.map((slot) => Date.parse(slot));
       const window = { start: Math.min(...times), end: Math.max(...times) + SLOT_MS };
       const busy = busyTimes(text, window, timeZone ?? deviceTimeZone());

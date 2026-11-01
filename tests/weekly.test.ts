@@ -1,7 +1,7 @@
 import assert from "node:assert/strict";
 import { describe, it } from "node:test";
-import { datesForWeekdays, referenceWeek, weekdayName, weekdayOf } from "../src/lib/weekly";
-import { describeRun, rangeLabel } from "../src/lib/format";
+import { datesForWeekdays, referenceWeek, weekdayName, weekdayOf } from "../src/lib/time/weekly";
+import { describeRun, rangeLabel } from "../src/lib/time/format";
 
 describe("referenceWeek", () => {
   it("starts on the next first-day-of-week after today", () => {

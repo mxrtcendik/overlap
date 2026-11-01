@@ -2,7 +2,7 @@
 
 import { useEffect, useMemo, useState, type FormEvent } from "react";
 import { useRouter } from "next/navigation";
-import { slotsIn } from "@/lib/availability";
+import { slotsIn } from "@/lib/poll/availability";
 import {
   deviceTimeZone,
   dismissCreated,
@@ -12,23 +12,23 @@ import {
   usePrefs,
   useTimeZone,
   useToday,
-} from "@/lib/browser";
+} from "@/client/browser";
 import { MAX_TITLE, SLOT_MS } from "@/lib/constants";
-import { buildSlots, inferSchedule } from "@/lib/schedule";
-import { rangeLabel, type Clock } from "@/lib/format";
-import { expiresAtFor, forgetPoll, rememberPoll, useMyPolls } from "@/lib/my-polls";
-import { json, messageOf, request } from "@/lib/request";
-import { parseFinal } from "@/lib/slots";
+import { buildSlots, inferSchedule } from "@/lib/time/schedule";
+import { rangeLabel, type Clock } from "@/lib/time/format";
+import { expiresAtFor, forgetPoll, rememberPoll, useMyPolls } from "@/client/my-polls";
+import { json, messageOf, request } from "@/client/request";
+import { parseFinal } from "@/lib/poll/slots";
 import type { PollView, VoterView } from "@/lib/types";
-import { useLiveUpdates, useRefreshAt } from "@/lib/use-live-updates";
+import { useLiveUpdates, useRefreshAt } from "@/client/use-live-updates";
 import { CopyLink, ShareBar } from "./copy-link";
 import { CreatedNotice } from "./created-notice";
 import { Availability } from "./availability";
 import { FinalTime } from "./final-time";
 import { SentenceBlock } from "./poll-summary";
-import { ScheduleFields } from "./schedule-fields";
+import { ScheduleFields } from "../common/schedule-fields";
 import { VotingControls } from "./voting-controls";
-import { datesForWeekdays, weekdayOf } from "@/lib/weekly";
+import { datesForWeekdays, weekdayOf } from "@/lib/time/weekly";
 
 export function OwnerView({ poll, hasResponses }: { poll: PollView; hasResponses: boolean }) {
   const router = useRouter();

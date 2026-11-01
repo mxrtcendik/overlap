@@ -1,7 +1,7 @@
 "use client";
 
 import { useSyncExternalStore } from "react";
-import { RETAIN_MS, SLOT_MS } from "./constants";
+import { RETAIN_MS, SLOT_MS } from "../lib/constants";
 
 export type MyPoll = {
   id: string;

@@ -1,4 +1,4 @@
-import { MAX_DAYS, MAX_RANGE_MS, MAX_SLOTS, MAX_SLOTS_PER_DAY, SLOT_MS } from "./constants";
+import { MAX_DAYS, MAX_RANGE_MS, MAX_SLOTS, MAX_SLOTS_PER_DAY, SLOT_MS } from "../constants";
 
 export type SlotResult = { ok: true; slots: string[] } | { ok: false; error: string };
 

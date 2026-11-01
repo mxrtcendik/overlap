@@ -1,9 +1,9 @@
 import { NextResponse } from "next/server";
-import { jsonError, readJson } from "@/lib/http";
-import { createPoll } from "@/lib/polls";
-import { allowWrite } from "@/lib/rate";
-import { verifyTurnstile } from "@/lib/turnstile";
-import { CREATE_ACTION } from "@/lib/turnstile-check";
+import { jsonError, readJson } from "@/server/http";
+import { createPoll } from "@/server/polls";
+import { allowWrite } from "@/server/rate-limit";
+import { verifyTurnstile } from "@/server/turnstile";
+import { CREATE_ACTION } from "@/lib/turnstile";
 
 export async function POST(request: Request) {
   try {

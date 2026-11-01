@@ -1,9 +1,9 @@
-import { slotsIn } from "@/lib/availability";
+import { slotsIn } from "@/lib/poll/availability";
 import { SLOT_MS } from "@/lib/constants";
-import { ogImage, OG_SIZE, type OgCell } from "@/lib/og-image";
-import { getPoll } from "@/lib/polls";
-import { pollDescription } from "@/lib/poll-meta";
-import { bestTime, tallySlots } from "@/lib/sentence";
+import { ogImage, OG_SIZE, type OgCell } from "@/server/og-image";
+import { getPoll } from "@/server/polls";
+import { pollDescription } from "@/server/poll-meta";
+import { bestTime, tallySlots } from "@/lib/poll/sentence";
 
 export const alt = "An Overlap poll with a grid of who is free when.";
 export const size = OG_SIZE;

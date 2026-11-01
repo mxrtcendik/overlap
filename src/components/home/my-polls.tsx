@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { useEffect, useState } from "react";
-import { forgetPoll, useMyPolls } from "@/lib/my-polls";
+import { forgetPoll, useMyPolls } from "@/client/my-polls";
 
 const created = (ms: number) => new Date(ms).toLocaleDateString("en-US", { month: "short", day: "numeric" });
 

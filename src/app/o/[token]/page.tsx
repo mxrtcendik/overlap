@@ -1,9 +1,9 @@
 import { connection } from "next/server";
 import type { Metadata } from "next";
 import { notFound } from "next/navigation";
-import { OwnerView } from "@/components/owner-view";
-import { Shell } from "@/components/shell";
-import { getPollByOwnerToken, toPollView } from "@/lib/polls";
+import { OwnerView } from "@/components/poll/owner-view";
+import { Shell } from "@/components/common/shell";
+import { getPollByOwnerToken, toPollView } from "@/server/polls";
 
 export const dynamic = "force-dynamic";
 

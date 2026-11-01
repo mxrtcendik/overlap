@@ -1,5 +1,5 @@
 import type { Metadata } from "next";
-import { Missing } from "@/components/missing";
+import { Missing } from "@/components/common/missing";
 
 export const metadata: Metadata = { title: "Page not found" };
 

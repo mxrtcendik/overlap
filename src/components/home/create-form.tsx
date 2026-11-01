@@ -2,15 +2,15 @@
 
 import { useState, type FormEvent } from "react";
 import { useRouter } from "next/navigation";
-import { deviceTimeZone, markCreated, useTimeZone } from "@/lib/browser";
+import { deviceTimeZone, markCreated, useTimeZone } from "@/client/browser";
 import { MAX_TITLE } from "@/lib/constants";
-import { expiresAtFor, rememberPoll } from "@/lib/my-polls";
-import { json, messageOf, request, UserFacingError } from "@/lib/request";
-import { buildSlots } from "@/lib/schedule";
-import { CREATE_ACTION } from "@/lib/turnstile-check";
-import { useTurnstile } from "@/lib/use-turnstile";
-import { WEEKLY_OPEN_MS, type PollKind } from "@/lib/weekly";
-import { ScheduleFields } from "./schedule-fields";
+import { expiresAtFor, rememberPoll } from "@/client/my-polls";
+import { json, messageOf, request, UserFacingError } from "@/client/request";
+import { buildSlots } from "@/lib/time/schedule";
+import { CREATE_ACTION } from "@/lib/turnstile";
+import { useTurnstile } from "@/client/use-turnstile";
+import { WEEKLY_OPEN_MS, type PollKind } from "@/lib/time/weekly";
+import { ScheduleFields } from "../common/schedule-fields";
 
 export function CreateForm() {
   const router = useRouter();

@@ -1,6 +1,6 @@
 import assert from "node:assert/strict";
 import { describe, it } from "node:test";
-import { parseDeadline } from "../src/lib/deadline";
+import { parseDeadline } from "../src/lib/poll/deadline";
 
 const now = Date.parse("2026-11-02T12:00:00Z");
 const lastEnd = Date.parse("2026-11-06T17:00:00Z");

@@ -1,4 +1,4 @@
-import { SLOT_MS } from "./constants";
+import { SLOT_MS } from "../constants";
 
 export type Segment = {
   start: number;

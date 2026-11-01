@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useRef } from "react";
-import { useCanShare } from "@/lib/browser";
+import { useCanShare } from "@/client/browser";
 import { copyText, CopyLabel, useCopyState } from "./copy-link";
 
 export function CreatedNotice({

@@ -1,5 +1,5 @@
-import { Missing } from "@/components/missing";
-import { ForgetMissingPoll } from "@/components/my-polls";
+import { Missing } from "@/components/common/missing";
+import { ForgetMissingPoll } from "@/components/home/my-polls";
 
 export default function OwnerLinkNotFound() {
   return (

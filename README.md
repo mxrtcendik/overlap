@@ -60,6 +60,25 @@ The whole app runs on a single Cloudflare Worker. A few decisions I'd point out:
 
 Built with Next.js 16, React 19, Tailwind CSS 4, TypeScript 7, Drizzle ORM, Cloudflare Workers, D1, Durable Objects and Turnstile. Bun runs the installs and the tests.
 
+## Project layout
+
+```
+src/
+  app/          routes, API handlers and preview images
+  components/
+    home/       the landing page and the create form
+    poll/       the poll page and the owner page
+    common/     the site shell and pieces both use
+  server/       runs only on the Worker: queries, rate limits, Turnstile, the live room
+  client/       runs only in the browser: hooks, local storage, requests
+  lib/          plain logic shared by both, covered by the unit tests
+  db/           Drizzle schema
+migrations/     SQL migrations, applied by Wrangler
+tests/          unit tests (bun test)
+e2e/            browser tests (Playwright)
+worker.ts       the Worker entry: app, WebSockets and the hourly purge
+```
+
 ## Running it locally
 
 You'll need [Bun](https://bun.sh).

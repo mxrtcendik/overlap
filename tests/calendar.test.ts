@@ -1,6 +1,6 @@
 import assert from "node:assert/strict";
 import { describe, it } from "node:test";
-import { escapeText, foldLine, googleCalendarUrl, icsFileName, toIcs, utcStamp } from "../src/lib/calendar";
+import { escapeText, foldLine, googleCalendarUrl, icsFileName, toIcs, utcStamp } from "../src/lib/calendar/export";
 
 const event = {
   uid: "abc@overlap.cendik.dev",

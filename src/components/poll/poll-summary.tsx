@@ -1,10 +1,10 @@
 "use client";
 
 import { useMemo } from "react";
-import { usePrefs, useTimeZone } from "@/lib/browser";
-import { momentLabel } from "@/lib/format";
-import { overlapSummary, summaryParts, type Summary, type Vote } from "@/lib/sentence";
-import { TimeZoneNote } from "./time-zone";
+import { usePrefs, useTimeZone } from "@/client/browser";
+import { momentLabel } from "@/lib/time/format";
+import { overlapSummary, summaryParts, type Summary, type Vote } from "@/lib/poll/sentence";
+import { TimeZoneNote } from "../common/time-zone";
 
 export function SummaryText({ summary, emptyText }: { summary: Summary; emptyText?: string }) {
   if (summary.kind === "empty" && emptyText) return <>{emptyText}</>;

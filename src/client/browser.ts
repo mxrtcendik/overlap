@@ -1,7 +1,7 @@
 "use client";
 
 import { useSyncExternalStore } from "react";
-import { detectClock, detectWeekStart, wallDate, wallParts, type Clock } from "./format";
+import { detectClock, detectWeekStart, wallDate, wallParts, type Clock } from "../lib/time/format";
 
 function subscribe() {
   return () => {};

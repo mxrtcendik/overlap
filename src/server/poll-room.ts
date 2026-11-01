@@ -1,5 +1,5 @@
 import { DurableObject } from "cloudflare:workers";
-import { CHANGED, MAX_SOCKETS, PING, PONG } from "./live";
+import { CHANGED, MAX_SOCKETS, PING, PONG } from "../lib/live";
 
 export class PollRoom extends DurableObject<CloudflareEnv> {
   constructor(ctx: DurableObjectState, env: CloudflareEnv) {

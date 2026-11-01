@@ -11,7 +11,7 @@ import {
   REFRESH_DEBOUNCE_MS,
   SILENT_LIMIT_MS,
   STALE_AFTER_HIDDEN_MS,
-} from "./live";
+} from "../lib/live";
 
 export function useLiveUpdates(pollId: string, enabled = true) {
   const router = useRouter();

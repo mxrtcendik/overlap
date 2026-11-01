@@ -1,6 +1,6 @@
 import assert from "node:assert/strict";
 import { describe, it } from "node:test";
-import { parseSlots } from "../src/lib/slots";
+import { parseSlots } from "../src/lib/poll/slots";
 import { cleanText, parseNote } from "../src/lib/text";
 
 function day(offset: number, hour = 15): string {

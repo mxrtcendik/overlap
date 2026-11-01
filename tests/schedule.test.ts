@@ -1,7 +1,7 @@
 import assert from "node:assert/strict";
 import { describe, it } from "node:test";
-import { timeZoneLabelFor, zonedToUtc } from "../src/lib/format";
-import { buildSlots, inferSchedule } from "../src/lib/schedule";
+import { timeZoneLabelFor, zonedToUtc } from "../src/lib/time/format";
+import { buildSlots, inferSchedule } from "../src/lib/time/schedule";
 
 const iso = (ms: number) => new Date(ms).toISOString();
 

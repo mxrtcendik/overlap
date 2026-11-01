@@ -1,8 +1,8 @@
 "use client";
 
 import { useEffect, useMemo, useRef, useState } from "react";
-import { deviceTimeZone, setTimeZone, useTimeZone, useTimeZoneChosen } from "@/lib/browser";
-import { timeZoneLabel, timeZoneLabelFor } from "@/lib/format";
+import { deviceTimeZone, setTimeZone, useTimeZone, useTimeZoneChosen } from "@/client/browser";
+import { timeZoneLabel, timeZoneLabelFor } from "@/lib/time/format";
 
 function cityOf(zone: string): string {
   return zone.split("/").pop()!.replaceAll("_", " ");

@@ -1,10 +1,10 @@
 "use client";
 
 import { useMemo, useState } from "react";
-import { usePrefs, useTimeZone, useToday } from "@/lib/browser";
+import { usePrefs, useTimeZone, useToday } from "@/client/browser";
 import { MAX_DAYS } from "@/lib/constants";
-import { minutesLabel, zonedToUtc } from "@/lib/format";
-import { datesForWeekdays, WEEKDAY_NAMES, weekdayOf } from "@/lib/weekly";
+import { minutesLabel, zonedToUtc } from "@/lib/time/format";
+import { datesForWeekdays, WEEKDAY_NAMES, weekdayOf } from "@/lib/time/weekly";
 import { TimeZoneNote } from "./time-zone";
 
 const WEEKDAYS = ["Su", "Mo", "Tu", "We", "Th", "Fr", "Sa"] as const;

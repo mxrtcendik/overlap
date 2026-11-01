@@ -1,6 +1,6 @@
 import assert from "node:assert/strict";
 import { describe, it } from "node:test";
-import { parseFinal } from "../src/lib/slots";
+import { parseFinal } from "../src/lib/poll/slots";
 
 const at = (hour: number, minute = 0) => Date.UTC(2030, 0, 7, hour, minute);
 const slots = [at(9), at(9, 30), at(10), at(11)].map((ms) => new Date(ms).toISOString());

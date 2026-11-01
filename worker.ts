@@ -5,9 +5,9 @@ import { and, eq, gt } from "drizzle-orm";
 import { createDb } from "./src/db";
 import { polls } from "./src/db/schema";
 import { isSameOrigin, livePollId } from "./src/lib/live";
-import { purgeExpired } from "./src/lib/purge";
+import { purgeExpired } from "./src/server/purge";
 
-export { PollRoom } from "./src/lib/poll-room";
+export { PollRoom } from "./src/server/poll-room";
 
 const next = nextHandler as ExportedHandler<CloudflareEnv>;
 

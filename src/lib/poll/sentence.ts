@@ -1,5 +1,5 @@
-import { MAX_VOTERS, SLOT_MS } from "./constants";
-import { describeRun, type Clock } from "./format";
+import { MAX_VOTERS, SLOT_MS } from "../constants";
+import { describeRun, type Clock } from "../time/format";
 
 export type Marks = { slots: string[]; maybe?: string[] };
 export type Vote = Marks & { name: string };

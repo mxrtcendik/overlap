@@ -1,12 +1,12 @@
 "use client";
 
 import { useEffect, useMemo, useRef, useState } from "react";
-import { usePrefs, useReducedMotion, useTimeZone, useToday } from "@/lib/browser";
+import { usePrefs, useReducedMotion, useTimeZone, useToday } from "@/client/browser";
 import { DEMO_DAYS, DEMO_END, DEMO_PEOPLE, DEMO_START } from "@/lib/demo-data";
-import { buildSlots } from "@/lib/schedule";
-import { overlapSummary } from "@/lib/sentence";
-import { PollGrid } from "./poll-grid";
-import { SummaryText } from "./poll-summary";
+import { buildSlots } from "@/lib/time/schedule";
+import { overlapSummary } from "@/lib/poll/sentence";
+import { PollGrid } from "../poll/poll-grid";
+import { SummaryText } from "../poll/poll-summary";
 
 function nextWeekdays(today: string, count: number): string[] {
   const [year, month, day] = today.split("-").map(Number);

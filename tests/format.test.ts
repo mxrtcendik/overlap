@@ -1,6 +1,6 @@
 import assert from "node:assert/strict";
 import { describe, it } from "node:test";
-import { clockTime, detectClock, detectWeekStart, minutesLabel, momentLabel, rangeLabel, timeZoneLabel } from "../src/lib/format";
+import { clockTime, detectClock, detectWeekStart, minutesLabel, momentLabel, rangeLabel, timeZoneLabel } from "../src/lib/time/format";
 
 const at = (hour: number, minute = 0) => Date.UTC(2030, 0, 7, hour, minute);
 

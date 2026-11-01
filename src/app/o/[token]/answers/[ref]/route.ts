@@ -1,8 +1,8 @@
 import { NextResponse } from "next/server";
-import { announceChange } from "@/lib/announce";
-import { jsonError } from "@/lib/http";
-import { removeAnswer } from "@/lib/polls";
-import { allowWrite } from "@/lib/rate";
+import { announceChange } from "@/server/announce";
+import { jsonError } from "@/server/http";
+import { removeAnswer } from "@/server/polls";
+import { allowWrite } from "@/server/rate-limit";
 import { isToken } from "@/lib/tokens";
 
 type Params = { params: Promise<{ token: string; ref: string }> };

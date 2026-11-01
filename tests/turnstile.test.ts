@@ -1,6 +1,6 @@
 import assert from "node:assert/strict";
 import { describe, it } from "node:test";
-import { CREATE_ACTION, judge, parseHostnames, readToken } from "../src/lib/turnstile-check";
+import { CREATE_ACTION, judge, parseHostnames, readToken } from "../src/lib/turnstile";
 
 const expected = { action: CREATE_ACTION, hostnames: ["overlap.example.com"], allowTestKeys: false };
 const pass = { success: true, action: CREATE_ACTION, hostname: "overlap.example.com" };

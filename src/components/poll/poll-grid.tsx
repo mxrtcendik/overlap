@@ -1,11 +1,11 @@
 "use client";
 
 import { useEffect, useMemo, useRef, useState, type KeyboardEvent, type PointerEvent } from "react";
-import { usePrefs, useTimeZone } from "@/lib/browser";
+import { usePrefs, useTimeZone } from "@/client/browser";
 import { SLOT_MS } from "@/lib/constants";
-import { clockTime, localParts, type Clock } from "@/lib/format";
-import { bestTime, tallySlots, type Marks } from "@/lib/sentence";
-import { weekdayName } from "@/lib/weekly";
+import { clockTime, localParts, type Clock } from "@/lib/time/format";
+import { bestTime, tallySlots, type Marks } from "@/lib/poll/sentence";
+import { weekdayName } from "@/lib/time/weekly";
 
 type Pos = { c: number; r: number };
 

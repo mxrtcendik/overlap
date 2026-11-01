@@ -1,6 +1,6 @@
 import assert from "node:assert/strict";
 import { describe, it } from "node:test";
-import { busyTimes, freeSlots } from "../src/lib/ics";
+import { busyTimes, freeSlots } from "../src/lib/calendar/import";
 
 const WINDOW = { start: Date.parse("2026-11-02T00:00:00Z"), end: Date.parse("2026-11-07T00:00:00Z") };
 

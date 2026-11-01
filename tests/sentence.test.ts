@@ -1,6 +1,6 @@
 import assert from "node:assert/strict";
 import { describe, it } from "node:test";
-import { overlapSentence, overlapSummary, tallySlots, type Vote } from "../src/lib/sentence";
+import { overlapSentence, overlapSummary, tallySlots, type Vote } from "../src/lib/poll/sentence";
 
 const zone = "UTC";
 const four = "2026-01-06T16:00:00.000Z";

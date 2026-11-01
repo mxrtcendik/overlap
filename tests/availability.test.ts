@@ -1,6 +1,6 @@
 import assert from "node:assert/strict";
 import { describe, it } from "node:test";
-import { topSegments } from "../src/lib/availability";
+import { topSegments } from "../src/lib/poll/availability";
 
 const at = (hour: number, minute = 0) => new Date(Date.UTC(2030, 0, 7, hour, minute)).toISOString();
 const slots = [at(9), at(9, 30), at(10), at(10, 30), at(11), at(11, 30)];

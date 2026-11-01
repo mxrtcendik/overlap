@@ -1,5 +1,5 @@
-import { icsFileName, toIcs } from "@/lib/calendar";
-import { getPoll } from "@/lib/polls";
+import { icsFileName, toIcs } from "@/lib/calendar/export";
+import { getPoll } from "@/server/polls";
 
 type Params = { params: Promise<{ id: string }> };
 

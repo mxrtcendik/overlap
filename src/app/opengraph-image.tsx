@@ -1,5 +1,5 @@
 import { DEMO_PEOPLE, demoCounts } from "@/lib/demo-data";
-import { ogImage, OG_SIZE } from "@/lib/og-image";
+import { ogImage, OG_SIZE } from "@/server/og-image";
 
 export const alt = "Overlap: pick a few days, send one link, and see when everyone is free.";
 export const size = OG_SIZE;

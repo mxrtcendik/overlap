@@ -1,7 +1,7 @@
 "use client";
 
-import { setClock, usePrefs } from "@/lib/browser";
-import type { Clock } from "@/lib/format";
+import { setClock, usePrefs } from "@/client/browser";
+import type { Clock } from "@/lib/time/format";
 
 const OPTIONS: { value: Clock; label: string; name: string }[] = [
   { value: "h12", label: "12h", name: "12-hour clock" },

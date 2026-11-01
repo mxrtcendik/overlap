@@ -1,9 +1,9 @@
 import { cookies } from "next/headers";
 import { NextResponse } from "next/server";
-import { announceChange } from "@/lib/announce";
-import { jsonError, readJson } from "@/lib/http";
-import { deleteOwnVote, saveVote } from "@/lib/polls";
-import { allowWrite } from "@/lib/rate";
+import { announceChange } from "@/server/announce";
+import { jsonError, readJson } from "@/server/http";
+import { deleteOwnVote, saveVote } from "@/server/polls";
+import { allowWrite } from "@/server/rate-limit";
 import { isToken } from "@/lib/tokens";
 
 type Params = { params: Promise<{ id: string }> };

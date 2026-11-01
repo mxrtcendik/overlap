@@ -1,6 +1,6 @@
 import ICAL from "ical.js";
-import { SLOT_MS } from "./constants";
-import { zonedToUtc } from "./format";
+import { SLOT_MS } from "../constants";
+import { zonedToUtc } from "../time/format";
 
 export type Busy = { start: number; end: number };
 

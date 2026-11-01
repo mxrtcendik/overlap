@@ -1,8 +1,8 @@
 "use client";
 
-import { usePageLocation, usePrefs, useTimeZone } from "@/lib/browser";
-import { googleCalendarUrl } from "@/lib/calendar";
-import { rangeLabel } from "@/lib/format";
+import { usePageLocation, usePrefs, useTimeZone } from "@/client/browser";
+import { googleCalendarUrl } from "@/lib/calendar/export";
+import { rangeLabel } from "@/lib/time/format";
 import type { FinalTime as FinalTimeData } from "@/lib/types";
 
 export function FinalTime({

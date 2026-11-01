@@ -2,10 +2,10 @@ import { connection } from "next/server";
 import { cookies } from "next/headers";
 import type { Metadata } from "next";
 import { notFound } from "next/navigation";
-import { PollView } from "@/components/poll-view";
-import { Shell } from "@/components/shell";
-import { pollDescription, requestOrigin } from "@/lib/poll-meta";
-import { getPoll, toPollView } from "@/lib/polls";
+import { PollView } from "@/components/poll/poll-view";
+import { Shell } from "@/components/common/shell";
+import { pollDescription, requestOrigin } from "@/server/poll-meta";
+import { getPoll, toPollView } from "@/server/polls";
 
 export const dynamic = "force-dynamic";
 

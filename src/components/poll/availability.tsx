@@ -1,10 +1,10 @@
 "use client";
 
 import { useMemo, useState } from "react";
-import { topSegments, type Segment } from "@/lib/availability";
-import { usePrefs, useTimeZone } from "@/lib/browser";
+import { topSegments, type Segment } from "@/lib/poll/availability";
+import { usePrefs, useTimeZone } from "@/client/browser";
 import { SLOT_MS } from "@/lib/constants";
-import { describeRun, rangeLabel, type Clock } from "@/lib/format";
+import { describeRun, rangeLabel, type Clock } from "@/lib/time/format";
 import type { VoterView } from "@/lib/types";
 import { PollGrid, type Brush } from "./poll-grid";
 
