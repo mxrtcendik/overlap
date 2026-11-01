@@ -2,7 +2,7 @@
 
 import { useState, type FormEvent } from "react";
 import { useRouter } from "next/navigation";
-import { deviceTimeZone, markCreated, useTimeZone } from "@/client/browser";
+import { deviceTimeZone, markCreated, useTimeZone, useToday } from "@/client/browser";
 import { MAX_TITLE } from "@/lib/constants";
 import { expiresAtFor, rememberPoll } from "@/client/my-polls";
 import { json, messageOf, request, UserFacingError } from "@/client/request";
@@ -12,6 +12,7 @@ import { useTurnstile } from "@/client/use-turnstile";
 import { WEEKLY_OPEN_MS, type PollKind } from "@/lib/time/weekly";
 import { DurationField } from "../common/duration-field";
 import { ScheduleFields } from "../common/schedule-fields";
+import { defaultOptions, OptionsFields, toOptions, type OptionDraft } from "../common/options-fields";
 
 export function CreateForm() {
   const router = useRouter();
@@ -22,6 +23,8 @@ export function CreateForm() {
   const [start, setStart] = useState(9 * 60);
   const [end, setEnd] = useState(17 * 60);
   const [duration, setDuration] = useState<number | null>(null);
+  const today = useToday();
+  const [drafts, setDrafts] = useState<OptionDraft[] | null>(null);
   const fitting = duration !== null && duration <= end - start ? duration : null;
   const [error, setError] = useState<string | null>(null);
   const [pending, setPending] = useState(false);
@@ -29,14 +32,15 @@ export function CreateForm() {
 
   async function onSubmit(event: FormEvent) {
     event.preventDefault();
-    if (dates.length === 0) {
+    if (kind !== "options" && dates.length === 0) {
       setError("Pick at least one day.");
       return;
     }
     setPending(true);
     setError(null);
     const zone = timeZone ?? deviceTimeZone();
-    const slots = buildSlots(dates, start, end, zone);
+    const options = kind === "options" && drafts ? toOptions(drafts, zone) : null;
+    const slots = options ? options.map((option) => option.start) : buildSlots(dates, start, end, zone);
     try {
       const token = await getToken();
       if (!token) {
@@ -44,9 +48,14 @@ export function CreateForm() {
       }
       const data = await request<{ id: string; ownerToken: string }>("/api/polls", {
         method: "POST",
-        ...json({ title, slots, kind, zone, duration: fitting, "cf-turnstile-response": token }),
+        ...json({ title, slots, kind, zone, duration: fitting, options, "cf-turnstile-response": token }),
       });
-      const lastEnd = kind === "weekly" ? new Date(Date.now() + WEEKLY_OPEN_MS).toISOString() : undefined;
+      const lastEnd =
+        kind === "weekly"
+          ? new Date(Date.now() + WEEKLY_OPEN_MS).toISOString()
+          : options
+            ? new Date(Math.max(...options.map((option) => Date.parse(option.end)))).toISOString()
+            : undefined;
       rememberPoll({ id: data.id, token: data.ownerToken, title: title.trim(), expiresAt: expiresAtFor(slots, lastEnd) });
       const marked = markCreated(data.ownerToken);
       router.push(`/o/${data.ownerToken}${marked ? "" : "#created"}`);
@@ -76,9 +85,16 @@ export function CreateForm() {
         onChange={(next) => {
           setKind(next);
           setDates([]);
+          if (next === "options" && !drafts && today) setDrafts(defaultOptions(today));
           setError(null);
         }}
       />
+      {kind === "options" && drafts ? (
+        <div className="mt-6">
+          <OptionsFields drafts={drafts} onChange={setDrafts} />
+        </div>
+      ) : (
+        <>
       <div className="mt-6">
         <ScheduleFields
           weekly={kind === "weekly"}
@@ -93,6 +109,8 @@ export function CreateForm() {
       <div className="mt-6">
         <DurationField value={fitting} max={end - start} onChange={setDuration} />
       </div>
+        </>
+      )}
       {error ? (
         <p className="mt-4 text-sm text-danger" role="alert">
           {error}
@@ -110,6 +128,7 @@ function KindSwitch({ value, onChange }: { value: PollKind; onChange: (kind: Pol
   const options: { kind: PollKind; label: string }[] = [
     { kind: "dates", label: "Specific dates" },
     { kind: "weekly", label: "Days of the week" },
+    { kind: "options", label: "Set times" },
   ];
   return (
     <div className="mt-8 flex flex-wrap items-center gap-x-4 gap-y-2">

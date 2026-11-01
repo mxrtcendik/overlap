@@ -4,6 +4,7 @@ import { ogImage, OG_SIZE, type OgCell } from "@/server/og-image";
 import { getPoll } from "@/server/polls";
 import { pollDescription } from "@/server/poll-meta";
 import { bestTime, tallySlots } from "@/lib/poll/sentence";
+import { rankOptions } from "@/lib/poll/options";
 
 export const alt = "An Overlap poll with a grid of who is free when.";
 export const size = OG_SIZE;
@@ -23,6 +24,9 @@ export default async function Image({ params }: Params) {
   const outlined = new Set<string>();
   if (poll.final) {
     for (const slot of slotsIn(poll.slots, Date.parse(poll.final.start), Date.parse(poll.final.end))) outlined.add(slot);
+  } else if (poll.options && poll.voters.length > 1) {
+    const top = rankOptions(poll.options, poll.voters)[0];
+    if (top) outlined.add(top.option.start);
   } else if (poll.voters.length > 1) {
     const run = bestTime(poll.slots, poll.voters, poll.duration);
     if (run) for (const slot of slotsIn(poll.slots, run.start, run.end)) outlined.add(slot);

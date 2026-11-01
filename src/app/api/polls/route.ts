@@ -18,6 +18,7 @@ export async function POST(request: Request) {
       kind?: unknown;
       zone?: unknown;
       duration?: unknown;
+      options?: unknown;
       "cf-turnstile-response"?: unknown;
     };
     if (!(await verifyTurnstile(request, record["cf-turnstile-response"], CREATE_ACTION))) {
@@ -29,6 +30,7 @@ export async function POST(request: Request) {
       kind: record.kind,
       zone: record.zone,
       duration: record.duration,
+      options: record.options,
     });
     if (!result.ok) return jsonError(result.error, 400);
     return NextResponse.json({ id: result.id, ownerToken: result.ownerToken });

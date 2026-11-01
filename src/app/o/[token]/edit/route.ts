@@ -7,6 +7,7 @@ import {
   updateDuration,
   updateFinal,
   updateNotify,
+  updateOptions,
   updateSlots,
   updateTitle,
   type StoredPoll,
@@ -37,7 +38,14 @@ export async function PATCH(request: Request, { params }: Params) {
       deadline?: unknown;
       duration?: unknown;
       notify?: unknown;
+      options?: unknown;
     };
+    if ("options" in record) {
+      const result = await updateOptions(token, record.options);
+      if (!result.ok) return jsonError(result.error, result.status);
+      await announceChange(result.id);
+      return NextResponse.json({ ok: true });
+    }
     if ("notify" in record) {
       const result = await updateNotify(token, record.notify);
       if (!result.ok) return jsonError(result.error, result.status);

@@ -16,8 +16,15 @@ const clock = (ms: number, timeZone: string) => {
   return `${pad(parts.hour)}:${pad(parts.minute)}`;
 };
 
-export function answersCsv(input: { slots: string[]; voters: Answer[]; timeZone: string; weekly?: boolean }): string {
-  const { slots, voters, timeZone, weekly = false } = input;
+export function answersCsv(input: {
+  slots: string[];
+  voters: Answer[];
+  timeZone: string;
+  weekly?: boolean;
+  ranges?: { start: string; end: string }[] | null;
+}): string {
+  const { slots, voters, timeZone, weekly = false, ranges } = input;
+  const ends = new Map((ranges ?? []).map((range) => [range.start, Date.parse(range.end)]));
   const header = [
     weekly ? "Day" : "Date",
     "Start",
@@ -34,7 +41,7 @@ export function answersCsv(input: { slots: string[]; voters: Answer[]; timeZone:
     return [
       weekly ? weekdayName(localParts(start, timeZone).weekday) : wallDate(wallParts(start, timeZone)),
       clock(start, timeZone),
-      clock(start + SLOT_MS, timeZone),
+      clock(ends.get(slot) ?? start + SLOT_MS, timeZone),
       marks.filter((mark) => mark === "yes").length,
       marks.filter((mark) => mark === "if needed").length,
       ...marks,

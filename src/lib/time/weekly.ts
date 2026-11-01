@@ -1,4 +1,4 @@
-export type PollKind = "dates" | "weekly";
+export type PollKind = "dates" | "weekly" | "options";
 
 export const WEEKDAY_NAMES = ["Sunday", "Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday"] as const;
 

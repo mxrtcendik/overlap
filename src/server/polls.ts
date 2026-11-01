@@ -6,6 +6,7 @@ import { MAX_NAME, MAX_NOTE, MAX_TITLE, MAX_VOTERS, RETAIN_MS, SLOT_MS } from ".
 import { getDb, type Database } from "./db";
 import { parseDeadline } from "../lib/poll/deadline";
 import { longestRun, parseDuration } from "../lib/poll/duration";
+import { parseOptions, type TimeOption } from "../lib/poll/options";
 import { parseFinal, parseSlots } from "../lib/poll/slots";
 import { cleanText, parseNote } from "../lib/text";
 import { readEmail } from "../lib/email";
@@ -36,6 +37,7 @@ export type StoredPoll = {
   closesAt: number;
   deadline: number | null;
   kind: PollKind;
+  options: TimeOption[] | null;
   zone: string | null;
   duration: number | null;
   notifyEmail: string | null;
@@ -68,6 +70,7 @@ export function toPollView(poll: StoredPoll, voterId: string | null, options: { 
     closesAt: new Date(poll.closesAt).toISOString(),
     deadline: poll.deadline === null ? null : new Date(poll.deadline).toISOString(),
     kind: poll.kind,
+    options: poll.options,
     zone: poll.zone,
     duration: poll.duration,
     ...(options.owner ? { notifyEmail: poll.notifyEmail } : {}),
@@ -95,6 +98,7 @@ async function findPoll(match: SQL): Promise<StoredPoll | null> {
       id: true,
       title: true,
       kind: true,
+      options: true,
       zone: true,
       duration: true,
       notifyEmail: true,
@@ -123,10 +127,11 @@ async function findPoll(match: SQL): Promise<StoredPoll | null> {
     closesAt: poll.closesAt,
     deadline: poll.deadline,
     kind: poll.kind,
+    options: poll.options,
     zone: poll.zone,
     duration: poll.duration,
     notifyEmail: poll.notifyEmail,
-    lastEnd: naturalEnd(poll.kind, poll.slots, poll.createdAt),
+    lastEnd: naturalEnd(poll.kind, poll.slots, poll.createdAt, poll.options),
     final:
       poll.finalStart !== null && poll.finalEnd !== null
         ? { start: new Date(poll.finalStart).toISOString(), end: new Date(poll.finalEnd).toISOString() }
@@ -159,8 +164,10 @@ function closesAt(slots: string[]): number {
   return Math.max(...slots.map((slot) => Date.parse(slot))) + SLOT_MS;
 }
 
-function naturalEnd(kind: PollKind, slots: string[], createdAt: number): number {
-  return kind === "weekly" ? createdAt + WEEKLY_OPEN_MS : closesAt(slots);
+function naturalEnd(kind: PollKind, slots: string[], createdAt: number, options: TimeOption[] | null = null): number {
+  if (kind === "weekly") return createdAt + WEEKLY_OPEN_MS;
+  if (kind === "options" && options) return Math.max(...options.map((option) => Date.parse(option.end)));
+  return closesAt(slots);
 }
 
 function parseZone(input: unknown): string | null {
@@ -169,7 +176,7 @@ function parseZone(input: unknown): string | null {
 
 function parseKind(input: unknown): PollKind | null {
   if (input === undefined || input === "dates") return "dates";
-  return input === "weekly" ? "weekly" : null;
+  return input === "weekly" || input === "options" ? input : null;
 }
 
 function fitsOneWeek(slots: string[]): boolean {
@@ -185,6 +192,7 @@ export async function createPoll(input: {
   kind?: unknown;
   zone?: unknown;
   duration?: unknown;
+  options?: unknown;
 }): Promise<{ ok: true; id: string; ownerToken: string } | { ok: false; error: string }> {
   const { title: titleInput, slots: slotsInput, kind: kindInput, zone: zoneInput } = input;
   const kind = parseKind(kindInput);
@@ -194,23 +202,33 @@ export async function createPoll(input: {
   }
   const title = cleanText(titleInput, MAX_TITLE);
   if (!title) return { ok: false, error: "Titles can be up to 80 characters." };
-  const parsed = parseSlots(slotsInput);
-  if (!parsed.ok) return parsed;
-  if (closesAt(parsed.slots) <= Date.now()) return { ok: false, error: ALL_PAST };
-  if (kind === "weekly" && !fitsOneWeek(parsed.slots)) return { ok: false, error: "A weekly poll covers one week." };
-  const length = parseDuration(input.duration, parsed.slots);
+  let choices: TimeOption[] | null = null;
+  let parsed: { ok: true; slots: string[] } | { ok: false; error: string };
+  if (kind === "options") {
+    const offered = parseOptions(input.options);
+    if (!offered.ok) return offered;
+    choices = offered.options;
+    parsed = { ok: true, slots: choices.map((option) => option.start) };
+  } else {
+    parsed = parseSlots(slotsInput);
+    if (!parsed.ok) return parsed;
+    if (closesAt(parsed.slots) <= Date.now()) return { ok: false, error: ALL_PAST };
+    if (kind === "weekly" && !fitsOneWeek(parsed.slots)) return { ok: false, error: "A weekly poll covers one week." };
+  }
+  const length = kind === "options" ? ({ ok: true, duration: null } as const) : parseDuration(input.duration, parsed.slots);
   if (!length.ok) return length;
 
   const db = await getDb();
   const id = randomToken(16);
   const ownerToken = randomToken(24);
   const now = Date.now();
-  const closes = naturalEnd(kind, parsed.slots, now);
+  const closes = naturalEnd(kind, parsed.slots, now, choices);
   await db.insert(polls).values({
     id,
     ownerHash: await ownerHash(ownerToken),
     title,
     kind,
+    options: choices,
     zone: parseZone(zoneInput),
     duration: length.duration,
     slots: parsed.slots,
@@ -321,6 +339,47 @@ export async function setVoterEmail(pollId: string, voterId: string | null, inpu
 
 type Done = { ok: true; id: string };
 
+function matchOption(
+  options: TimeOption[],
+  input: unknown,
+): { ok: true; final: { start: number; end: number } | null } | { ok: false; error: string } {
+  if (input === null) return { ok: true, final: null };
+  const record = input as { start?: unknown; end?: unknown } | undefined;
+  const chosen = options.find(
+    (option) =>
+      typeof record?.start === "string" &&
+      typeof record?.end === "string" &&
+      Date.parse(option.start) === Date.parse(record.start) &&
+      Date.parse(option.end) === Date.parse(record.end),
+  );
+  if (!chosen) return { ok: false, error: "Pick one of the times on the poll." };
+  return { ok: true, final: { start: Date.parse(chosen.start), end: Date.parse(chosen.end) } };
+}
+
+export async function updateOptions(token: string, input: unknown): Promise<Done | Failure> {
+  const current = await getPollByOwnerToken(token);
+  if (!current) return NOT_FOUND;
+  if (current.kind !== "options") return { ok: false, status: 400, error: "This poll doesn’t offer set times." };
+  if (current.voters.length > 0) return { ok: false, status: 409, error: "Times can’t change once people have answered." };
+  const offered = parseOptions(input);
+  if (!offered.ok) return { ok: false, status: 400, error: offered.error };
+  const closes = naturalEnd("options", [], 0, offered.options);
+  const db = await getDb();
+  await db
+    .update(polls)
+    .set({
+      options: offered.options,
+      slots: offered.options.map((option) => option.start),
+      closesAt: closes,
+      deadline: null,
+      deleteAt: closes + RETAIN_MS,
+      finalStart: null,
+      finalEnd: null,
+    })
+    .where(and(eq(polls.id, current.id), notExists(db.select({ id: voters.id }).from(voters).where(eq(voters.pollId, polls.id)))));
+  return { ok: true, id: current.id };
+}
+
 export async function updateDuration(token: string, input: unknown): Promise<Done | Failure> {
   const poll = await getPollByOwnerToken(token);
   if (!poll) return NOT_FOUND;
@@ -403,7 +462,7 @@ export async function updateFinal(
 ): Promise<(Done & { poll: StoredPoll; final: { start: number; end: number } | null }) | Failure> {
   const poll = await getPollByOwnerToken(token);
   if (!poll) return NOT_FOUND;
-  const parsed = parseFinal(poll.slots, input);
+  const parsed = poll.options ? matchOption(poll.options, input) : parseFinal(poll.slots, input);
   if (!parsed.ok) return { ok: false, status: 400, error: parsed.error };
   const db = await getDb();
   await db

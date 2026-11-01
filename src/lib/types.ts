@@ -18,7 +18,8 @@ export type PollView = {
   closed: boolean;
   closesAt: string;
   deadline: string | null;
-  kind: "dates" | "weekly";
+  kind: "dates" | "weekly" | "options";
+  options: { start: string; end: string }[] | null;
   zone: string | null;
   duration: number | null;
   notifyEmail?: string | null;

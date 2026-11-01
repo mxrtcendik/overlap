@@ -10,10 +10,12 @@ type Found = { events: number; free: string[] };
 
 export function CalendarFill({
   slots,
+  options,
   hasAnswer,
   onApply,
 }: {
   slots: string[];
+  options?: { start: string; end: string }[] | null;
   hasAnswer: boolean;
   onApply: (free: string[]) => void;
 }) {
@@ -37,10 +39,18 @@ export function CalendarFill({
     setReading(true);
     try {
       const [{ busyTimes, freeSlots }, text] = await Promise.all([import("@/lib/calendar/import"), file.text()]);
-      const times = slots.map((slot) => Date.parse(slot));
-      const window = { start: Math.min(...times), end: Math.max(...times) + SLOT_MS };
+      const ranges = options ?? slots.map((slot) => ({ start: slot, end: new Date(Date.parse(slot) + SLOT_MS).toISOString() }));
+      const window = {
+        start: Math.min(...ranges.map((range) => Date.parse(range.start))),
+        end: Math.max(...ranges.map((range) => Date.parse(range.end))),
+      };
       const busy = busyTimes(text, window, timeZone ?? deviceTimeZone());
-      setFound({ events: busy.length, free: freeSlots(slots, busy) });
+      const free = options
+        ? options
+            .filter((option) => !busy.some((span) => span.start < Date.parse(option.end) && span.end > Date.parse(option.start)))
+            .map((option) => option.start)
+        : freeSlots(slots, busy);
+      setFound({ events: busy.length, free });
     } catch {
       setError("That file doesn’t look like a calendar. Export an .ics file from your calendar app and try again.");
     } finally {

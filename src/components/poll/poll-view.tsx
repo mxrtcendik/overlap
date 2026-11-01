@@ -11,6 +11,7 @@ import { VOTE_ACTION } from "@/lib/turnstile";
 import { currentWeek, IDENTITY, projectPoll } from "@/lib/time/week-projection";
 import { Availability } from "./availability";
 import { CalendarFill } from "./calendar-fill";
+import { OptionsView } from "./options-view";
 import { deviceTimeZone, useTimeZone } from "@/client/browser";
 import { EmailSubscription } from "../common/email-subscription";
 import { FinalTime } from "./final-time";
@@ -198,6 +199,7 @@ export function PollView({ poll: stored, canEmail = false }: { poll: PollViewDat
         lastEnd={poll.lastEnd}
         weekly={weekly}
         duration={poll.duration}
+        options={poll.options}
         emptyText="No answers yet. Be the first."
       />
 
@@ -261,7 +263,9 @@ export function PollView({ poll: stored, canEmail = false }: { poll: PollViewDat
               </button>
             </>
           ) : (
-            "Enter your name, drag across the times you can make, then save your answer."
+            poll.options
+              ? "Enter your name, answer each time, then save your answer."
+              : "Enter your name, drag across the times you can make, then save your answer."
           )}
         </p>
       )}
@@ -288,6 +292,28 @@ export function PollView({ poll: stored, canEmail = false }: { poll: PollViewDat
         </div>
       ) : null}
 
+      {poll.options ? (
+        <div className="mt-8">
+          {poll.closed ? null : (
+            <div className="mb-4">
+              <CalendarFill
+                slots={poll.slots}
+                options={poll.options}
+                hasAnswer={answer.slots.length + answer.maybe.length > 0}
+                onApply={(free) => change(free, [])}
+              />
+            </div>
+          )}
+          <OptionsView
+            options={poll.options}
+            voters={voters}
+            answer={answer}
+            final={poll.final}
+            readOnly={poll.closed}
+            onChange={change}
+          />
+        </div>
+      ) : (
       <div className="mt-8">
         {poll.closed ? null : (
           <div className="mb-5 flex flex-wrap items-center justify-between gap-x-8 gap-y-3">
@@ -312,6 +338,7 @@ export function PollView({ poll: stored, canEmail = false }: { poll: PollViewDat
           onChange={change}
         />
       </div>
+      )}
     </>
   );
 }

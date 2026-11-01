@@ -28,6 +28,7 @@ describe("projectPoll", () => {
     closesAt: "2026-12-31T00:00:00.000Z",
     deadline: null,
     kind: "weekly",
+    options: null,
     zone,
     duration: null,
     lastEnd: "2026-12-31T00:00:00.000Z",

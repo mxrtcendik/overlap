@@ -30,6 +30,9 @@ import { FinalTime } from "./final-time";
 import { SentenceBlock } from "./poll-summary";
 import { ScheduleFields } from "../common/schedule-fields";
 import { VotingControls } from "./voting-controls";
+import { OptionsView } from "./options-view";
+import { OptionsFields, toOptions, type OptionDraft } from "../common/options-fields";
+import { wallDate, wallParts } from "@/lib/time/format";
 import { DurationField } from "../common/duration-field";
 import { longestRun } from "@/lib/poll/duration";
 import { currentWeek, IDENTITY, projectPoll, storedRange } from "@/lib/time/week-projection";
@@ -93,6 +96,19 @@ export function OwnerView({
   async function send(method: "PATCH" | "DELETE", body?: unknown, route = "edit") {
     const path = `${window.location.pathname.replace(/\/$/, "")}/${route}`;
     await request(path, { method, ...(body === undefined ? {} : json(body)) });
+  }
+
+  async function onOptions(options: { start: string; end: string }[]) {
+    setPending(true);
+    setError(null);
+    try {
+      await send("PATCH", { options });
+      router.refresh();
+    } catch (caught) {
+      setError({ at: "settings", message: messageOf(caught) });
+    } finally {
+      setPending(false);
+    }
   }
 
   async function onDuration(minutes: number | null) {
@@ -255,9 +271,28 @@ export function OwnerView({
         lastEnd={poll.lastEnd}
         weekly={weekly}
         duration={poll.duration}
+        options={poll.options}
         emptyText="No answers yet. Share the public link to collect them."
       />
       {location && !justCreated ? <ShareBar title={poll.title} href={`${location.origin}/p/${poll.id}`} /> : null}
+      {poll.options ? (
+        <>
+          <p className="mt-8 max-w-2xl text-sm text-muted">
+            {poll.final ? "To change the final time" : "To set the final time"}, pick one of the times. Everyone with the
+            public link will see it.
+          </p>
+          <div className="mt-6">
+            <OptionsView
+              options={poll.options}
+              voters={poll.voters}
+              final={poll.final}
+              readOnly
+              onPick={(option) => void setFinal({ start: Date.parse(option.start), end: Date.parse(option.end) })}
+            />
+          </div>
+        </>
+      ) : (
+        <>
       <p className="mt-8 max-w-2xl text-sm text-muted">
         {poll.final ? "To change the final time" : "To set the final time"}, drag down a day on the grid
         {poll.voters.length > 1 ? " or pick one of the best times" : ""}. Everyone with the public link will see it.
@@ -277,6 +312,8 @@ export function OwnerView({
           onPick={(segment) => void setFinal({ start: segment.start, end: segment.end })}
         />
       </div>
+        </>
+      )}
       {error?.at === "final" ? (
         <p className="mt-4 text-sm text-danger" role="alert">
           {error.message}
@@ -331,6 +368,7 @@ export function OwnerView({
           title={poll.title}
           slots={poll.slots}
           weekly={weekly}
+          ranges={poll.options}
           voters={poll.voters}
           pending={pending}
           error={error?.at === "answers" ? error.message : null}
@@ -357,6 +395,7 @@ export function OwnerView({
             />
           </div>
         ) : null}
+        {poll.options ? null : (
         <div className="mt-6 max-w-xl">
           <DurationField
             value={poll.duration}
@@ -365,6 +404,7 @@ export function OwnerView({
             onChange={(minutes) => void onDuration(minutes)}
           />
         </div>
+        )}
         <form onSubmit={onTitle} className="mt-8 flex max-w-xl flex-wrap items-end gap-3">
           <label className="min-w-0 flex-1 basis-64 text-sm text-muted">
             Title
@@ -383,7 +423,11 @@ export function OwnerView({
 
       <div className="mt-10 max-w-xl">
         {hasResponses ? (
-          <p className="text-sm text-muted">Days can’t change once people have answered. Removing every answer unlocks them.</p>
+          <p className="text-sm text-muted">
+            {poll.options ? "Times" : "Days"} can’t change once people have answered. Removing every answer unlocks them.
+          </p>
+        ) : poll.options ? (
+          <OptionsEditor options={poll.options} pending={pending} onSave={onOptions} />
         ) : (
           <>
             {poll.final || poll.deadline ? (
@@ -433,6 +477,7 @@ function Answers({
   title,
   slots,
   weekly,
+  ranges,
   voters,
   pending,
   error,
@@ -442,6 +487,7 @@ function Answers({
   title: string;
   slots: string[];
   weekly: boolean;
+  ranges: { start: string; end: string }[] | null;
   voters: VoterView[];
   pending: boolean;
   error: string | null;
@@ -460,7 +506,7 @@ function Answers({
   const timeZone = useTimeZone();
 
   function download() {
-    const csv = answersCsv({ slots, voters, timeZone: timeZone ?? deviceTimeZone(), weekly });
+    const csv = answersCsv({ slots, voters, timeZone: timeZone ?? deviceTimeZone(), weekly, ranges });
     const url = URL.createObjectURL(new Blob([csv], { type: "text/csv;charset=utf-8" }));
     const link = document.createElement("a");
     link.href = url;
@@ -632,6 +678,41 @@ function DaysEditor({
       />
       <button type="submit" disabled={pending} className="mt-6 btn">
         Save days
+      </button>
+    </form>
+  );
+}
+
+function OptionsEditor({
+  options,
+  pending,
+  onSave,
+}: {
+  options: { start: string; end: string }[];
+  pending: boolean;
+  onSave: (options: { start: string; end: string }[]) => Promise<void>;
+}) {
+  const timeZone = useTimeZone();
+  const [drafts, setDrafts] = useState<OptionDraft[] | null>(null);
+  if (!timeZone) return <div className="min-h-40" />;
+  const current =
+    drafts ??
+    options.map((option) => {
+      const start = wallParts(Date.parse(option.start), timeZone);
+      const end = wallParts(Date.parse(option.end), timeZone);
+      const endMinutes = wallDate(end) === wallDate(start) ? end.hour * 60 + end.minute : 24 * 60;
+      return { date: wallDate(start), start: start.hour * 60 + start.minute, end: endMinutes };
+    });
+  return (
+    <form
+      onSubmit={(event) => {
+        event.preventDefault();
+        void onSave(toOptions(current, timeZone));
+      }}
+    >
+      <OptionsFields drafts={current} onChange={setDrafts} />
+      <button type="submit" disabled={pending} className="mt-6 btn">
+        Save times
       </button>
     </form>
   );

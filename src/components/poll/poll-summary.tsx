@@ -4,6 +4,7 @@ import { useMemo } from "react";
 import { usePrefs, useTimeZone } from "@/client/browser";
 import { momentLabel } from "@/lib/time/format";
 import { durationLabel } from "@/lib/poll/duration";
+import { optionSummary, type TimeOption } from "@/lib/poll/options";
 import { overlapSummary, summaryParts, type Summary, type Vote } from "@/lib/poll/sentence";
 import { TimeZoneNote } from "../common/time-zone";
 
@@ -27,6 +28,7 @@ export function SentenceBlock({
   lastEnd,
   weekly = false,
   duration = null,
+  options = null,
   emptyText,
 }: {
   slots: string[];
@@ -36,11 +38,17 @@ export function SentenceBlock({
   lastEnd: string;
   weekly?: boolean;
   duration?: number | null;
+  options?: TimeOption[] | null;
   emptyText: string;
 }) {
   const timeZone = useTimeZone();
   const prefs = usePrefs();
-  const summary = timeZone && prefs ? overlapSummary({ slots, votes, timeZone, clock: prefs.clock, weekly, duration }) : null;
+  const summary =
+    timeZone && prefs
+      ? options
+        ? optionSummary({ options, votes, timeZone, clock: prefs.clock })
+        : overlapSummary({ slots, votes, timeZone, clock: prefs.clock, weekly, duration })
+      : null;
   const times = useMemo(() => slots.map((slot) => Date.parse(slot)), [slots]);
 
   return (
