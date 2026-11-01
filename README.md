@@ -1,55 +1,127 @@
-Overlap is a scheduling poll. You pick a few days and a range of hours, and you get two links. The public link is where each person types a name and marks the slots they can do. The secret link is the only way to edit or delete the poll. If you lose the secret link, ownership is gone. The database keeps only a SHA-256 hash of the secret link, so a copy of the data cannot be used to edit or delete polls.
+# overlap
 
-Creating a poll takes you straight to its secret link, with the public link ready to copy, so a reload or a closed tab cannot lose it. Polls you create or open as owner are also remembered in your browser and listed on the home page. That list never leaves the device.
+Pick a few days, send one link, and see which time works for everyone.
 
-A poll can also ask about days of the week instead of dates, for something that repeats: the grid is headed Mon, Wed, Fri, the answer reads “Mondays 6:00–7:00 PM works for everyone”, and the final time goes into calendars as a weekly event. Its times are stored as one reference week, the first full week after it was made, so everything else works as for dates; a weekly poll stays open two months unless the owner closes it sooner.
+<picture>
+  <source media="(prefers-color-scheme: dark)" srcset="docs/screenshots/home-dark.png">
+  <img alt="The Overlap landing page with a live example poll" src="docs/screenshots/home-light.png">
+</picture>
 
-Each person sees the grid in their own timezone, with a 12- or 24-hour clock and a first day of the week that follow their browser, and a switch in the footer to change the clock. The timezone can be changed next to the times, for example when planning from another city; the choice is kept in the browser and also sets the zone a new poll’s hours are entered in. The offset shown is the one the poll’s own days have, so a poll after a daylight-saving change says GMT-5, not today’s GMT-4. Instead of marking by hand, someone can pick a calendar file (.ics, which Google Calendar, Outlook and Apple Calendar export) and have every time it leaves free marked for them. The file is read in the browser and never uploaded; recurring events, changed or cancelled occurrences, and timezones are handled by ical.js, which loads only when a file is picked. Each time can be marked as one you can make, or one you can make only if needed. The best time is the one the most people can make, and among those, the one the fewest can make only if needed. The page states the overlap in one sentence, such as “Mon 10:00–11:00 AM works for everyone, 2 if needed.” New answers and the owner’s changes appear on every open page without a reload. The poll closes when the last slot has ended, and it is deleted 30 days after that.
+Overlap is a small scheduling poll. You choose some days and a window of hours, share the link, and everyone drags across the times they can make. The page then tells you the answer in one sentence, like *"Tue 11:30 AM–1:00 PM works for everyone"*, shown in each person's own timezone.
 
-On the secret link, the owner can settle on a final time, either one of the best times or any unbroken stretch dragged on the grid. Everyone with the public link then sees it in their own timezone and can add it to a calendar, as an `.ics` file or through Google Calendar. The `.ics` file keeps one event ID per poll, so importing it again after the time changes updates the event instead of adding a second one.
+There are no accounts. Creating a poll gives you two links: a public one to share, and a secret one that's the only way to edit or delete the poll.
 
-Pasting a public link in a chat shows a preview with the title, how many people answered and a small heatmap of the poll. The preview has no clock times, because it is drawn without knowing the reader's timezone. Poll pages are never indexed by search engines.
+## What it does
 
-## Run it
+<picture>
+  <source media="(prefers-color-scheme: dark)" srcset="docs/screenshots/poll-dark.png">
+  <img alt="A poll with five answers, the overlap sentence, and who is free at the hovered time" src="docs/screenshots/poll-light.png">
+</picture>
 
-Install dependencies, apply the local database migrations, and start the app.
+- **Timezones done properly.** Everyone sees the grid in their own zone, with their own 12- or 24-hour clock and first day of the week. If you're planning from another city, you can switch the zone next to the times.
+- **"If needed" answers.** Mark a time as one you can make, or one you'd rather not but could. The best time is the one most people can make, and among those, the one the fewest only "could".
+- **Fill in from your calendar.** Pick an `.ics` export from Google Calendar, Outlook or Apple Calendar and every time it leaves free gets marked. The file is read in the browser and never uploaded.
+- **Notes.** A short line next to your name, like "Remote only".
+- **Weekly polls.** Ask about days of the week instead of dates when something repeats. The answer then reads "Mondays 6:00–7:00 PM".
+- **A final time.** The owner picks one of the best times, or drags any stretch on the grid. Everyone can add it to their calendar, and re-importing after a change updates the event instead of duplicating it.
+- **Live.** New answers and the owner's changes show up on every open page without a reload.
+- **Deadlines.** The owner can close voting, set a deadline, or reopen it. An open page goes read-only the moment voting closes.
+- **Link previews.** Pasting a poll link in a chat shows the title, how many people answered and a small heatmap. Poll pages are never indexed.
 
+Polls delete themselves 30 days after their last time, or three months after a weekly poll was made.
+
+## How it works
+
+```mermaid
+flowchart LR
+  browser([Browser])
+  worker["Cloudflare Worker<br/>Next.js through OpenNext"]
+  d1[("D1<br/>polls · voters · marks")]
+  room["PollRoom<br/>Durable Object, one per poll"]
+  turnstile["Turnstile"]
+  cron(["Hourly cron"])
+
+  browser -- "pages, votes" --> worker
+  worker -- "Drizzle" --> d1
+  worker -- "after each write" --> room
+  room -. "“changed” over WebSocket" .-> browser
+  worker -- "verify token on create" --> turnstile
+  cron -- "delete expired polls" --> worker
 ```
+
+The whole app runs on a single Cloudflare Worker. A few decisions I'd point out:
+
+- **The secret link is never stored.** The database keeps a SHA-256 hash of it, so a copy of the data can't be used to edit or delete anything. Voters are identified by a cookie, and the owner page refers to answers by a hash of that cookie, never the cookie itself.
+- **Live updates carry no data.** After a write, the poll's Durable Object tells open pages "changed", and each page re-renders on the server for its own viewer. Sockets use the hibernation API, so an idle poll costs nothing. If a socket drops, the page checks every 20 seconds until it reconnects.
+- **Typed queries with Drizzle.** The schema lives in `src/db/schema.ts`. A poll loads with its voters and their marks in one query, and a vote is saved as one D1 batch, so it's all or nothing. Marks go in through `json_each`, because D1 allows only 100 bound values per statement and a poll can have hundreds of slots.
+- **Weekly polls reuse everything.** Their times are stored as one real reference week, so the grid, the ranking and timezone conversion work exactly as for dates. Only the labels change.
+- **Abuse protection without accounts.** Poll creation is checked with Turnstile, which stays invisible unless it needs a click, and only loads once the create form is on screen. Writes are rate limited per network with Cloudflare's rate limiter, keyed by a hash of the address.
+- **Locked down by default.** Every response has a Content Security Policy, HSTS and anti-framing headers.
+
+Built with Next.js 16, React 19, Tailwind CSS 4, TypeScript 7, Drizzle ORM, Cloudflare Workers, D1, Durable Objects and Turnstile. Bun runs the installs and the tests.
+
+## Running it locally
+
+You'll need [Bun](https://bun.sh).
+
+```sh
 bun install
+cp .dev.vars.example .dev.vars
 bun run db:migrate
 bun run dev
 ```
 
-Open http://localhost:3000. The local database is D1, stored by Wrangler on this machine. `bun run test` checks the slot rules, the overlap sentence, the best-time ranking, the final time, the calendar export and the date and time formatting.
+Then open http://localhost:3000. The database is a local D1 that Wrangler keeps on your machine. `.dev.vars` holds Cloudflare's public Turnstile test key, which the server only accepts in development.
 
-`bun run preview` builds the Worker and runs it locally in workerd, the same runtime as production.
+`next dev` can't run Durable Objects, so in dev mode open pages poll for changes every 20 seconds instead. To get the real thing, run `bun run preview`, which builds the Worker and runs it in workerd, the same runtime as production.
 
-Live updates need a Durable Object, which `next dev` can’t run, so under `bun run dev` open pages check for changes every 20 seconds instead. `bun run preview` has the real thing.
+| Command | What it does |
+| --- | --- |
+| `bun run check` | Typecheck, lint and unit tests |
+| `bun run test` | Unit tests only |
+| `bun run db:generate` | Write a migration after changing `src/db/schema.ts` |
+| `bun run db:migrate` | Apply migrations to the local database |
+| `bun run preview` | Build the Worker and run it locally |
 
-## Database
+## Deploying
 
-The schema lives in `src/db/schema.ts` as Drizzle tables, and every query is built with Drizzle, so rows are typed from the schema down to the page. A poll is loaded with its voters and their marks in one statement. Writes that must happen together, such as replacing someone’s answer, run as a D1 batch, which is one transaction.
+1. Create a D1 database called `overlap` and put its id in `wrangler.jsonc`.
+2. Apply the migrations: `bunx wrangler d1 migrations apply overlap --remote`.
+3. Store the Turnstile secret: `bunx wrangler secret put TURNSTILE_SECRET`.
+4. Check that `TURNSTILE_HOSTNAMES` in `wrangler.jsonc` lists your domain.
+5. `bun run deploy`.
 
-To change the schema, edit `schema.ts`, run `bun run db:generate` to write the SQL migration into `migrations/`, and apply it with `bun run db:migrate`. Migrations 0001 to 0003 predate Drizzle and were written by hand; `migrations/meta` holds Drizzle’s snapshot of the schema they produce.
+Production builds use https://overlap.cendik.dev for absolute preview URLs. Set `SITE_URL` while building to use another address.
 
-## Deploy
+## Limits
 
-Create a D1 database named overlap, put its id in `wrangler.jsonc`, apply the migrations with `--remote`, and run `bun run deploy`. The site lives at https://overlap.cendik.dev, which production builds use for the home page's absolute preview URLs; set `SITE_URL` when building to use another address. Poll pages use the address of each request instead.
+| | |
+| --- | --- |
+| Days per poll | 14, or one week for weekly polls |
+| Hours per day | up to 12, in 30-minute slots |
+| People per poll | 40 |
+| Title / name / note | 80 / 40 / 80 characters |
+| New polls | 5 a minute per network |
+| Saved answers | 60 a minute per network |
 
-Poll creation is checked with Cloudflare Turnstile. Store the widget's secret with `wrangler secret put TURNSTILE_SECRET`, `TURNSTILE_HOSTNAMES` in `wrangler.jsonc` lists the hostnames tokens may come from, comma-separated and without localhost. The site key is in `src/lib/use-turnstile.ts`. Locally, `.dev.vars` holds Cloudflare's public test secret, which the server accepts only in development; copy `.dev.vars.example` to start.
+The days and hours can change while nobody has answered yet. People can remove their own answer until voting ends, and the owner can remove any answer at any time.
 
-The Worker entry point is `worker.ts`. It serves the Next.js app that OpenNext builds and adds an hourly Cron Trigger that deletes expired polls. Deleting a poll removes its answers through foreign keys.
+## How I built this
 
-Each poll has a Durable Object, `PollRoom`, that holds the WebSockets of the pages open on it. After a vote or an owner edit is saved, the route tells the room, and the room sends each page a message that only says “changed”. The page then renders again on the server, so the room never holds poll data and each person still gets their own view. Sockets use the hibernation API, and keepalive pings are answered without waking the object, so an idle poll costs nothing. `worker.ts` accepts a socket only from the site’s own origin and only for a poll that exists. While a socket is down, a visible page checks every 20 seconds and reconnects with backoff. The first deploy creates the Durable Object class from the migration in `wrangler.jsonc`.
+I built Overlap with Claude Code as my pair programmer. Most of the code was written by the AI. My part was deciding what the product should be and keeping it on track.
 
-Every response carries a Content Security Policy, HSTS in production, and headers that stop the site from being framed or sniffed. Poll routes add `X-Robots-Tag: noindex`.
+What that looked like in practice:
 
-The Turnstile widget stays invisible unless Cloudflare needs a click to tell a person from a bot, and its script loads only once the create form is on screen, so reading the landing page never contacts Cloudflare. The server checks each token once, for the poll-creation action and the site's own hostname, and refuses anything less, including a failed call to Cloudflare.
+- I chose the idea and its limits: no accounts, one public link and one secret link, nothing to install.
+- I set the visual direction early: warm paper background, ink-coloured text, hairline borders, a single green accent, and no gradients, glassy cards or anything that looks generated.
+- I made the stack calls: moving from npm to Bun, replacing hand-written SQL with Drizzle, and adding Turnstile and Cloudflare's rate limiter.
+- I decided which features to build and in what order (calendar import, deadlines, notes, weekly polls), and named the project and its domain.
+- I used it as it grew and sent back what felt off, like the grid header that read "13 Dec 14" when a poll crossed into a new month.
 
-## Caps
+The parts I found most interesting were the ones where a constraint shaped the design: D1's limit on bound values deciding how answers are inserted, Durable Objects that only ever say "changed", and weekly polls stored as a real week so nothing else had to change.
 
-The title can be 80 characters. A poll can cover 14 days, and the hours on those days can span at most 12 hours. Slots are 30 minutes. A name can be 40 characters, and the optional note beside it, such as “Remote only”, 80. A poll can have 40 names. At least one slot must still be ahead when the poll is created or its days change.
+Next up: tests that run against the real Worker, CI on GitHub Actions, and putting it live at overlap.cendik.dev.
 
-People can remove their own answer until voting ends. The owner can remove any answer at any time; the owner page names answers by a hash of the voter id, because the id itself is the voter’s cookie. The days and hours can change while the poll has no answers. Changing them clears the final time. The title can change until the poll is deleted. Voting stops when the last slot ends, or earlier if the owner closes it or sets a deadline; a closed poll can be reopened while its last time is still ahead, and an open page turns read-only the moment voting closes. The grid stays visible and becomes read-only. The poll is deleted 30 days after that.
+## License
 
-Writes are rate limited per network with Cloudflare's Rate Limiting binding: 5 new polls, 60 vote saves and 30 owner saves a minute. The counters live in Cloudflare, not the database, and are keyed by a hash of the address.
+MIT
