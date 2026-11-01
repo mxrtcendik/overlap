@@ -13,20 +13,20 @@ Pasting a public link in a chat shows a preview with the title, how many people 
 Install dependencies, apply the local database migrations, and start the app.
 
 ```
-npm install
-npx wrangler d1 migrations apply overlap --local
-npm run dev
+bun install
+bun run db:migrate
+bun run dev
 ```
 
-Open http://localhost:3000. The local database is D1, stored by Wrangler on this machine. `npm test` checks the slot rules, the overlap sentence, the best-time ranking, the final time, the calendar export and the date and time formatting.
+Open http://localhost:3000. The local database is D1, stored by Wrangler on this machine. `bun run test` checks the slot rules, the overlap sentence, the best-time ranking, the final time, the calendar export and the date and time formatting.
 
-`npm run preview` builds the Worker and runs it locally in workerd, the same runtime as production.
+`bun run preview` builds the Worker and runs it locally in workerd, the same runtime as production.
 
-Live updates need a Durable Object, which `next dev` can’t run, so under `npm run dev` open pages check for changes every 20 seconds instead. Wrangler warns about this when the dev server starts. `npm run preview` has the real thing.
+Live updates need a Durable Object, which `next dev` can’t run, so under `bun run dev` open pages check for changes every 20 seconds instead. Wrangler warns about this when the dev server starts. `bun run preview` has the real thing.
 
 ## Deploy
 
-Create a D1 database named overlap, put its id in `wrangler.jsonc`, apply the migrations with `--remote`, and run `npm run deploy`. Set `SITE_URL` to the public address, such as `https://overlap.example.com`, when building, so the home page's link preview uses absolute URLs. Poll pages use the address of each request instead.
+Create a D1 database named overlap, put its id in `wrangler.jsonc`, apply the migrations with `--remote`, and run `bun run deploy`. Set `SITE_URL` to the public address, such as `https://overlap.example.com`, when building, so the home page's link preview uses absolute URLs. Poll pages use the address of each request instead.
 
 The Worker entry point is `worker.ts`. It serves the Next.js app that OpenNext builds and adds an hourly Cron Trigger that deletes expired polls and old rate-limit counters. Deleting a poll removes its answers through foreign keys.
 
