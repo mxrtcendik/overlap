@@ -22,7 +22,7 @@ Open http://localhost:3000. The local database is D1, stored by Wrangler on this
 
 `bun run preview` builds the Worker and runs it locally in workerd, the same runtime as production.
 
-Live updates need a Durable Object, which `next dev` can’t run, so under `bun run dev` open pages check for changes every 20 seconds instead. Wrangler warns about this when the dev server starts. `bun run preview` has the real thing.
+Live updates need a Durable Object, which `next dev` can’t run, so under `bun run dev` open pages check for changes every 20 seconds instead. `bun run preview` has the real thing.
 
 ## Deploy
 
