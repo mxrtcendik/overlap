@@ -45,6 +45,7 @@ export function useTurnstile(action: string) {
   const widget = useRef<string | null>(null);
   const token = useRef<string | null>(null);
   const waiters = useRef<((token: string | null) => void)[]>([]);
+  const startNow = useRef<() => void>(() => {});
 
   const settle = useCallback((value: string | null) => {
     token.current = value;
@@ -55,6 +56,10 @@ export function useTurnstile(action: string) {
     let cancelled = false;
     let observer: IntersectionObserver | undefined;
     const near = new Promise<void>((resolve) => {
+      startNow.current = () => {
+        observer?.disconnect();
+        resolve();
+      };
       if (!container.current || typeof IntersectionObserver !== "function") return resolve();
       observer = new IntersectionObserver(
         (entries) => {
@@ -100,6 +105,7 @@ export function useTurnstile(action: string) {
 
   const getToken = useCallback((): Promise<string | null> => {
     if (token.current) return Promise.resolve(token.current);
+    startNow.current();
     return new Promise((resolve) => {
       const timer = window.setTimeout(() => {
         waiters.current = waiters.current.filter((wake) => wake !== done);
