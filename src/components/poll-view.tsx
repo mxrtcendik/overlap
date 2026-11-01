@@ -7,6 +7,7 @@ import { json, messageOf, request, UserFacingError } from "@/lib/request";
 import type { PollView as PollViewData, VoterView } from "@/lib/types";
 import { useLiveUpdates } from "@/lib/use-live-updates";
 import { Availability } from "./availability";
+import { CalendarFill } from "./calendar-fill";
 import { FinalTime } from "./final-time";
 import type { Brush } from "./poll-grid";
 import { SentenceBlock, Status } from "./poll-summary";
@@ -205,7 +206,16 @@ export function PollView({ poll }: { poll: PollViewData }) {
       ) : null}
 
       <div className="mt-8">
-        {poll.closed ? null : <BrushSwitch value={brush} onChange={setBrush} />}
+        {poll.closed ? null : (
+          <div className="mb-5 flex flex-wrap items-center justify-between gap-x-8 gap-y-3">
+            <BrushSwitch value={brush} onChange={setBrush} />
+            <CalendarFill
+              slots={poll.slots}
+              hasAnswer={answer.slots.length + answer.maybe.length > 0}
+              onApply={(free) => change(free, [])}
+            />
+          </div>
+        )}
         <Availability
           slots={poll.slots}
           voters={voters}
@@ -227,7 +237,7 @@ function BrushSwitch({ value, onChange }: { value: Brush; onChange: (brush: Brus
     { brush: "maybe", label: "If needed" },
   ];
   return (
-    <div className="mb-5 flex flex-wrap items-center gap-x-4 gap-y-2">
+    <div className="flex flex-wrap items-center gap-x-4 gap-y-2">
       <span id="brush-label" className="text-sm text-muted">
         Mark times as
       </span>

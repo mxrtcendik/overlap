@@ -22,6 +22,7 @@
   "dependencies": {
     "@opennextjs/cloudflare": "^1.20.15",
     "drizzle-orm": "^0.45.4",
+    "ical.js": "^2.2.1",
     "next": "16.4.3",
     "react": "19.3.1",
     "react-dom": "19.3.1"
