@@ -18,7 +18,8 @@
     "db:generate": "drizzle-kit generate",
     "db:check": "drizzle-kit check",
     "db:migrate": "wrangler d1 migrations apply overlap --local",
-    "test:e2e": "playwright test"
+    "test:e2e": "playwright test",
+    "test:worker": "E2E_TARGET=worker playwright test"
   },
   "dependencies": {
     "@opennextjs/cloudflare": "^1.20.15",

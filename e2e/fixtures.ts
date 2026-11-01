@@ -46,7 +46,7 @@ export async function vote(
   answer: { name: string; slots: string[]; maybe?: string[]; note?: string },
 ): Promise<void> {
   const voter = await playwrightRequest.newContext({
-    baseURL: `http://localhost:${process.env.E2E_PORT ?? 3000}`,
+    baseURL: `http://localhost:${process.env.E2E_PORT ?? (process.env.E2E_TARGET === "worker" ? 8787 : 3000)}`,
     extraHTTPHeaders: { "x-forwarded-for": randomIp() },
   });
   const response = await voter.post(`/p/${pollId}/vote`, { data: { ...answer, "cf-turnstile-response": TEST_TOKEN } });

@@ -9,7 +9,7 @@ export async function verifyTurnstile(request: Request, input: unknown, action: 
   const token = readToken(input);
   if (!token) return false;
   const { env } = await getCloudflareContext({ async: true });
-  const vars: Partial<Pick<CloudflareEnv, "TURNSTILE_SECRET" | "TURNSTILE_HOSTNAMES">> = env;
+  const vars: Partial<Pick<CloudflareEnv, "TURNSTILE_SECRET" | "TURNSTILE_HOSTNAMES">> & { TURNSTILE_ALLOW_TEST_KEYS?: string } = env;
   if (!vars.TURNSTILE_SECRET) {
     console.error(JSON.stringify({ event: "turnstile_unconfigured" }));
     return false;
@@ -28,7 +28,7 @@ export async function verifyTurnstile(request: Request, input: unknown, action: 
     const passed = judge(result, {
       action,
       hostnames: parseHostnames(vars.TURNSTILE_HOSTNAMES),
-      allowTestKeys: process.env.NODE_ENV === "development",
+      allowTestKeys: process.env.NODE_ENV === "development" || vars.TURNSTILE_ALLOW_TEST_KEYS === "true",
     });
     if (!passed) {
       console.warn(JSON.stringify({ event: "turnstile_rejected", codes: result["error-codes"] ?? [] }));

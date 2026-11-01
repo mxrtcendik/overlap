@@ -91,7 +91,7 @@ bun run db:migrate
 bun run dev
 ```
 
-Then open http://localhost:3000. The database is a local D1 that Wrangler keeps on your machine. `.dev.vars` holds Cloudflare's public Turnstile test key, which the server only accepts in development.
+Then open http://localhost:3000. The database is a local D1 that Wrangler keeps on your machine. `.dev.vars` holds Cloudflare's public Turnstile test key. The server accepts it in development, or when `TURNSTILE_ALLOW_TEST_KEYS=true`, which only `.dev.vars` sets so the local Worker build can be tested. Production never reads that file.
 
 `next dev` can't run Durable Objects, so in dev mode open pages poll for changes every 20 seconds instead. To get the real thing, run `bun run preview`, which builds the Worker and runs it in workerd, the same runtime as production.
 
@@ -100,6 +100,7 @@ Then open http://localhost:3000. The database is a local D1 that Wrangler keeps 
 | `bun run check` | Typecheck, lint and unit tests |
 | `bun run test` | Unit tests only |
 | `bun run test:e2e` | Browser tests with Playwright, including axe accessibility scans in light and dark mode |
+| `bun run test:worker` | Builds the real Worker and checks live updates over WebSockets |
 | `bun run db:generate` | Write a migration after changing `src/db/schema.ts` |
 | `bun run db:migrate` | Apply migrations to the local database |
 | `bun run preview` | Build the Worker and run it locally |

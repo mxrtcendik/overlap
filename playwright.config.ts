@@ -1,11 +1,14 @@
 import { defineConfig, devices } from "@playwright/test";
 
 const ci = Boolean(process.env.CI);
-const port = Number(process.env.E2E_PORT ?? 3000);
+const worker = process.env.E2E_TARGET === "worker";
+const port = Number(process.env.E2E_PORT ?? (worker ? 8787 : 3000));
 const baseURL = `http://localhost:${port}`;
 
 export default defineConfig({
   testDir: "e2e",
+  testMatch: worker ? "worker/**/*.spec.ts" : "*.spec.ts",
+  testIgnore: worker ? [] : ["**/worker/**"],
   fullyParallel: true,
   forbidOnly: ci,
   retries: ci ? 1 : 0,
@@ -20,9 +23,9 @@ export default defineConfig({
   },
   projects: [{ name: "chromium", use: { ...devices["Desktop Chrome"], viewport: { width: 1280, height: 900 } } }],
   webServer: {
-    command: `bun run dev --port ${port}`,
+    command: worker ? "bun run preview" : `bun run dev --port ${port}`,
     url: baseURL,
     reuseExistingServer: !ci,
-    timeout: 180_000,
+    timeout: worker ? 600_000 : 180_000,
   },
 });
