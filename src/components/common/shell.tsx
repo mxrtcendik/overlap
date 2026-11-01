@@ -1,5 +1,6 @@
 import Link from "next/link";
 import { ClockToggle } from "./clock-toggle";
+import { ThemeToggle } from "./theme-toggle";
 
 function Mark() {
   return (
@@ -27,7 +28,10 @@ export function Shell({ children, wide = false }: { children: React.ReactNode; w
       <main className="mt-10 flex-1">{children}</main>
       <footer className="mt-20 flex flex-wrap items-center justify-between gap-x-6 gap-y-2 text-xs text-muted">
         <span>No accounts. Polls are deleted 30 days after their last day.</span>
-        <ClockToggle />
+        <span className="flex items-center gap-5">
+          <ThemeToggle />
+          <ClockToggle />
+        </span>
       </footer>
     </div>
   );

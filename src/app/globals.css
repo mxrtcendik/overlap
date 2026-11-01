@@ -17,7 +17,7 @@
 }
 
 @media (prefers-color-scheme: dark) {
-  :root {
+  :root:not([data-theme="light"]) {
     --background: #161513;
     --paper: #1e1c19;
     --foreground: #ebe6de;
@@ -29,6 +29,19 @@
     --danger: #e3977f;
     color-scheme: dark;
   }
+}
+
+:root[data-theme="dark"] {
+  --background: #161513;
+  --paper: #1e1c19;
+  --foreground: #ebe6de;
+  --muted: #9a948a;
+  --line: #34312c;
+  --line-strong: #4b4740;
+  --accent: #7cae8c;
+  --on-accent: #161513;
+  --danger: #e3977f;
+  color-scheme: dark;
 }
 
 @theme inline {
