@@ -40,7 +40,7 @@ jobs:
       - run: cp .dev.vars.example .dev.vars
       - run: bun run db:migrate
       - run: bunx playwright install --with-deps chromium
-      - run: bun run test:e2e
+      - run: bun run test:e2e --grep-invert @visual
         env:
           CI: "true"
       - uses: actions/upload-artifact@v4
@@ -49,6 +49,57 @@ jobs:
           name: playwright-report
           path: playwright-report
           retention-days: 7
+
+  visual:
+    name: Visual regression
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: oven-sh/setup-bun@v2
+        with:
+          bun-version-file: package.json
+      - id: baselines
+        run: |
+          if ls e2e/visual.spec.ts-snapshots/*-linux.png > /dev/null 2>&1; then
+            echo "present=true" >> "$GITHUB_OUTPUT"
+          else
+            echo "::notice::No Linux screenshot baselines yet. Run the 'Update visual baselines' workflow to create them."
+          fi
+      - if: steps.baselines.outputs.present == 'true'
+        run: bun install --frozen-lockfile
+      - if: steps.baselines.outputs.present == 'true'
+        run: cp .dev.vars.example .dev.vars && bun run db:migrate
+      - if: steps.baselines.outputs.present == 'true'
+        run: bunx playwright install --with-deps chromium
+      - if: steps.baselines.outputs.present == 'true'
+        run: bunx playwright test --grep @visual
+        env:
+          CI: "true"
+      - uses: actions/upload-artifact@v4
+        if: failure()
+        with:
+          name: visual-diffs
+          path: test-results
+          retention-days: 7
+
+  lighthouse:
+    name: Lighthouse
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: oven-sh/setup-bun@v2
+        with:
+          bun-version-file: package.json
+      - run: bun install --frozen-lockfile
+      - run: cp .dev.vars.example .dev.vars
+      - run: bun run db:migrate
+      - run: bunx @lhci/cli@0.15.1 autorun
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: lighthouse-report
+          path: .lighthouseci
+          retention-days: 14
 
   worker:
     name: Worker runtime tests

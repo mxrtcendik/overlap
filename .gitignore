@@ -42,3 +42,6 @@ skills-lock.json
 
 /playwright-report/
 /test-results/
+
+# lighthouse ci
+/.lighthouseci/

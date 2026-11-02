@@ -83,6 +83,7 @@ src/
     poll/       the poll page and the owner page
     common/     the site shell and pieces both use
     ui/         shared styles (buttons, fields, links, cards) and the segmented toggle
+    design/     pieces of the /design page
   server/       runs only on the Worker: queries, rate limits, Turnstile, the live room
   client/       runs only in the browser: hooks, local storage, requests
   lib/          plain logic shared by both, covered by the unit tests
@@ -112,13 +113,17 @@ Then open http://localhost:3000. The database is a local D1 that Wrangler keeps 
 | --- | --- |
 | `bun run check` | Typecheck, lint and unit tests |
 | `bun run test` | Unit tests only |
-| `bun run test:e2e` | Browser tests with Playwright, including axe accessibility scans in light and dark mode |
+| `bun run test:e2e` | Browser tests with Playwright, including axe accessibility scans and screenshot comparisons in light and dark mode |
 | `bun run test:worker` | Builds the real Worker and checks live updates over WebSockets |
 | `bun run db:generate` | Write a migration after changing `src/db/schema.ts` |
 | `bun run db:migrate` | Apply migrations to the local database |
 | `bun run preview` | Build the Worker and run it locally |
 
-GitHub Actions runs the checks, both builds and the browser tests on every push.
+GitHub Actions runs the checks, both builds, the browser tests, the Worker tests, screenshot comparisons and a Lighthouse audit on every push.
+
+- **Screenshots.** `e2e/visual.spec.ts` compares the design page and the landing hero against stored images, with the date-dependent parts masked. Font rendering differs between systems, so each platform keeps its own baselines; the *Update visual baselines* workflow regenerates the Linux set and commits it.
+- **Lighthouse.** `lighthouserc.json` audits the home page on the built Worker three times. Accessibility, best practices and SEO must score at least 0.95, 0.9 and 0.9, and fail the build otherwise; performance below 0.9 is a warning. Reports are kept as a build artifact.
+- **Design system.** [`/design`](src/app/design/page.tsx) shows every colour, type style and shared component in both themes. It isn't linked or indexed, and it doubles as the screenshot test's subject.
 
 ## Deploying
 

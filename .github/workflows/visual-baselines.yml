@@ -1,0 +1,41 @@
+name: Update visual baselines
+
+# Screenshot baselines depend on the platform's font rendering, so CI keeps a
+# Linux set next to any local ones. Run this by hand after an intended design
+# change; it regenerates the Linux screenshots and commits them to the branch.
+on:
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+env:
+  WRANGLER_SEND_METRICS: "false"
+  NEXT_TELEMETRY_DISABLED: "1"
+
+jobs:
+  update:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: oven-sh/setup-bun@v2
+        with:
+          bun-version-file: package.json
+      - run: bun install --frozen-lockfile
+      - run: cp .dev.vars.example .dev.vars
+      - run: bun run db:migrate
+      - run: bunx playwright install --with-deps chromium
+      - run: bunx playwright test --grep @visual --update-snapshots
+        env:
+          CI: "true"
+      - name: Commit new baselines
+        run: |
+          git add e2e/visual.spec.ts-snapshots/*-linux.png
+          if git diff --cached --quiet; then
+            echo "Baselines are already up to date."
+            exit 0
+          fi
+          git config user.name "github-actions[bot]"
+          git config user.email "41898283+github-actions[bot]@users.noreply.github.com"
+          git commit -m "Update Linux visual baselines"
+          git push
