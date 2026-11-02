@@ -9,6 +9,7 @@ import { useTurnstile } from "@/client/use-turnstile";
 import { shiftWeeks, weeksToShift } from "@/lib/poll/copy";
 import { CREATE_ACTION } from "@/lib/turnstile";
 import type { PollView } from "@/lib/types";
+import { appear, cn, link } from "@/components/ui/styles";
 
 export function CopyPoll({ poll }: { poll: PollView }) {
   const router = useRouter();
@@ -54,13 +55,13 @@ export function CopyPoll({ poll }: { poll: PollView }) {
     <div>
       <div className="flex flex-wrap items-baseline justify-between gap-x-6 gap-y-2">
         <p className="text-sm text-muted">Start a fresh poll with the same title and hours, a week or more later.</p>
-        <button type="button" className="link-quiet shrink-0" disabled={pending} onClick={() => void copy()}>
+        <button type="button" className={cn(link(), "shrink-0")} disabled={pending} onClick={() => void copy()}>
           {pending ? "Copying…" : "Copy to a new week"}
         </button>
       </div>
       <div ref={turnstileRef} className="mt-3 max-w-sm empty:mt-0" />
       {error ? (
-        <p className="mt-2 text-sm text-danger" role="alert">
+        <p className={cn(appear, "mt-2 text-sm text-danger")} role="alert">
           {error}
         </p>
       ) : null}

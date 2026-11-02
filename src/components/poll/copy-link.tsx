@@ -3,6 +3,7 @@
 import { useEffect, useState } from "react";
 import { useCanShare } from "@/client/browser";
 import { QrCode } from "./qr-code";
+import { appear, button, card, cn, link } from "@/components/ui/styles";
 
 type CopyState = "idle" | "copied" | "failed";
 
@@ -25,14 +26,17 @@ export function useCopyState(): [CopyState, (ok: boolean) => void] {
   return [state, (ok) => setState(ok ? "copied" : "failed")];
 }
 
+const COPY_SWAP =
+  "col-start-1 row-start-1 transition-opacity duration-150 ease-ui motion-reduce:transition-none";
+
 export function CopyLabel({ idle, copied }: { idle: string; copied: boolean }) {
   return (
-    <span className="copy-label grid" data-copied={copied}>
-      <span className="copy-idle col-start-1 row-start-1" aria-hidden={copied}>
+    <span className="group/copy grid" data-copied={copied}>
+      <span className={cn(COPY_SWAP, "group-data-[copied=true]/copy:opacity-0")} aria-hidden={copied}>
         {idle}
       </span>
       <span
-        className="copy-done col-start-1 row-start-1 inline-flex items-center justify-center gap-1.5"
+        className={cn(COPY_SWAP, "inline-flex items-center justify-center gap-1.5 group-data-[copied=false]/copy:opacity-0")}
         aria-hidden="true"
       >
         <svg viewBox="0 0 12 12" className="size-3" fill="none" stroke="currentColor" strokeWidth="1.5" aria-hidden="true">
@@ -54,7 +58,7 @@ export function ShareBar({ title, href }: { title: string; href: string }) {
 
   return (
     <div className="mt-6 max-w-2xl">
-      <div className="flex flex-wrap items-center gap-x-4 gap-y-2 border-y border-line py-3">
+      <div className={cn(card, "flex flex-wrap items-center gap-x-4 gap-y-2 py-2 pr-2 pl-4")}>
         <span className="text-sm text-muted">Public link</span>
         <a
           href={href}
@@ -66,28 +70,28 @@ export function ShareBar({ title, href }: { title: string; href: string }) {
           {canShare ? (
             <button
               type="button"
-              className="link-quiet"
+              className={link()}
               onClick={() => void navigator.share({ title, text: `When can you make “${title}”?`, url: href }).catch(() => {})}
             >
               Share…
             </button>
           ) : null}
-          <button type="button" className="link-quiet" aria-expanded={showQr} onClick={() => setShowQr((open) => !open)}>
+          <button type="button" className={link()} aria-expanded={showQr} onClick={() => setShowQr((open) => !open)}>
             QR code
           </button>
-          <button type="button" className="btn" onClick={async () => report(await copyText(href))}>
+          <button type="button" className={button()} onClick={async () => report(await copyText(href))}>
             <CopyLabel idle="Copy link" copied={state === "copied"} />
           </button>
         </span>
       </div>
       {showQr ? (
-        <div className="appear mt-4 flex flex-wrap items-end gap-4">
+        <div className={cn(appear, "mt-4 flex flex-wrap items-end gap-4")}>
           <QrCode value={href} />
           <p className="max-w-48 text-xs text-muted">Point a phone camera here to open the public link.</p>
         </div>
       ) : null}
       {state === "failed" ? (
-        <p className="mt-2 text-sm text-danger" role="alert">
+        <p className={cn(appear, "mt-2 text-sm text-danger")} role="alert">
           Your browser blocked copying. Select the link and copy it yourself.
         </p>
       ) : null}
@@ -125,12 +129,12 @@ export function CopyLink({
         >
           {href}
         </a>
-        <button type="button" className="link-quiet shrink-0 leading-6" onClick={async () => report(await copyText(href))}>
+        <button type="button" className={cn(link(), "shrink-0 leading-6")} onClick={async () => report(await copyText(href))}>
           <CopyLabel idle="Copy" copied={state === "copied"} />
         </button>
       </div>
       {state === "failed" ? (
-        <p className="mt-1 text-sm text-danger" role="alert">
+        <p className={cn(appear, "mt-1 text-sm text-danger")} role="alert">
           Your browser blocked copying. Select the link and copy it yourself.
         </p>
       ) : null}

@@ -40,6 +40,7 @@ import { currentWeek, IDENTITY, projectPoll, storedRange } from "@/lib/time/week
 import { answersCsv } from "@/lib/poll/csv";
 import { icsFileName } from "@/lib/calendar/export";
 import { datesForWeekdays, weekdayOf } from "@/lib/time/weekly";
+import { appear, button, card, cn, field, heading, link } from "@/components/ui/styles";
 
 export function OwnerView({
   poll: stored,
@@ -231,7 +232,7 @@ export function OwnerView({
   if (deleted) {
     return (
       <>
-        <h1 className="text-[1.75rem] leading-9 tracking-[-0.02em] text-balance">Poll deleted</h1>
+        <h1 className={heading.page}>Poll deleted</h1>
         <p className="mt-4">The poll and all its answers are gone. The links no longer work.</p>
       </>
     );
@@ -248,11 +249,8 @@ export function OwnerView({
           onDone={dismissCreated}
         />
       ) : null}
-      <p className="inline-flex items-center gap-2 text-xs text-muted">
-        <span className="inline-block size-1.5 rounded-full bg-danger" aria-hidden="true" />
-        Owner view. Don’t share this link.
-      </p>
-      <h1 className="mt-3 text-[1.75rem] leading-9 tracking-[-0.02em] text-balance">{poll.title}</h1>
+      <p className="border-l border-danger pl-3 text-xs text-muted">Owner view. Don’t share this link.</p>
+      <h1 className={cn(heading.page, "mt-4")}>{poll.title}</h1>
       {poll.final ? (
         <FinalTime
           pollId={poll.id}
@@ -282,7 +280,7 @@ export function OwnerView({
             {poll.final ? "To change the final time" : "To set the final time"}, pick one of the times. Everyone with the
             public link will see it.
           </p>
-          <div className="mt-6">
+          <div className={cn(card, "mt-6 p-4 sm:p-6")}>
             <OptionsView
               options={poll.options}
               voters={poll.voters}
@@ -298,7 +296,7 @@ export function OwnerView({
         {poll.final ? "To change the final time" : "To set the final time"}, drag down a day on the grid
         {poll.voters.length > 1 ? " or pick one of the best times" : ""}. Everyone with the public link will see it.
       </p>
-      <div className="mt-6">
+      <div className={cn(card, "mt-6 p-4 sm:p-6")}>
         <Availability
           slots={poll.slots}
           voters={poll.voters}
@@ -316,7 +314,7 @@ export function OwnerView({
         </>
       )}
       {error?.at === "final" ? (
-        <p className="mt-4 text-sm text-danger" role="alert">
+        <p className={cn(appear, "mt-4 text-sm text-danger")} role="alert">
           {error.message}
         </p>
       ) : null}
@@ -332,8 +330,8 @@ export function OwnerView({
           onCancel={() => setDraft([])}
         />
       ) : null}
-      <section aria-labelledby="voting-heading" className="mt-16 border-t border-line pt-10">
-        <h2 id="voting-heading" className="text-sm text-muted">
+      <section aria-labelledby="voting-heading" className={cn(card, "mt-12 max-w-3xl p-5 sm:p-7")}>
+        <h2 id="voting-heading" className="font-medium tracking-tight">
           Voting
         </h2>
         <div className="mt-4">
@@ -350,8 +348,8 @@ export function OwnerView({
       </section>
 
       {location ? (
-        <section aria-labelledby="secret-heading" className="mt-16 border-t border-line pt-10">
-          <h2 id="secret-heading" className="inline-flex items-center gap-2 text-sm text-muted">
+        <section aria-labelledby="secret-heading" className={cn(card, "mt-6 max-w-3xl p-5 sm:p-7")}>
+          <h2 id="secret-heading" className="inline-flex items-center gap-2 font-medium tracking-tight">
             <span aria-hidden="true" className="inline-block size-1.5 rounded-full bg-danger" />
             Secret link
           </h2>
@@ -378,8 +376,8 @@ export function OwnerView({
         />
       ) : null}
 
-      <section aria-labelledby="settings-heading" className="mt-16 border-t border-line pt-10">
-        <h2 id="settings-heading" className="text-sm text-muted">
+      <section aria-labelledby="settings-heading" className={cn(card, "mt-6 max-w-3xl p-5 sm:p-7")}>
+        <h2 id="settings-heading" className="font-medium tracking-tight">
           Poll settings
         </h2>
         {canEmail ? (
@@ -407,17 +405,17 @@ export function OwnerView({
         </div>
         )}
         <form onSubmit={onTitle} className="mt-8 flex max-w-xl flex-wrap items-end gap-3">
-          <label className="min-w-0 flex-1 basis-64 text-sm text-muted">
+          <label className="min-w-0 flex-1 basis-64 text-[13px] font-medium text-foreground">
             Title
             <input
               value={title}
               onChange={(event) => setTitle(event.target.value)}
               maxLength={MAX_TITLE}
               required
-              className="field mt-1"
+              className={cn(field(), "mt-1.5")}
             />
           </label>
-          <button type="submit" disabled={pending || title.trim() === poll.title} className="btn">
+          <button type="submit" disabled={pending || title.trim() === poll.title} className={button({ variant: "secondary" })}>
             Save title
           </button>
         </form>
@@ -442,7 +440,7 @@ export function OwnerView({
       </div>
 
       {error?.at === "settings" ? (
-        <p className="mt-4 text-sm text-danger" role="alert">
+        <p className={cn(appear, "mt-4 text-sm text-danger")} role="alert">
           {error.message}
         </p>
       ) : null}
@@ -453,13 +451,13 @@ export function OwnerView({
 
       <div className="mt-6 max-w-xl border-t border-line pt-6">
         {confirming ? (
-          <div className="appear border-l-2 border-danger pl-4">
+          <div className={cn(appear, "border-l-2 border-danger pl-4")}>
             <p>Delete this poll and all its answers? This can’t be undone.</p>
             <div className="mt-3 flex items-center gap-5">
-              <button type="button" disabled={pending} onClick={() => void onDelete()} className="btn btn-danger">
+              <button type="button" disabled={pending} onClick={() => void onDelete()} className={button({ variant: "danger" })}>
                 Delete poll
               </button>
-              <button type="button" onClick={() => setConfirming(false)} className="link-quiet">
+              <button type="button" onClick={() => setConfirming(false)} className={link()}>
                 Cancel
               </button>
             </div>
@@ -467,7 +465,7 @@ export function OwnerView({
         ) : (
           <div className="flex flex-wrap items-baseline justify-between gap-x-6 gap-y-2">
             <p className="text-sm text-muted">Deleting removes the poll and every answer, and both links stop working.</p>
-            <button type="button" onClick={() => setConfirming(true)} className="link-quiet link-danger shrink-0">
+            <button type="button" onClick={() => setConfirming(true)} className={cn(link({ tone: "danger" }), "shrink-0")}>
               Delete poll
             </button>
           </div>
@@ -521,14 +519,14 @@ function Answers({
   }
 
   return (
-    <section aria-labelledby="answers-heading" className="mt-16 border-t border-line pt-10">
-      <h2 id="answers-heading" className="text-sm text-muted">
+    <section aria-labelledby="answers-heading" className={cn(card, "mt-6 max-w-3xl p-5 sm:p-7")}>
+      <h2 id="answers-heading" className="font-medium tracking-tight">
         Answers
       </h2>
       <p className="mt-2 max-w-xl text-sm text-muted">
         Remove an answer that’s a duplicate or doesn’t belong. The person can still answer again.
       </p>
-      <button type="button" className="link-quiet mt-3" onClick={download}>
+      <button type="button" className={cn(link(), "mt-3")} onClick={download}>
         Download as CSV
       </button>
       <ul className="mt-5 max-w-xl border-t border-line">
@@ -540,10 +538,10 @@ function Answers({
               {ref && confirming === ref ? (
                 <div className="flex flex-wrap items-center gap-x-5 gap-y-2">
                   <p className="text-sm">Remove {voter.name}’s answer?</p>
-                  <button type="button" disabled={pending} onClick={() => onRemove(ref)} className="btn btn-danger">
+                  <button type="button" disabled={pending} onClick={() => onRemove(ref)} className={button({ variant: "danger" })}>
                     Remove
                   </button>
-                  <button type="button" onClick={() => setConfirming(null)} className="link-quiet">
+                  <button type="button" onClick={() => setConfirming(null)} className={link()}>
                     Cancel
                   </button>
                 </div>
@@ -558,7 +556,7 @@ function Answers({
                       {times === 0 ? "No times" : times === 1 ? "1 time" : `${times} times`}
                     </span>
                     {ref ? (
-                      <label className="inline-flex items-center gap-1.5 text-sm text-muted">
+                      <label className="inline-flex items-center gap-1.5 text-[13px] font-medium text-foreground">
                         <input
                           type="checkbox"
                           className="size-3.5 accent-[var(--foreground)]"
@@ -571,7 +569,7 @@ function Answers({
                     {ref ? (
                       <button
                         type="button"
-                        className="link-quiet link-danger"
+                        className={link({ tone: "danger" })}
                         aria-label={`Remove ${voter.name}’s answer`}
                         onClick={() => setConfirming(ref)}
                       >
@@ -586,7 +584,7 @@ function Answers({
         })}
       </ul>
       {error ? (
-        <p className="mt-4 text-sm text-danger" role="alert">
+        <p className={cn(appear, "mt-4 text-sm text-danger")} role="alert">
           {error}
         </p>
       ) : null}
@@ -622,20 +620,20 @@ function DraftBar({
   const label = rangeLabel(range.start, range.end, timeZone, clock, weekly);
 
   return (
-    <div className="sticky bottom-0 z-30 -mx-4 mt-6 flex flex-wrap items-center gap-x-5 gap-y-3 border-t border-line bg-background px-4 py-3 sm:mx-0 sm:px-0">
+    <div className="sticky bottom-0 z-30 -mx-4 mt-6 flex flex-wrap items-center gap-x-5 gap-y-3 border-t border-line bg-background/90 px-4 py-3 backdrop-blur sm:mx-0 sm:px-0">
       <span aria-hidden="true" className="inline-block size-1.5 rounded-full bg-foreground" />
       <p className="text-sm">
         {label.day} <span className="text-muted">·</span>{" "}
         <span className="font-mono tabular-nums">{label.time}</span>
       </p>
       {valid.ok ? (
-        <button type="button" className="btn" disabled={pending} onClick={() => onConfirm(range)}>
+        <button type="button" className={button()} disabled={pending} onClick={() => onConfirm(range)}>
           Set as final time
         </button>
       ) : (
         <p className="text-sm text-danger">{valid.error}</p>
       )}
-      <button type="button" className="link-quiet" onClick={onCancel}>
+      <button type="button" className={link()} onClick={onCancel}>
         Cancel
       </button>
     </div>
@@ -681,7 +679,7 @@ function DaysEditor({
         onStart={(start) => setDraft((current) => ({ ...(current ?? schedule), start }))}
         onEnd={(end) => setDraft((current) => ({ ...(current ?? schedule), end }))}
       />
-      <button type="submit" disabled={pending} className="mt-6 btn">
+      <button type="submit" disabled={pending} className={cn(button({ variant: "secondary" }), "mt-6")}>
         Save days
       </button>
     </form>
@@ -716,7 +714,7 @@ function OptionsEditor({
       }}
     >
       <OptionsFields drafts={current} onChange={setDrafts} />
-      <button type="submit" disabled={pending} className="mt-6 btn">
+      <button type="submit" disabled={pending} className={cn(button({ variant: "secondary" }), "mt-6")}>
         Save times
       </button>
     </form>

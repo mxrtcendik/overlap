@@ -1,6 +1,7 @@
 "use client";
 
 import { durationLabel, durationOptions } from "@/lib/poll/duration";
+import { cn, field, hint, selectChrome } from "@/components/ui/styles";
 
 export function DurationField({
   value,
@@ -14,10 +15,10 @@ export function DurationField({
   onChange: (minutes: number | null) => void;
 }) {
   return (
-    <label className="block text-sm text-muted">
+    <label className="block text-[13px] font-medium text-foreground">
       Meeting length
       <select
-        className="field mt-1 w-auto py-2 pr-2 pl-2.5"
+        className={cn(field({ size: "select" }), selectChrome, "mt-1.5 w-full")}
         value={value ?? ""}
         disabled={disabled}
         onChange={(event) => onChange(event.target.value ? Number(event.target.value) : null)}
@@ -29,8 +30,8 @@ export function DurationField({
           </option>
         ))}
       </select>
-      <span className="mt-1 block text-xs">
-        With a length, the best times are stretches everyone can stay for the whole meeting.
+      <span className={cn(hint, "mt-2 block")}>
+        The best times are long enough for the whole meeting.
       </span>
     </label>
   );

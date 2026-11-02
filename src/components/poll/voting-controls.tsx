@@ -3,6 +3,7 @@
 import { useState } from "react";
 import { usePrefs, useTimeZone } from "@/client/browser";
 import { momentLabel, timeZoneLabel, wallDate, wallParts, zonedToUtc } from "@/lib/time/format";
+import { appear, button, cn, field, link } from "@/components/ui/styles";
 
 function wallInput(ms: number, timeZone: string): string {
   const parts = wallParts(ms, timeZone);
@@ -61,14 +62,14 @@ export function VotingControls({
 
       {editing ? (
         <form
-          className="appear mt-4 flex flex-wrap items-end gap-3"
+          className={cn(appear, "mt-4 flex flex-wrap items-end gap-3")}
           onSubmit={(event) => {
             event.preventDefault();
             const iso = fromWallInput(value, timeZone);
             if (iso) void save(iso);
           }}
         >
-          <label className="text-sm text-muted">
+          <label className="text-[13px] font-medium text-foreground">
             Close voting at
             <input
               type="datetime-local"
@@ -77,13 +78,13 @@ export function VotingControls({
               min={earliest}
               max={wallInput(lastEnd - 60_000, timeZone)}
               onChange={(event) => setValue(event.target.value)}
-              className="field mt-1 w-60 tabular-nums"
+              className={cn(field(), "mt-1 w-60 tabular-nums")}
             />
           </label>
-          <button type="submit" className="btn" disabled={pending || !value}>
+          <button type="submit" className={button()} disabled={pending || !value}>
             Save deadline
           </button>
-          <button type="button" className="link-quiet pb-2.5" onClick={() => setEditing(false)}>
+          <button type="button" className={cn(link(), "pb-2.5")} onClick={() => setEditing(false)}>
             Cancel
           </button>
           <p className="basis-full text-xs text-muted">In {timeZoneLabel(timeZone)}, like the grid.</p>
@@ -91,19 +92,19 @@ export function VotingControls({
       ) : closed ? (
         closedEarly ? (
           <div className="mt-3">
-            <button type="button" className="btn" disabled={pending} onClick={() => void save(null)}>
+            <button type="button" className={button()} disabled={pending} onClick={() => void save(null)}>
               Reopen voting
             </button>
           </div>
         ) : null
       ) : (
         <div className="mt-3 flex flex-wrap items-center gap-x-5 gap-y-2">
-          <button type="button" className="btn" disabled={pending} onClick={() => void save("now")}>
+          <button type="button" className={button({ variant: "secondary" })} disabled={pending} onClick={() => void save("now")}>
             Close voting now
           </button>
           <button
             type="button"
-            className="link-quiet"
+            className={link()}
             onClick={() => {
               setValue(at !== null ? wallInput(at, timeZone) : "");
               setEarliest(wallInput(Date.now(), timeZone));
@@ -113,7 +114,7 @@ export function VotingControls({
             {at !== null ? "Change deadline" : "Set a deadline"}
           </button>
           {at !== null ? (
-            <button type="button" className="link-quiet" disabled={pending} onClick={() => void save(null)}>
+            <button type="button" className={link()} disabled={pending} onClick={() => void save(null)}>
               Remove deadline
             </button>
           ) : null}
@@ -121,7 +122,7 @@ export function VotingControls({
       )}
 
       {error ? (
-        <p className="mt-3 text-sm text-danger" role="alert">
+        <p className={cn(appear, "mt-3 text-sm text-danger")} role="alert">
           {error}
         </p>
       ) : null}

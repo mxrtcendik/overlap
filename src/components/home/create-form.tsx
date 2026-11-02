@@ -13,6 +13,8 @@ import { WEEKLY_OPEN_MS, type PollKind } from "@/lib/time/weekly";
 import { DurationField } from "../common/duration-field";
 import { ScheduleFields } from "../common/schedule-fields";
 import { defaultOptions, OptionsFields, toOptions, type OptionDraft } from "../common/options-fields";
+import { Segmented } from "../ui/segmented";
+import { appear, button, cn, field, label } from "@/components/ui/styles";
 
 export function CreateForm() {
   const router = useRouter();
@@ -68,8 +70,11 @@ export function CreateForm() {
 
   return (
     <form onSubmit={onSubmit}>
-      <h2 className="text-[1.75rem] leading-9 tracking-[-0.02em] text-balance">Create a poll</h2>
-      <label className="mt-8 block text-sm text-muted">
+      <h2 className="font-display text-3xl font-medium tracking-[-0.02em] text-balance sm:text-4xl">Create a poll</h2>
+      <p className="mt-3 max-w-md text-sm leading-6 text-pretty text-muted">
+        Two links, no account. The public one is for everyone. The secret one is the only way to edit the poll.
+      </p>
+      <label className="mt-6 block text-[13px] font-medium text-foreground">
         Title
         <input
           value={title}
@@ -77,7 +82,7 @@ export function CreateForm() {
           maxLength={MAX_TITLE}
           required
           placeholder="Team retro"
-          className="field mt-1 placeholder:text-muted/60"
+          className={cn(field(), "mt-1.5")}
         />
       </label>
       <KindSwitch
@@ -89,35 +94,33 @@ export function CreateForm() {
           setError(null);
         }}
       />
-      {kind === "options" && drafts ? (
-        <div className="mt-6">
+      <div key={kind} className={cn(appear, "mt-6")}>
+        {kind === "options" && drafts ? (
           <OptionsFields drafts={drafts} onChange={setDrafts} />
-        </div>
-      ) : (
-        <>
-      <div className="mt-6">
-        <ScheduleFields
-          weekly={kind === "weekly"}
-          dates={dates}
-          start={start}
-          end={end}
-          onDates={setDates}
-          onStart={setStart}
-          onEnd={setEnd}
-        />
+        ) : (
+          <>
+            <ScheduleFields
+              weekly={kind === "weekly"}
+              dates={dates}
+              start={start}
+              end={end}
+              onDates={setDates}
+              onStart={setStart}
+              onEnd={setEnd}
+            />
+            <div className="mt-6">
+              <DurationField value={fitting} max={end - start} onChange={setDuration} />
+            </div>
+          </>
+        )}
       </div>
-      <div className="mt-6">
-        <DurationField value={fitting} max={end - start} onChange={setDuration} />
-      </div>
-        </>
-      )}
       {error ? (
-        <p className="mt-4 text-sm text-danger" role="alert">
+        <p className={cn(appear, "mt-4 text-sm text-danger")} role="alert">
           {error}
         </p>
       ) : null}
       <div ref={turnstileRef} className="mt-6 max-w-sm empty:mt-0" />
-      <button type="submit" disabled={pending} className="mt-8 btn">
+      <button type="submit" disabled={pending} className={cn(button({ variant: "accent", size: "lg" }), "mt-8 w-full sm:w-auto")}>
         {pending ? "Creating…" : "Create poll"}
       </button>
     </form>
@@ -125,34 +128,22 @@ export function CreateForm() {
 }
 
 function KindSwitch({ value, onChange }: { value: PollKind; onChange: (kind: PollKind) => void }) {
-  const options: { kind: PollKind; label: string }[] = [
-    { kind: "dates", label: "Specific dates" },
-    { kind: "weekly", label: "Days of the week" },
-    { kind: "options", label: "Set times" },
-  ];
   return (
-    <div className="mt-8 flex flex-wrap items-center gap-x-4 gap-y-2">
-      <span id="kind-label" className="text-sm text-muted">
+    <div className="mt-6 flex flex-col gap-2">
+      <span id="kind-label" className={label}>
         Ask about
       </span>
-      <div role="group" aria-labelledby="kind-label" className="inline-flex border border-line">
-        {options.map((option) => {
-          const on = option.kind === value;
-          return (
-            <button
-              key={option.kind}
-              type="button"
-              aria-pressed={on}
-              onClick={() => onChange(option.kind)}
-              className={`px-3 py-1.5 text-sm transition-colors ${
-                on ? "bg-paper text-foreground shadow-[inset_0_0_0_1px_var(--foreground)]" : "text-muted hover:text-foreground"
-              }`}
-            >
-              {option.label}
-            </button>
-          );
-        })}
-      </div>
+      <Segmented
+        aria-labelledby="kind-label"
+        fill
+        value={value}
+        onChange={onChange}
+        options={[
+          { value: "dates", label: "Specific dates" },
+          { value: "weekly", label: "Days of the week" },
+          { value: "options", label: "Set times" },
+        ]}
+      />
     </div>
   );
 }

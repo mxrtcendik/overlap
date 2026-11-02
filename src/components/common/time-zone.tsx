@@ -3,6 +3,7 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 import { deviceTimeZone, setTimeZone, useTimeZone, useTimeZoneChosen } from "@/client/browser";
 import { timeZoneLabel, timeZoneLabelFor } from "@/lib/time/format";
+import { appear, cn, field, link, selectChrome } from "@/components/ui/styles";
 
 function cityOf(zone: string): string {
   return zone.split("/").pop()!.replaceAll("_", " ");
@@ -59,7 +60,7 @@ export function TimeZoneNote({ lead, times = [] }: { lead: string; times?: numbe
         {open ? null : (
           <button
             type="button"
-            className="link-quiet decoration-line-strong hover:decoration-current"
+            className={link()}
             aria-expanded={false}
             onClick={() => setOpen(true)}
           >
@@ -68,7 +69,7 @@ export function TimeZoneNote({ lead, times = [] }: { lead: string; times?: numbe
         )}
       </p>
       {open ? (
-        <div className="mt-3 flex flex-wrap items-center gap-x-4 gap-y-2">
+        <div className={cn(appear, "mt-3 flex flex-wrap items-center gap-x-4 gap-y-2")}>
           <label htmlFor="time-zone" className="sr-only">
             Timezone
           </label>
@@ -80,7 +81,7 @@ export function TimeZoneNote({ lead, times = [] }: { lead: string; times?: numbe
             onKeyDown={(event) => {
               if (event.key === "Escape") setOpen(false);
             }}
-            className="field w-auto max-w-full py-1.5 text-sm"
+            className={cn(field({ size: "select" }), selectChrome, "max-w-full")}
           >
             <option value="">Your timezone · {timeZoneLabel(device, at)}</option>
             {groups.map((group) => (
@@ -93,7 +94,7 @@ export function TimeZoneNote({ lead, times = [] }: { lead: string; times?: numbe
               </optgroup>
             ))}
           </select>
-          <button type="button" className="link-quiet" onClick={() => setOpen(false)}>
+          <button type="button" className={link()} onClick={() => setOpen(false)}>
             Done
           </button>
         </div>

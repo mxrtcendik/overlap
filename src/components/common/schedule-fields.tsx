@@ -6,6 +6,7 @@ import { MAX_DAYS } from "@/lib/constants";
 import { minutesLabel, zonedToUtc } from "@/lib/time/format";
 import { datesForWeekdays, WEEKDAY_NAMES, weekdayOf } from "@/lib/time/weekly";
 import { TimeZoneNote } from "./time-zone";
+import { appear, button, cn, field, selectChrome } from "@/components/ui/styles";
 
 const WEEKDAYS = ["Su", "Mo", "Tu", "We", "Th", "Fr", "Sa"] as const;
 
@@ -235,7 +236,7 @@ export function ScheduleFields({
             aria-label="Previous month"
             disabled={offset === 0}
             onClick={() => setOffset((current) => Math.max(0, current - 1))}
-            className="month-nav"
+            className={cn(button({ variant: "secondary", size: "icon" }), "size-7")}
           >
             <Chevron direction="left" />
           </button>
@@ -244,7 +245,7 @@ export function ScheduleFields({
             aria-label="Next month"
             disabled={offset >= MONTHS_AHEAD - 1}
             onClick={() => setOffset((current) => Math.min(MONTHS_AHEAD - 1, current + 1))}
-            className="month-nav"
+            className={cn(button({ variant: "secondary", size: "icon" }), "size-7")}
           >
             <Chevron direction="right" />
           </button>
@@ -266,7 +267,7 @@ export function ScheduleFields({
       </div>
       )}
       {message ? (
-        <p className="mt-3 text-sm text-danger" role="alert">
+        <p className={cn(appear, "mt-3 text-sm text-danger")} role="alert">
           {message}
         </p>
       ) : (
@@ -279,10 +280,10 @@ export function ScheduleFields({
         </p>
       )}
       <div className="mt-4 flex flex-wrap gap-6">
-        <label className="text-sm text-muted">
+        <label className="text-[13px] font-medium text-foreground">
           From
           <select
-            className="field mt-1 w-auto py-2 pr-2 pl-2.5"
+            className={cn(field({ size: "select" }), selectChrome, "mt-1.5")}
             value={start}
             onChange={(event) => changeStart(Number(event.target.value))}
           >
@@ -293,10 +294,10 @@ export function ScheduleFields({
             ))}
           </select>
         </label>
-        <label className="text-sm text-muted">
+        <label className="text-[13px] font-medium text-foreground">
           To
           <select
-            className="field mt-1 w-auto py-2 pr-2 pl-2.5"
+            className={cn(field({ size: "select" }), selectChrome, "mt-1.5")}
             value={end}
             onChange={(event) => onEnd(Number(event.target.value))}
           >

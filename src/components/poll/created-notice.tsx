@@ -4,6 +4,7 @@ import { useEffect, useRef } from "react";
 import { useCanShare } from "@/client/browser";
 import { copyText, CopyLabel, useCopyState } from "./copy-link";
 import { EmailLinks } from "./email-links";
+import { appear, arrive, button, cn, link } from "@/components/ui/styles";
 
 export function CreatedNotice({
   title,
@@ -30,39 +31,38 @@ export function CreatedNotice({
   }, []);
 
   return (
-    <section aria-labelledby="created-heading" className="mb-12 border border-line bg-paper p-5 sm:p-6">
+    <section aria-labelledby="created-heading" className={cn(arrive, "mb-12 border-y border-line py-6")}>
       <h2
         id="created-heading"
         ref={heading}
         tabIndex={-1}
-        className="inline-flex items-center gap-2 text-xs text-muted outline-none"
+        className="text-sm text-muted outline-none"
       >
-        <span aria-hidden="true" className="inline-block size-1.5 rounded-full bg-accent" />
         Poll created
       </h2>
-      <p className="mt-2 text-xl leading-8 tracking-[-0.01em] text-balance">
+      <p className="mt-2 font-display text-2xl leading-snug text-balance">
         Send the public link to everyone you’re asking.
       </p>
       <p className="mt-3 font-mono text-[13px] leading-6 break-all">{publicUrl}</p>
       <div className="mt-5 flex flex-wrap items-center gap-x-5 gap-y-3">
-        <button type="button" className="btn" onClick={async () => report(await copyText(publicUrl))}>
+        <button type="button" className={button()} onClick={async () => report(await copyText(publicUrl))}>
           <CopyLabel idle="Copy public link" copied={state === "copied"} />
         </button>
         {canShare ? (
           <button
             type="button"
-            className="link-quiet"
+            className={link()}
             onClick={() => void navigator.share({ title, text: `When can you make “${title}”?`, url: publicUrl }).catch(() => {})}
           >
             Share…
           </button>
         ) : null}
-        <button type="button" className="link-quiet ml-auto" onClick={onDone}>
+        <button type="button" className={cn(link(), "ml-auto")} onClick={onDone}>
           Done
         </button>
       </div>
       {state === "failed" ? (
-        <p className="mt-3 text-sm text-danger" role="alert">
+        <p className={cn(appear, "mt-3 text-sm text-danger")} role="alert">
           Your browser blocked copying. Select the link and copy it yourself.
         </p>
       ) : null}

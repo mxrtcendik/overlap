@@ -3,6 +3,7 @@
 import { useId, useRef, useState, type ChangeEvent } from "react";
 import { deviceTimeZone, useTimeZone } from "@/client/browser";
 import { SLOT_MS } from "@/lib/constants";
+import { appear, button, cn, link } from "@/components/ui/styles";
 
 const MAX_BYTES = 5 * 1024 * 1024;
 
@@ -63,7 +64,7 @@ export function CalendarFill({
       <div className="flex flex-wrap items-baseline gap-x-2 text-sm">
         <button
           type="button"
-          className="link-quiet decoration-line-strong"
+          className={link()}
           aria-describedby={hintId}
           disabled={reading}
           onClick={() => input.current?.click()}
@@ -77,13 +78,13 @@ export function CalendarFill({
       </div>
 
       {error ? (
-        <p className="basis-full text-sm text-danger" role="alert">
+        <p className={cn(appear, "basis-full text-sm text-danger")} role="alert">
           {error}
         </p>
       ) : null}
 
       {found ? (
-        <div className="appear basis-full border-l-2 border-line-strong pl-4" role="status">
+        <div className={cn(appear, "basis-full border-l-2 border-line-strong pl-4")} role="status">
           <p className="text-sm">
             {found.events === 0
               ? "Your calendar has nothing on these days, so every time looks free."
@@ -96,7 +97,7 @@ export function CalendarFill({
           <div className="mt-3 flex items-center gap-5">
             <button
               type="button"
-              className="btn"
+              className={button()}
               disabled={found.free.length === 0}
               onClick={() => {
                 onApply(found.free);
@@ -105,7 +106,7 @@ export function CalendarFill({
             >
               {found.free.length === 0 ? "No free times" : "Mark the free times"}
             </button>
-            <button type="button" className="link-quiet" onClick={() => setFound(null)}>
+            <button type="button" className={link()} onClick={() => setFound(null)}>
               Cancel
             </button>
           </div>

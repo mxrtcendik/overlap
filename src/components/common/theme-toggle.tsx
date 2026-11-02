@@ -1,5 +1,6 @@
 "use client";
 
+import { Segmented } from "../ui/segmented";
 import { useSyncExternalStore } from "react";
 
 type Theme = "auto" | "light" | "dark";
@@ -39,24 +40,12 @@ export function ThemeToggle() {
   const theme = useSyncExternalStore(subscribe, readTheme, () => null);
 
   return (
-    <div role="group" aria-label="Theme" className="inline-flex items-center gap-1 text-xs">
-      {OPTIONS.map((option, index) => (
-        <span key={option.value} className="inline-flex items-center gap-1">
-          {index > 0 ? (
-            <span aria-hidden="true" className="text-line-strong">
-              /
-            </span>
-          ) : null}
-          <button
-            type="button"
-            aria-pressed={theme === option.value}
-            onClick={() => setTheme(option.value)}
-            className={`transition-colors ${theme === option.value ? "text-foreground" : "text-muted hover:text-foreground"}`}
-          >
-            {option.label}
-          </button>
-        </span>
-      ))}
-    </div>
+    <Segmented
+      aria-label="Theme"
+      size="sm"
+      value={theme}
+      onChange={setTheme}
+      options={OPTIONS.map((option) => ({ value: option.value, label: option.label }))}
+    />
   );
 }

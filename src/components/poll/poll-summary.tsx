@@ -14,7 +14,7 @@ export function SummaryText({ summary, emptyText }: { summary: Summary; emptyTex
   return (
     <>
       {before}
-      {when ? <strong className="font-medium">{when}</strong> : null}
+      {when ? <em className="font-medium">{when}</em> : null}
       {after}
     </>
   );
@@ -53,7 +53,7 @@ export function SentenceBlock({
 
   return (
     <div className="mt-4">
-      <p className="min-h-7 max-w-2xl text-lg leading-7 text-balance" aria-live="polite">
+      <p className="font-display min-h-8 max-w-2xl text-2xl leading-snug text-balance" aria-live="polite">
         {summary ? <SummaryText summary={summary} emptyText={emptyText} /> : null}
       </p>
       {duration ? <p className="mt-1 text-sm text-muted">For a meeting of {durationLabel(duration)}.</p> : null}
@@ -90,7 +90,7 @@ function VotingStatus({
     text = `Voting closes ${when}.`;
   }
   if (!text) return null;
-  return <p className="mt-4 inline-block border border-line px-2 py-0.5 text-xs text-muted tabular-nums">{text}</p>;
+  return <p className="mt-3 text-xs text-muted tabular-nums">{text}</p>;
 }
 
 export function Status({ state }: { state: "saving" | "saved" }) {

@@ -3,6 +3,8 @@
 import { usePrefs, useTimeZone } from "@/client/browser";
 import { nameList } from "@/lib/poll/sentence";
 import { optionLabel, optionResults, rankOptions, type TimeOption } from "@/lib/poll/options";
+import { Segmented } from "../ui/segmented";
+import { link } from "@/components/ui/styles";
 
 type Voter = { name: string; slots: string[]; maybe: string[]; required?: boolean; yours?: boolean };
 type Level = "yes" | "maybe" | "no";
@@ -71,9 +73,9 @@ export function OptionsView({
                 {isFinal ? <span className="text-xs text-accent">Final time</span> : option.start === best ? <span className="text-xs text-muted">Best</span> : null}
               </p>
               <div className="mt-2 flex items-center gap-3">
-                <span aria-hidden="true" className="block h-1.5 w-32 overflow-hidden rounded-full bg-line">
+                <span aria-hidden="true" className="block h-1 w-32 overflow-hidden bg-line">
                   <span
-                    className="block h-full rounded-full"
+                    className="block h-full"
                     style={{ width: `${(count / people) * 100}%`, background: "var(--accent)" }}
                   />
                 </span>
@@ -84,23 +86,14 @@ export function OptionsView({
               {who ? <p className="mt-1 text-xs text-muted">{who}</p> : null}
             </div>
             {!readOnly && answer && onChange ? (
-              <div role="group" aria-label={`Your answer for ${label}`} className="inline-flex border border-line">
-                {LEVELS.map(({ level, label: text }) => (
-                  <button
-                    key={level}
-                    type="button"
-                    aria-pressed={mine === level}
-                    onClick={() => choose(option.start, level)}
-                    className={`px-3 py-1.5 text-sm transition-colors ${
-                      mine === level ? "bg-paper text-foreground shadow-[inset_0_0_0_1px_var(--foreground)]" : "text-muted hover:text-foreground"
-                    }`}
-                  >
-                    {text}
-                  </button>
-                ))}
-              </div>
+              <Segmented
+                aria-label={`Your answer for ${label}`}
+                value={mine}
+                onChange={(level) => choose(option.start, level)}
+                options={LEVELS.map(({ level, label: text }) => ({ value: level, label: text }))}
+              />
             ) : onPick && !isFinal ? (
-              <button type="button" className="link-quiet" onClick={() => onPick(option)}>
+              <button type="button" className={link()} onClick={() => onPick(option)}>
                 Pick
               </button>
             ) : null}

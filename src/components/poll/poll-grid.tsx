@@ -6,6 +6,30 @@ import { SLOT_MS } from "@/lib/constants";
 import { clockTime, localParts, type Clock } from "@/lib/time/format";
 import { bestTime, tallySlots, type Marks } from "@/lib/poll/sentence";
 import { weekdayName } from "@/lib/time/weekly";
+import { appear, cn, link } from "@/components/ui/styles";
+
+function marksEqual(a: string[], b: string[]) {
+  if (a.length !== b.length) return false;
+  for (let index = 0; index < a.length; index++) if (a[index] !== b[index]) return false;
+  return true;
+}
+
+const SLOT = cn(
+  "relative block h-8 w-10 rounded-[2px] border border-line bg-paper",
+  "transition-[background-color,border-color,opacity] duration-200 motion-reduce:transition-none",
+  "data-[wide=true]:w-full data-[dim=true]:opacity-30",
+  "data-[filled=true]:heat data-[filled=true]:border-transparent",
+  "data-[best=true]:border-transparent data-[best=true]:shadow-[inset_0_0_0_1.5px_var(--foreground),inset_0_0_0_2.5px_var(--paper)]",
+);
+
+const SLOT_BUTTON = cn(SLOT, "not-aria-disabled:cursor-pointer not-aria-disabled:touch-none pointer-fine:not-aria-disabled:hover:border-line-strong");
+
+const SLOT_FILL = cn(
+  "pointer-events-none absolute inset-[3px] scale-[0.92] rounded-[2px] bg-foreground opacity-0",
+  "transition-[scale,opacity] duration-150 ease-ui motion-reduce:transition-none",
+  "data-[on=true]:scale-100 data-[on=true]:opacity-100",
+  "data-[on=maybe]:hatch-soft data-[on=maybe]:scale-100 data-[on=maybe]:opacity-100 data-[on=maybe]:shadow-[inset_0_0_0_1.5px_var(--foreground)]",
+);
 
 type Pos = { c: number; r: number };
 
@@ -103,6 +127,7 @@ export function PollGrid({
   weekly = false,
   duration = null,
   dayView = true,
+  fill = false,
   onChange,
   onInspect,
 }: {
@@ -119,6 +144,8 @@ export function PollGrid({
   weekly?: boolean;
   duration?: number | null;
   dayView?: boolean;
+  /** Stretch the columns to fill the available width. */
+  fill?: boolean;
   onChange?: (next: string[], nextMaybe: string[]) => void;
   onInspect?: (iso: string | null) => void;
 }) {
@@ -130,6 +157,9 @@ export function PollGrid({
   );
   const [active, setActive] = useState<Pos | null>(null);
   const [drag, setDrag] = useState<{ anchor: Pos; current: Pos; add: boolean } | null>(null);
+  const beforeStroke = useRef<{ yes: string[]; maybe: string[] } | null>(null);
+  const ownChange = useRef(false);
+  const [undo, setUndo] = useState<{ yes: string[]; maybe: string[] } | null>(null);
   const cellRefs = useRef(new Map<string, HTMLButtonElement>());
   const scrollerRef = useRef<HTMLDivElement>(null);
   const [moreRight, setMoreRight] = useState(false);
@@ -152,7 +182,27 @@ export function PollGrid({
 
   const selectedSet = useMemo(() => new Set(selected), [selected]);
   const maybeSet = useMemo(() => new Set(maybe), [maybe]);
+  const markKey = `${selected.join("\n")}\n${maybe.join("\n")}`;
+
+  useEffect(() => {
+    if (ownChange.current) {
+      ownChange.current = false;
+      return;
+    }
+    setUndo(null);
+  }, [markKey]);
   const levelOf = (iso: string): Brush | null => (selectedSet.has(iso) ? "yes" : maybeSet.has(iso) ? "maybe" : null);
+
+  function rememberStroke() {
+    beforeStroke.current = { yes: [...selected], maybe: [...maybe] };
+  }
+
+  function keepUndo(nextYes: string[], nextMaybe: string[]) {
+    const before = beforeStroke.current;
+    beforeStroke.current = null;
+    if (!before || (marksEqual(before.yes, nextYes) && marksEqual(before.maybe, nextMaybe))) return;
+    setUndo(before);
+  }
 
   const preview = useMemo(() => {
     if (!drag || !layout) return null;
@@ -181,14 +231,20 @@ export function PollGrid({
     if (!drag) return;
     const commit = () => {
       if (preview) {
-        onChange?.(
-          slots.filter((slot) => preview.yes.has(slot)),
-          slots.filter((slot) => preview.maybe.has(slot)),
-        );
+        const nextYes = slots.filter((slot) => preview.yes.has(slot));
+        const nextMaybe = slots.filter((slot) => preview.maybe.has(slot));
+        keepUndo(nextYes, nextMaybe);
+        ownChange.current = true;
+        onChange?.(nextYes, nextMaybe);
+      } else {
+        beforeStroke.current = null;
       }
       setDrag(null);
     };
-    const cancel = () => setDrag(null);
+    const cancel = () => {
+      beforeStroke.current = null;
+      setDrag(null);
+    };
     window.addEventListener("pointerup", commit);
     window.addEventListener("pointercancel", cancel);
     return () => {
@@ -213,6 +269,7 @@ export function PollGrid({
   }
 
   const dayMode = dayView && narrow && layout.columns.length > DAY_VIEW_AFTER;
+  const stretch = dayMode || fill;
   const bestDay = run ? layout.grid.findIndex((column) => column.some((iso) => iso && Date.parse(iso) === run.start)) : -1;
   const day = Math.min(pickedDay ?? (bestDay >= 0 ? bestDay : 0), layout.columns.length - 1);
   const visible = dayMode ? [day] : layout.columns.map((_, index) => index);
@@ -238,11 +295,15 @@ export function PollGrid({
       event.currentTarget.releasePointerCapture(event.pointerId);
     }
     setActive(pos);
+    rememberStroke();
     setDrag({ anchor: pos, current: pos, add: mode === "range" || levelOf(iso) !== brush });
   }
 
   function toggleOne(iso: string) {
+    rememberStroke();
     if (mode === "range") {
+      ownChange.current = true;
+      keepUndo([iso], []);
       onChange?.([iso], []);
       return;
     }
@@ -254,10 +315,19 @@ export function PollGrid({
       target.add(iso);
       other.delete(iso);
     }
-    onChange?.(
-      slots.filter((slot) => yes.has(slot)),
-      slots.filter((slot) => ifNeeded.has(slot)),
-    );
+    const nextYes = slots.filter((slot) => yes.has(slot));
+    const nextMaybe = slots.filter((slot) => ifNeeded.has(slot));
+    ownChange.current = true;
+    keepUndo(nextYes, nextMaybe);
+    onChange?.(nextYes, nextMaybe);
+  }
+
+  function undoLast() {
+    if (!undo || drag) return;
+    const previous = undo;
+    setUndo(null);
+    ownChange.current = true;
+    onChange?.(previous.yes, previous.maybe);
   }
 
   function onPointerEnter(pos: Pos, iso: string) {
@@ -312,7 +382,7 @@ export function PollGrid({
               {weekly ? null : <span className="block font-medium tabular-nums text-foreground">{column.day}</span>}
               <span
                 aria-hidden="true"
-                className="mt-1 block h-1 rounded-full"
+                className="mt-1.5 block h-0.5"
                 style={{ background: `color-mix(in oklab, var(--accent) ${dayHeat[c]}%, var(--line))` }}
               />
             </button>
@@ -321,21 +391,21 @@ export function PollGrid({
       ) : null}
       <div
         ref={scrollerRef}
-        className="grid-scroll overflow-x-auto pb-1"
+        className="overflow-x-auto pb-1 data-[more-right=true]:[mask-image:linear-gradient(to_right,#000_calc(100%-3rem),transparent)]"
         data-more-right={moreRight ? "true" : undefined}
         onPointerLeave={() => onInspect?.(null)}
         onBlur={(event) => {
           if (!event.currentTarget.contains(event.relatedTarget as Node | null)) onInspect?.(null);
         }}
       >
-        <table className={`border-separate border-spacing-1 select-none ${dayMode ? "w-full" : ""}`}>
+        <table className={`border-separate border-spacing-1 select-none ${stretch ? "w-full" : ""}`}>
           <caption className="sr-only">
             Availability. Times are in your timezone. Use the arrow keys to move between times
             {readOnly ? "." : " and Space to mark one."}
           </caption>
           <thead className={dayMode ? "sr-only" : undefined}>
             <tr>
-              <th scope="col" className="sticky left-0 z-20 bg-background">
+              <th scope="col" className="sticky left-0 z-20 w-px bg-paper">
                 <span className="sr-only">Time</span>
               </th>
               {visible.map((c) => {
@@ -364,14 +434,14 @@ export function PollGrid({
               <tr key={row.key}>
                 <th
                   scope="row"
-                  className={`sticky left-0 z-20 bg-background pr-3 text-right align-top text-xs leading-8 font-normal whitespace-nowrap text-muted tabular-nums ${dayMode ? "w-px" : ""}`}
+                  className={`sticky left-0 z-20 bg-paper pr-3 text-right align-top text-xs leading-8 font-normal w-px whitespace-nowrap text-muted tabular-nums`}
                 >
                   <span className={row.labeled ? undefined : "sr-only"}>{row.label}</span>
                 </th>
                 {visible.map((c) => {
                   const column = layout.columns[c];
                   const iso = layout.grid[c][r];
-                  if (!iso) return <td key={column.key} className={`h-8 ${dayMode ? "" : "w-10"}`} />;
+                  if (!iso) return <td key={column.key} className={`h-8 ${stretch ? "" : "w-10"}`} />;
                   const pos = { c, r };
                   const tally = tallies.get(iso) ?? { yes: 0, maybe: 0 };
                   const count = tally.yes + tally.maybe;
@@ -411,14 +481,14 @@ export function PollGrid({
                           if (readOnly || event.detail !== 0) return;
                           toggleOne(iso);
                         }}
-                        className="slot"
-                        data-wide={dayMode ? "true" : undefined}
+                        className={cn("slot", SLOT_BUTTON)}
+                        data-wide={stretch ? "true" : undefined}
                         data-filled={heat > 0 ? "true" : undefined}
                         data-best={isBest ? "true" : undefined}
                         data-dim={highlight && !highlight.has(iso) ? "true" : undefined}
                         style={{ "--heat": `${heat}%` } as React.CSSProperties}
                       >
-                        <span className="slot-fill" data-on={on === "yes" ? "true" : on === "maybe" ? "maybe" : "false"} />
+                        <span className={SLOT_FILL} data-on={on === "yes" ? "true" : on === "maybe" ? "maybe" : "false"} />
                         {count > 0 ? (
                           <span
                             className={`relative z-10 text-[11px] font-medium tabular-nums ${ink} ${
@@ -442,6 +512,13 @@ export function PollGrid({
         maybeLabel={showMaybeKey ? "You, if needed" : null}
         outlineLabel={best.size > 0 ? outlineLabel : null}
       />
+      {!readOnly && undo ? (
+        <p className="mt-3">
+          <button type="button" className={cn(link(), appear)} onClick={undoLast}>
+            Undo last mark
+          </button>
+        </p>
+      ) : null}
     </div>
   );
 }
@@ -466,7 +543,7 @@ function Legend({
           {steps.map((heat) => (
             <span
               key={heat}
-              className="slot h-3 w-4"
+              className={cn(SLOT, "h-3 w-4 rounded-[2px]")}
               data-filled="true"
               style={{ "--heat": `${heat}%` } as React.CSSProperties}
             />
@@ -488,7 +565,7 @@ function Legend({
       ) : null}
       {outlineLabel ? (
         <span className="inline-flex items-center gap-2">
-          <span className="inline-block h-3 w-4 rounded-[3px] bg-paper shadow-[inset_0_0_0_1.5px_var(--foreground)]" />
+          <span className="inline-block h-3 w-4 rounded-[2px] bg-paper shadow-[inset_0_0_0_1.5px_var(--foreground)]" />
           {outlineLabel}
         </span>
       ) : null}

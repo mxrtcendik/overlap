@@ -7,6 +7,7 @@ import { SLOT_MS } from "@/lib/constants";
 import { describeRun, rangeLabel, type Clock } from "@/lib/time/format";
 import type { VoterView } from "@/lib/types";
 import { PollGrid, type Brush } from "./poll-grid";
+import { cn, link } from "@/components/ui/styles";
 
 type Voter = Pick<VoterView, "name" | "slots" | "maybe" | "yours"> & { note?: string | null; required?: boolean };
 
@@ -123,7 +124,7 @@ function BestTimes({
 }) {
   return (
     <section aria-labelledby="best-times-heading">
-      <h2 id="best-times-heading" className="text-sm text-muted">
+      <h2 id="best-times-heading" className="text-sm font-medium">
         Best times
       </h2>
       <ol className="mt-3 border-t border-line">
@@ -143,7 +144,7 @@ function BestTimes({
             <div className="mt-0.5 flex items-baseline justify-between gap-4">
               <p className="truncate text-xs text-muted">{whoLine(segment, voters)}</p>
               {onPick ? (
-                <button type="button" className="link-quiet shrink-0 text-xs" onClick={() => onPick(segment)}>
+                <button type="button" className={cn(link(), "shrink-0 text-xs")} onClick={() => onPick(segment)}>
                   Pick
                 </button>
               ) : null}
@@ -230,7 +231,7 @@ function People({
 }) {
   return (
     <section className="mt-8" aria-labelledby="people-heading">
-      <h2 id="people-heading" className="text-sm text-muted">
+      <h2 id="people-heading" className="text-sm font-medium">
         {voters.length === 1 ? "1 person answered" : `${voters.length} people answered`}
       </h2>
       <ul className="mt-3 flex flex-wrap gap-2 text-sm">
@@ -243,7 +244,7 @@ function People({
                 type="button"
                 aria-pressed={on}
                 aria-label={`${voter.name}${voter.yours ? ", you" : ""}${voter.note ? `, “${voter.note}”` : ""}. Show their times on the grid.`}
-                className={`border bg-paper px-2.5 py-1 transition-[border-color,box-shadow] duration-[var(--quick)] ${
+                className={`rounded-md border bg-paper px-2.5 py-1 transition-[border-color,box-shadow] duration-150 ${
                   on
                     ? "border-foreground shadow-[inset_0_0_0_0.5px_var(--foreground)]"
                     : "border-line hover:border-line-strong"

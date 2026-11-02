@@ -3,6 +3,7 @@
 import { useId, useState, type FormEvent } from "react";
 import { messageOf } from "@/client/request";
 import { MAX_EMAIL } from "@/lib/email";
+import { appear, button, cn, field, link } from "@/components/ui/styles";
 
 export function EmailSubscription({
   label,
@@ -40,12 +41,12 @@ export function EmailSubscription({
       <div className="text-sm">
         <p className="text-muted">
           {activeText(current)}{" "}
-          <button type="button" className="link-quiet decoration-line-strong" disabled={pending} onClick={() => void save(null)}>
+          <button type="button" className={link()} disabled={pending} onClick={() => void save(null)}>
             Stop
           </button>
         </p>
         {error ? (
-          <p className="mt-2 text-danger" role="alert">
+          <p className={cn(appear, "mt-2 text-danger")} role="alert">
             {error}
           </p>
         ) : null}
@@ -73,14 +74,14 @@ export function EmailSubscription({
           value={address}
           onChange={(event) => setAddress(event.target.value)}
           placeholder="you@example.com"
-          className="field w-64 placeholder:text-muted/60"
+          className={cn(field(), "w-64")}
         />
-        <button type="submit" className="btn" disabled={pending}>
+        <button type="submit" className={button({ variant: "secondary" })} disabled={pending}>
           {pending ? "Saving…" : "Save"}
         </button>
       </div>
       {error ? (
-        <p className="mt-2 text-sm text-danger" role="alert">
+        <p className={cn(appear, "mt-2 text-sm text-danger")} role="alert">
           {error}
         </p>
       ) : (

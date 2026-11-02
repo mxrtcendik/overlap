@@ -17,6 +17,8 @@ import { EmailSubscription } from "../common/email-subscription";
 import { FinalTime } from "./final-time";
 import type { Brush } from "./poll-grid";
 import { SentenceBlock, Status } from "./poll-summary";
+import { Segmented } from "../ui/segmented";
+import { appear, button, card, cn, field, heading, link } from "@/components/ui/styles";
 
 type Answer = { slots: string[]; maybe: string[] };
 
@@ -189,7 +191,7 @@ export function PollView({ poll: stored, canEmail = false }: { poll: PollViewDat
 
   return (
     <>
-      <h1 className="text-[1.75rem] leading-9 tracking-[-0.02em] text-balance">{poll.title}</h1>
+      <h1 className={heading.page}>{poll.title}</h1>
       {poll.final ? <FinalTime pollId={poll.id} title={poll.title} final={poll.final} weekly={weekly} zone={poll.zone} /> : null}
       <SentenceBlock
         slots={poll.slots}
@@ -205,7 +207,7 @@ export function PollView({ poll: stored, canEmail = false }: { poll: PollViewDat
 
       {poll.closed ? null : (
         <form onSubmit={onSubmit} className="mt-8 flex flex-wrap items-end gap-3">
-          <label className="text-sm text-muted">
+          <label className="text-[13px] font-medium text-foreground">
             Your name
             <input
               value={name}
@@ -213,10 +215,10 @@ export function PollView({ poll: stored, canEmail = false }: { poll: PollViewDat
               maxLength={MAX_NAME}
               required
               autoComplete="name"
-              className="field mt-1 w-56"
+              className={cn(field(), "mt-1 w-56")}
             />
           </label>
-          <label className="text-sm text-muted">
+          <label className="text-[13px] font-medium text-foreground">
             Note <span className="text-muted">(optional)</span>
             <input
               value={note}
@@ -224,11 +226,11 @@ export function PollView({ poll: stored, canEmail = false }: { poll: PollViewDat
               maxLength={MAX_NOTE}
               placeholder="Remote only"
               autoComplete="off"
-              className="field mt-1 w-64 placeholder:text-muted/60"
+              className={cn(field(), "mt-1 w-64")}
             />
           </label>
           {!saved || nameChanged || noteChanged ? (
-            <button type="submit" className="btn">
+            <button type="submit" className={button()}>
               {!saved ? "Save answer" : nameChanged && noteChanged ? "Save changes" : nameChanged ? "Save name" : "Save note"}
             </button>
           ) : null}
@@ -238,13 +240,13 @@ export function PollView({ poll: stored, canEmail = false }: { poll: PollViewDat
       )}
       {poll.closed ? null : <div ref={turnstileRef} className="mt-3 max-w-sm empty:mt-0" />}
       {poll.closed ? null : confirmingRemove ? (
-        <div className="appear mt-4 max-w-xl border-l-2 border-danger pl-4">
+        <div className={cn(appear, "mt-4 max-w-xl border-l-2 border-danger pl-4")}>
           <p className="text-sm">Remove your answer? Your name and times are deleted from this poll.</p>
           <div className="mt-3 flex items-center gap-5">
-            <button type="button" disabled={pending} onClick={() => void removeAnswer()} className="btn btn-danger">
+            <button type="button" disabled={pending} onClick={() => void removeAnswer()} className={button({ variant: "danger" })}>
               Remove answer
             </button>
-            <button type="button" onClick={() => setConfirmingRemove(false)} className="link-quiet">
+            <button type="button" onClick={() => setConfirmingRemove(false)} className={link()}>
               Cancel
             </button>
           </div>
@@ -256,7 +258,7 @@ export function PollView({ poll: stored, canEmail = false }: { poll: PollViewDat
               <span>Your answer saves as you change it.</span>
               <button
                 type="button"
-                className="link-quiet link-danger decoration-line-strong hover:decoration-current"
+                className={link({ tone: "danger" })}
                 onClick={() => setConfirmingRemove(true)}
               >
                 Remove my answer
@@ -270,7 +272,7 @@ export function PollView({ poll: stored, canEmail = false }: { poll: PollViewDat
         </p>
       )}
       {error ? (
-        <p className="mt-3 text-sm text-danger" role="alert">
+        <p className={cn(appear, "mt-3 text-sm text-danger")} role="alert">
           {error}
         </p>
       ) : null}
@@ -293,7 +295,7 @@ export function PollView({ poll: stored, canEmail = false }: { poll: PollViewDat
       ) : null}
 
       {poll.options ? (
-        <div className="mt-8">
+        <div className={cn(card, "mt-8 p-4 sm:p-6")}>
           {poll.closed ? null : (
             <div className="mb-4">
               <CalendarFill
@@ -314,7 +316,7 @@ export function PollView({ poll: stored, canEmail = false }: { poll: PollViewDat
           />
         </div>
       ) : (
-      <div className="mt-8">
+      <div className={cn(card, "mt-8 p-4 sm:p-6")}>
         {poll.closed ? null : (
           <div className="mb-5 flex flex-wrap items-center justify-between gap-x-8 gap-y-3">
             <BrushSwitch value={brush} onChange={setBrush} />
@@ -344,39 +346,20 @@ export function PollView({ poll: stored, canEmail = false }: { poll: PollViewDat
 }
 
 function BrushSwitch({ value, onChange }: { value: Brush; onChange: (brush: Brush) => void }) {
-  const options: { brush: Brush; label: string }[] = [
-    { brush: "yes", label: "Can make" },
-    { brush: "maybe", label: "If needed" },
-  ];
   return (
-    <div className="flex flex-wrap items-center gap-x-4 gap-y-2">
+    <div className="flex flex-wrap items-center gap-x-3 gap-y-2">
       <span id="brush-label" className="text-sm text-muted">
         Mark times as
       </span>
-      <div role="group" aria-labelledby="brush-label" className="inline-flex border border-line">
-        {options.map((option) => {
-          const on = option.brush === value;
-          return (
-            <button
-              key={option.brush}
-              type="button"
-              aria-pressed={on}
-              onClick={() => onChange(option.brush)}
-              className={`inline-flex items-center gap-2 px-3 py-1.5 text-sm transition-colors ${
-                on ? "bg-paper text-foreground shadow-[inset_0_0_0_1px_var(--foreground)]" : "text-muted hover:text-foreground"
-              }`}
-            >
-              <span
-                aria-hidden="true"
-                className={`inline-block size-3 rounded-[2px] ${
-                  option.brush === "yes" ? "bg-foreground" : "hatch border border-foreground"
-                }`}
-              />
-              {option.label}
-            </button>
-          );
-        })}
-      </div>
+      <Segmented
+        aria-labelledby="brush-label"
+        value={value}
+        onChange={onChange}
+        options={[
+          { value: "yes", label: <><span aria-hidden="true" className="inline-block size-3 rounded-[2px] bg-current" />Can make</> },
+          { value: "maybe", label: <><span aria-hidden="true" className="hatch inline-block size-3 rounded-[2px] border border-current" />If needed</> },
+        ]}
+      />
     </div>
   );
 }

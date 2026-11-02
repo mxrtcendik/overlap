@@ -5,6 +5,7 @@ import { json, messageOf, request, UserFacingError } from "@/client/request";
 import { useTurnstile } from "@/client/use-turnstile";
 import { MAX_EMAIL } from "@/lib/email";
 import { EMAIL_ACTION } from "@/lib/turnstile";
+import { appear, button, cn, field } from "@/components/ui/styles";
 
 export function EmailLinks({ className = "" }: { className?: string }) {
   const inputId = useId();
@@ -48,19 +49,19 @@ export function EmailLinks({ className = "" }: { className?: string }) {
           value={address}
           onChange={(event) => setAddress(event.target.value)}
           placeholder="you@example.com"
-          className="field w-64 placeholder:text-muted/60"
+          className={cn(field(), "w-64")}
         />
-        <button type="submit" className="btn" disabled={pending}>
+        <button type="submit" className={button({ variant: "secondary" })} disabled={pending}>
           {pending ? "Sending…" : "Send"}
         </button>
       </div>
       <div ref={turnstileRef} className="mt-3 max-w-sm empty:mt-0" />
       {error ? (
-        <p className="mt-2 text-sm text-danger" role="alert">
+        <p className={cn(appear, "mt-2 text-sm text-danger")} role="alert">
           {error}
         </p>
       ) : sentTo ? (
-        <p className="appear mt-2 text-sm text-muted" role="status">
+        <p className={cn(appear, "mt-2 text-sm text-muted")} role="status">
           Sent to {sentTo}. We didn’t keep the address.
         </p>
       ) : (

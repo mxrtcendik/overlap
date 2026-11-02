@@ -1,344 +1,172 @@
 @import "tailwindcss";
 
+/*
+ * Dark mode follows the system unless the theme switch pins it
+ * (<html data-theme="light|dark">, set before paint by THEME_SCRIPT).
+ */
+@custom-variant dark {
+  &:where([data-theme="dark"], [data-theme="dark"] *) {
+    @slot;
+  }
+  @media (prefers-color-scheme: dark) {
+    &:where(:root:not([data-theme="light"]), :root:not([data-theme="light"]) *) {
+      @slot;
+    }
+  }
+}
+
+/*
+ * Warm paper and ink. The oxide accent is for the one action and for
+ * density on the grid — not for decoration.
+ */
 :root {
-  --background: #f4f3ef;
-  --paper: #fffcf7;
-  --foreground: #221f1b;
-  --muted: #6d675f;
-  --line: #ddd8cf;
-  --line-strong: #c4bdb1;
-  --accent: #3f6f52;
-  --on-accent: #fffcf7;
-  --danger: #8a3a2a;
-  --heat-low: #e2ece4;
-  --heat-high: #3f6f52;
-  --heat-ink: #221f1b;
-  --heat-ink-strong: #fffcf7;
-  --ease-ui: cubic-bezier(0.23, 1, 0.32, 1);
-  --press: 160ms;
-  --quick: 120ms;
+  --background: oklch(0.965 0.008 85);
+  --paper: oklch(0.992 0.004 85);
+  --sunken: oklch(0.94 0.01 85);
+  --foreground: oklch(0.22 0.012 65);
+  --muted: oklch(0.44 0.014 65);
+  --line: oklch(0.88 0.012 85);
+  --line-strong: oklch(0.76 0.016 70);
+  --accent: oklch(0.46 0.13 38);
+  --accent-soft: oklch(0.94 0.03 70);
+  --on-accent: oklch(0.985 0.004 85);
+  --danger: var(--color-red-700);
+  --heat-low: oklch(0.94 0.02 75);
+  --heat-high: oklch(0.4 0.11 40);
+  --heat-ink: oklch(0.22 0.012 65);
+  --heat-ink-strong: oklch(0.985 0.004 85);
+  --select-chevron: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 12 12' fill='none' stroke='%23221f1b' stroke-width='1.5' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M2.5 4.5 6 8l3.5-3.5'/%3E%3C/svg%3E");
   color-scheme: light;
 }
 
 @media (prefers-color-scheme: dark) {
   :root:not([data-theme="light"]) {
-    --background: #161513;
-    --paper: #1e1c19;
-    --foreground: #ebe6de;
-    --muted: #9a948a;
-    --line: #34312c;
-    --line-strong: #4b4740;
-    --accent: #7cae8c;
-    --on-accent: #161513;
-    --danger: #e3977f;
-    --heat-low: #27342c;
-    --heat-high: #8cc09c;
-    --heat-ink: #ebe6de;
-    --heat-ink-strong: #161513;
+    --background: oklch(0.18 0.006 70);
+    --paper: oklch(0.22 0.007 70);
+    --sunken: oklch(0.26 0.008 70);
+    --foreground: oklch(0.95 0.008 85);
+    --muted: oklch(0.72 0.012 80);
+    --line: oklch(0.32 0.008 70);
+    --line-strong: oklch(0.46 0.012 70);
+    --accent: oklch(0.72 0.15 48);
+    --accent-soft: oklch(0.3 0.04 50);
+    --on-accent: oklch(0.2 0.02 50);
+    --danger: var(--color-red-400);
+    --heat-low: oklch(0.28 0.025 55);
+    --heat-high: oklch(0.78 0.1 60);
+    --heat-ink: oklch(0.95 0.008 85);
+    --heat-ink-strong: oklch(0.2 0.02 50);
+    --select-chevron: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 12 12' fill='none' stroke='%23f3f1ec' stroke-width='1.5' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M2.5 4.5 6 8l3.5-3.5'/%3E%3C/svg%3E");
     color-scheme: dark;
   }
 }
 
 :root[data-theme="dark"] {
-  --background: #161513;
-  --paper: #1e1c19;
-  --foreground: #ebe6de;
-  --muted: #9a948a;
-  --line: #34312c;
-  --line-strong: #4b4740;
-  --accent: #7cae8c;
-  --on-accent: #161513;
-  --danger: #e3977f;
-  --heat-low: #27342c;
-  --heat-high: #8cc09c;
-  --heat-ink: #ebe6de;
-  --heat-ink-strong: #161513;
+  --background: oklch(0.18 0.006 70);
+  --paper: oklch(0.22 0.007 70);
+  --sunken: oklch(0.26 0.008 70);
+  --foreground: oklch(0.95 0.008 85);
+  --muted: oklch(0.72 0.012 80);
+  --line: oklch(0.32 0.008 70);
+  --line-strong: oklch(0.46 0.012 70);
+  --accent: oklch(0.72 0.15 48);
+  --accent-soft: oklch(0.3 0.04 50);
+  --on-accent: oklch(0.2 0.02 50);
+  --danger: var(--color-red-400);
+  --heat-low: oklch(0.28 0.025 55);
+  --heat-high: oklch(0.78 0.1 60);
+  --heat-ink: oklch(0.95 0.008 85);
+  --heat-ink-strong: oklch(0.2 0.02 50);
+  --select-chevron: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 12 12' fill='none' stroke='%23f3f1ec' stroke-width='1.5' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M2.5 4.5 6 8l3.5-3.5'/%3E%3C/svg%3E");
   color-scheme: dark;
 }
 
 @theme inline {
   --color-background: var(--background);
+  --color-paper: var(--paper);
+  --color-sunken: var(--sunken);
   --color-foreground: var(--foreground);
   --color-muted: var(--muted);
   --color-line: var(--line);
   --color-line-strong: var(--line-strong);
-  --color-paper: var(--paper);
   --color-accent: var(--accent);
+  --color-accent-soft: var(--accent-soft);
   --color-on-accent: var(--on-accent);
   --color-danger: var(--danger);
-  --font-sans: var(--font-geist-sans), ui-sans-serif, system-ui, sans-serif;
-  --font-mono: var(--font-geist-mono), ui-monospace, monospace;
+  --color-heat-low: var(--heat-low);
+  --color-heat-high: var(--heat-high);
+  --color-heat-ink: var(--heat-ink);
+  --color-heat-ink-strong: var(--heat-ink-strong);
+  --font-sans: var(--font-plex), ui-sans-serif, system-ui, sans-serif;
+  --font-body: var(--font-inter), ui-sans-serif, system-ui, sans-serif;
+  --font-mono: var(--font-plex-mono), ui-monospace, monospace;
+  --font-display: var(--font-newsreader), "Iowan Old Style", Palatino, serif;
 }
 
-@media (prefers-reduced-motion: no-preference) {
+@theme {
+  --ease-ui: cubic-bezier(0.23, 1, 0.32, 1);
+}
+
+/* Diagonal lines that mark "if needed". */
+@utility hatch {
+  background-color: var(--paper);
+  background-image: repeating-linear-gradient(135deg, var(--foreground) 0 1px, transparent 1px 4px);
+}
+
+@utility hatch-soft {
+  background-color: var(--paper);
+  background-image: repeating-linear-gradient(
+    135deg,
+    color-mix(in oklab, var(--foreground) 55%, transparent) 0 1px,
+    transparent 1px 4px
+  );
+}
+
+/* Heat-map fill driven by the --heat custom property (0–100%). */
+@utility heat {
+  background-color: color-mix(in oklab, var(--heat-high) var(--heat), var(--heat-low));
+}
+
+@layer base {
   html {
-    scroll-behavior: smooth;
+    -webkit-tap-highlight-color: transparent;
   }
-}
 
-body {
-  background: var(--background);
-  color: var(--foreground);
-  font-family: var(--font-sans);
-}
+  @media (prefers-reduced-motion: no-preference) {
+    html {
+      scroll-behavior: smooth;
+    }
+  }
 
-::selection {
-  background: color-mix(in oklab, var(--accent) 28%, transparent);
-}
-
-:focus-visible {
-  outline: 2px solid var(--foreground);
-  outline-offset: 2px;
-}
-
-@layer components {
-  .field {
-    display: block;
-    width: 100%;
-    border: 1px solid var(--line);
-    background: var(--paper);
-    padding: 0.5rem 0.75rem;
+  body {
+    background: var(--background);
     color: var(--foreground);
-    transition: border-color var(--quick) ease;
   }
 
-  .field:focus-visible {
-    border-color: var(--foreground);
-    outline: 1px solid var(--foreground);
-    outline-offset: 0;
+  /* Prose is Inter. Interface text stays in Plex, and display lines opt into Newsreader. */
+  p,
+  dd,
+  figcaption {
+    font-family: var(--font-body), ui-sans-serif, system-ui, sans-serif;
   }
 
-  .btn {
-    display: inline-flex;
-    align-items: center;
-    gap: 0.5rem;
-    border: 1px solid transparent;
-    background: var(--foreground);
-    padding: 0.5rem 0.875rem;
-    font-size: 0.875rem;
-    line-height: 1.25rem;
-    color: var(--background);
-    transition:
-      opacity var(--quick) ease,
-      transform var(--press) var(--ease-ui);
+  ::selection {
+    background: color-mix(in oklab, var(--accent) 28%, transparent);
   }
 
-  .btn:active:not(:disabled) {
-    transform: scale(0.97);
+  :focus-visible {
+    outline: 2px solid var(--foreground);
+    outline-offset: 2px;
   }
 
-  .btn-danger {
-    background: var(--danger);
-  }
-
-  .btn:disabled {
-    opacity: 0.5;
-    cursor: not-allowed;
-  }
-
-  .link-quiet {
-    font-size: 0.875rem;
-    color: var(--muted);
-    text-decoration-line: underline;
-    text-decoration-color: transparent;
-    text-underline-offset: 4px;
-    transition:
-      color var(--quick) ease,
-      text-decoration-color var(--quick) ease;
-  }
-
-  .link-quiet:disabled {
-    opacity: 0.5;
-  }
-
-  .month-nav {
-    display: inline-flex;
-    align-items: center;
-    justify-content: center;
-    width: 1.75rem;
-    height: 1.75rem;
-    border: 1px solid var(--line);
-    color: var(--foreground);
-    transition:
-      border-color var(--quick) ease,
-      opacity var(--quick) ease,
-      transform var(--press) var(--ease-ui);
-  }
-
-  .month-nav:active:not(:disabled) {
-    transform: scale(0.94);
-  }
-
-  .month-nav:disabled {
-    opacity: 0.35;
-  }
-
-  @media (hover: hover) and (pointer: fine) {
-    .field:hover,
-    .month-nav:hover:not(:disabled) {
-      border-color: var(--line-strong);
-    }
-
-    .btn:hover:not(:disabled) {
-      opacity: 0.86;
-    }
-
-    .link-quiet:hover:not(:disabled) {
-      color: var(--foreground);
-      text-decoration-color: var(--line-strong);
-    }
-
-    .link-danger:hover:not(:disabled) {
-      color: var(--danger);
-      text-decoration-color: currentColor;
-    }
-
-    button.slot:hover:not([aria-disabled="true"]) {
-      border-color: var(--line-strong);
-    }
-  }
-
-  .copy-idle,
-  .copy-done {
-    transition:
-      opacity 200ms var(--ease-ui),
-      filter 200ms var(--ease-ui),
-      transform 200ms var(--ease-ui);
-  }
-
-  .copy-label[data-copied="true"] .copy-idle,
-  .copy-label[data-copied="false"] .copy-done {
-    opacity: 0;
-    filter: blur(2px);
-    transform: scale(0.96);
-  }
-
-  [role="alert"],
-  .appear {
-    transition:
-      opacity 200ms var(--ease-ui),
-      translate 200ms var(--ease-ui);
-
-    @starting-style {
-      opacity: 0;
-      translate: 0 -4px;
-    }
-  }
-
-  .slot {
-    display: block;
-    position: relative;
-    height: 2rem;
-    width: 2.5rem;
-    border: 1px solid var(--line);
-    border-radius: 3px;
-    background: var(--paper);
-    transition:
-      background-color 240ms ease,
-      border-color var(--quick) ease,
-      opacity var(--press) ease;
-  }
-
-  .slot[data-wide="true"] {
-    width: 100%;
-  }
-
-  button.slot:not([aria-disabled="true"]) {
+  button:not(:disabled),
+  [role="button"]:not([aria-disabled="true"]) {
     cursor: pointer;
-    touch-action: none;
   }
 
-  .slot[data-dim="true"] {
-    opacity: 0.28;
-  }
-
-  .slot[data-filled="true"] {
-    border-color: transparent;
-    background: color-mix(in oklab, var(--heat-high) var(--heat), var(--heat-low));
-  }
-
-  .slot[data-best="true"] {
-    border-color: transparent;
-    box-shadow:
-      inset 0 0 0 1.5px var(--foreground),
-      inset 0 0 0 2.5px var(--paper);
-  }
-
-  .slot-fill {
-    position: absolute;
-    inset: 3px;
-    border-radius: 2px;
-    background: var(--foreground);
-    opacity: 0;
-    transform: scale(0.92);
-    pointer-events: none;
-    transition:
-      transform var(--press) var(--ease-ui),
-      opacity var(--press) var(--ease-ui);
-  }
-
-  .slot-fill[data-on="true"] {
-    opacity: 1;
-    transform: scale(1);
-  }
-
-  .grid-scroll[data-more-right="true"] {
-    mask-image: linear-gradient(to right, #000 calc(100% - 3rem), transparent);
-  }
-
-  .hatch {
+  select option,
+  select optgroup {
     background-color: var(--paper);
-    background-image: repeating-linear-gradient(
-      135deg,
-      var(--foreground) 0 1px,
-      transparent 1px 4px
-    );
-  }
-
-  .slot-fill[data-on="maybe"] {
-    opacity: 1;
-    transform: scale(1);
-    background-color: var(--paper);
-    background-image: repeating-linear-gradient(
-      135deg,
-      color-mix(in oklab, var(--foreground) 55%, transparent) 0 1px,
-      transparent 1px 4px
-    );
-    box-shadow: inset 0 0 0 1.5px var(--foreground);
-  }
-}
-
-@media (prefers-reduced-motion: reduce) {
-  .slot-fill,
-  .btn,
-  .field,
-  .slot,
-  .month-nav {
-    transition: none;
-  }
-
-  .btn:active:not(:disabled),
-  .month-nav:active:not(:disabled) {
-    transform: none;
-  }
-
-  .copy-idle,
-  .copy-done {
-    transition: opacity 200ms ease;
-  }
-
-  .copy-label[data-copied] .copy-idle,
-  .copy-label[data-copied] .copy-done {
-    filter: none;
-    transform: none;
-  }
-
-  [role="alert"],
-  .appear {
-    transition: opacity 200ms ease;
-
-    @starting-style {
-      translate: none;
-    }
+    color: var(--foreground);
   }
 }

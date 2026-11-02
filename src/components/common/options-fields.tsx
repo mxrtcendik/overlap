@@ -4,6 +4,7 @@ import { usePrefs, useTimeZone, useToday } from "@/client/browser";
 import { MAX_OPTIONS } from "@/lib/poll/options";
 import { minutesLabel, zonedToUtc } from "@/lib/time/format";
 import { TimeZoneNote } from "./time-zone";
+import { cn, field, link, selectChrome } from "@/components/ui/styles";
 
 export type OptionDraft = { date: string; start: number; end: number };
 
@@ -49,7 +50,7 @@ export function OptionsFields({ drafts, onChange }: { drafts: OptionDraft[]; onC
       <ol className="mt-4 space-y-3">
         {drafts.map((draft, index) => (
           <li key={index} className="flex flex-wrap items-end gap-3">
-            <label className="text-sm text-muted">
+            <label className="text-[13px] font-medium text-foreground">
               Day
               <input
                 type="date"
@@ -57,13 +58,13 @@ export function OptionsFields({ drafts, onChange }: { drafts: OptionDraft[]; onC
                 min={today ?? undefined}
                 value={draft.date}
                 onChange={(event) => update(index, { date: event.target.value })}
-                className="field mt-1 w-auto py-1.5"
+                className={cn(field({ size: "select" }), "mt-1.5")}
               />
             </label>
-            <label className="text-sm text-muted">
+            <label className="text-[13px] font-medium text-foreground">
               From
               <select
-                className="field mt-1 w-auto py-2 pr-2 pl-2.5"
+                className={cn(field({ size: "select" }), selectChrome, "mt-1.5")}
                 value={draft.start}
                 onChange={(event) => update(index, { start: Number(event.target.value) })}
               >
@@ -74,10 +75,10 @@ export function OptionsFields({ drafts, onChange }: { drafts: OptionDraft[]; onC
                 ))}
               </select>
             </label>
-            <label className="text-sm text-muted">
+            <label className="text-[13px] font-medium text-foreground">
               To
               <select
-                className="field mt-1 w-auto py-2 pr-2 pl-2.5"
+                className={cn(field({ size: "select" }), selectChrome, "mt-1.5")}
                 value={draft.end}
                 onChange={(event) => update(index, { end: Number(event.target.value) })}
               >
@@ -93,7 +94,7 @@ export function OptionsFields({ drafts, onChange }: { drafts: OptionDraft[]; onC
             {drafts.length > 2 ? (
               <button
                 type="button"
-                className="link-quiet link-danger pb-2.5"
+                className={cn(link({ tone: "danger" }), "pb-2.5")}
                 aria-label={`Remove time ${index + 1}`}
                 onClick={() => onChange(drafts.filter((_, at) => at !== index))}
               >
@@ -106,7 +107,7 @@ export function OptionsFields({ drafts, onChange }: { drafts: OptionDraft[]; onC
       {drafts.length < MAX_OPTIONS ? (
         <button
           type="button"
-          className="link-quiet mt-4"
+          className={cn(link(), "mt-4")}
           onClick={() => {
             const last = drafts[drafts.length - 1];
             onChange([...drafts, last ? { ...last, date: addDays(last.date, 1) } : { date: today ?? "", start: 18 * 60, end: 19 * 60 }]);
