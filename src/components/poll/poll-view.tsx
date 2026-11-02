@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useEffectEvent, useMemo, useRef, useState, type FormEvent } from "react";
+import { useMemo, useRef, useState, type FormEvent } from "react";
 import { slotsIn } from "@/lib/poll/availability";
 import { MAX_NAME, MAX_NOTE } from "@/lib/constants";
 import { json, messageOf, request, UserFacingError } from "@/client/request";
@@ -24,8 +24,6 @@ import { PresenceLine } from "./presence";
 type Answer = { slots: string[]; maybe: string[] };
 
 const NO_ANSWER: Answer = { slots: [], maybe: [] };
-
-const UNDO_LIMIT = 30;
 
 export function PollView({ poll: stored, canEmail = false }: { poll: PollViewData; canEmail?: boolean }) {
   const [now] = useState(() => Date.now());
@@ -59,9 +57,6 @@ export function PollView({ poll: stored, canEmail = false }: { poll: PollViewDat
   const answerRef = useRef<Answer>(you ? { slots: you.slots, maybe: you.maybe } : NO_ANSWER);
   const inflight = useRef(false);
   const queued = useRef<Answer | null>(null);
-  /** Earlier answers, newest last, for Ctrl+Z / Cmd+Z and the Undo button. */
-  const history = useRef<Answer[]>([]);
-  const [canUndo, setCanUndo] = useState(false);
   const { container: turnstileRef, getToken, reset: resetTurnstile } = useTurnstile(VOTE_ACTION);
 
   function setNameValue(value: string) {
@@ -145,7 +140,7 @@ export function PollView({ poll: stored, canEmail = false }: { poll: PollViewDat
     }
   }
 
-  function change(slots: string[], maybe: string[], { record = true }: { record?: boolean } = {}) {
+  function change(slots: string[], maybe: string[]) {
     if (poll.closed) return;
     presence.announceEditing();
     if (saved && !nameRef.current.trim()) {
@@ -153,10 +148,6 @@ export function PollView({ poll: stored, canEmail = false }: { poll: PollViewDat
       return;
     }
     const next = { slots, maybe };
-    if (record) {
-      history.current = [...history.current, answerRef.current].slice(-UNDO_LIMIT);
-      setCanUndo(true);
-    }
     answerRef.current = next;
     setAnswer(next);
     if (saved) {
@@ -165,26 +156,6 @@ export function PollView({ poll: stored, canEmail = false }: { poll: PollViewDat
       void flush();
     }
   }
-
-  function undo() {
-    const previous = history.current.pop();
-    setCanUndo(history.current.length > 0);
-    if (previous) change(previous.slots, previous.maybe, { record: false });
-  }
-
-  const undoFromKeyboard = useEffectEvent(() => undo());
-  useEffect(() => {
-    function onKeyDown(event: KeyboardEvent) {
-      if (!(event.ctrlKey || event.metaKey) || event.shiftKey || event.altKey || event.key.toLowerCase() !== "z") return;
-      const target = event.target as HTMLElement | null;
-      if (target?.closest("input, textarea, select, [contenteditable='true']")) return;
-      if (history.current.length === 0) return;
-      event.preventDefault();
-      undoFromKeyboard();
-    }
-    window.addEventListener("keydown", onKeyDown);
-    return () => window.removeEventListener("keydown", onKeyDown);
-  }, []);
 
   function onSubmit(event: FormEvent) {
     event.preventDefault();
@@ -290,11 +261,6 @@ export function PollView({ poll: stored, canEmail = false }: { poll: PollViewDat
           {saved ? (
             <>
               <span>Your answer saves as you change it.</span>
-              {canUndo ? (
-                <button type="button" className={link()} onClick={undo} title="Ctrl+Z or ⌘Z">
-                  Undo
-                </button>
-              ) : null}
               <button
                 type="button"
                 className={link({ tone: "danger" })}
