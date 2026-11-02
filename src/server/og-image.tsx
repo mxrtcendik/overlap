@@ -2,25 +2,27 @@ import { ImageResponse } from "next/og";
 
 export const OG_SIZE = { width: 1200, height: 630 };
 
-const BACKGROUND = "#f4f3ef";
-const PAPER = [0xff, 0xfc, 0xf7];
-const INK = "#221f1b";
-const MUTED = "#6d675f";
-const LINE = "#ddd8cf";
-const LINE_STRONG = "#c4bdb1";
-const ACCENT = [0x3f, 0x6f, 0x52];
+// Hex copies of the light theme in globals.css (ImageResponse can't read CSS variables).
+const BACKGROUND = "#f6f3ee";
+const HEAT_LOW = [0xf3, 0xea, 0xdd];
+const HEAT_HIGH = [0x77, 0x2e, 0x11];
+const INK = "#1f1a15";
+const MUTED = "#58514b";
+const LINE = "#dbd7cf";
+const LINE_STRONG = "#b8b0a6";
+const ACCENT = [0x92, 0x37, 0x19];
 
 export type OgCell = { count: number; outlined: boolean } | null;
 
 function heatColor(count: number, people: number): string {
   const share = count === 0 ? 0 : 0.16 + (count / Math.max(people, 1)) * 0.84;
-  const mix = PAPER.map((paper, index) => Math.round(paper + (ACCENT[index] - paper) * share));
+  const mix = HEAT_LOW.map((low, index) => Math.round(low + (HEAT_HIGH[index] - low) * share));
   return `rgb(${mix.join(", ")})`;
 }
 
 function Mark({ size }: { size: number }) {
   const cell = Math.round(size * 0.42);
-  const square = (color: string) => <div style={{ width: cell, height: cell, borderRadius: 3, background: color }} />;
+  const square = (color: string) => <div style={{ width: cell, height: cell, background: color }} />;
   return (
     <div style={{ display: "flex", flexDirection: "column", gap: size - cell * 2 }}>
       <div style={{ display: "flex", gap: size - cell * 2 }}>
@@ -84,7 +86,7 @@ export function ogImage({
                       style={{
                         width: cell,
                         height: cell,
-                        borderRadius: 3,
+                        borderRadius: 2,
                         background: heatColor(item.count, people),
                         border: `${item.outlined ? 3 : 1.5}px solid ${item.outlined ? INK : LINE}`,
                       }}
