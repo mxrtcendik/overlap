@@ -41,6 +41,7 @@ import { answersCsv } from "@/lib/poll/csv";
 import { icsFileName } from "@/lib/calendar/export";
 import { datesForWeekdays, weekdayOf } from "@/lib/time/weekly";
 import { appear, button, card, cn, field, heading, link } from "@/components/ui/styles";
+import { PresenceLine } from "./presence";
 
 export function OwnerView({
   poll: stored,
@@ -72,7 +73,7 @@ export function OwnerView({
   const [pending, setPending] = useState(false);
   const [confirming, setConfirming] = useState(false);
   const [deleted, setDeleted] = useState(false);
-  useLiveUpdates(poll.id, !deleted);
+  const presence = useLiveUpdates(poll.id, !deleted);
   const weekly = poll.kind === "weekly";
   useRefreshAt(poll.closed || deleted ? null : poll.closesAt);
   const justCreated = useJustCreated(location ? (new URL(location.href).pathname.split("/")[2] ?? null) : null);
@@ -273,6 +274,7 @@ export function OwnerView({
         options={poll.options}
         emptyText="No answers yet. Share the public link to collect them."
       />
+      <PresenceLine presence={presence} className="mt-3" />
       {location && !justCreated ? <ShareBar title={poll.title} href={`${location.origin}/p/${poll.id}`} /> : null}
       {poll.options ? (
         <>

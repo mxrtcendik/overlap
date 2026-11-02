@@ -2,6 +2,30 @@ import { isToken } from "./tokens";
 
 export const CHANGED = JSON.stringify({ type: "changed" });
 
+/** Sent by a page while its visitor drags on the grid; relayed to the other pages. */
+export const EDITING = JSON.stringify({ type: "editing" });
+export const EDITING_EVERY_MS = 2_500;
+export const EDITING_SHOWN_MS = 4_000;
+
+export function presenceMessage(here: number): string {
+  return JSON.stringify({ type: "presence", here });
+}
+
+export type LiveMessage = { type: "changed" } | { type: "editing" } | { type: "presence"; here: number };
+
+/** Reads a message from the room. Anything unexpected is ignored. */
+export function parseLiveMessage(data: unknown): LiveMessage | null {
+  if (typeof data !== "string" || data.length > 200) return null;
+  try {
+    const value = JSON.parse(data) as { type?: unknown; here?: unknown };
+    if (value.type === "changed" || value.type === "editing") return { type: value.type };
+    if (value.type === "presence" && Number.isInteger(value.here) && (value.here as number) >= 0) {
+      return { type: "presence", here: value.here as number };
+    }
+  } catch {}
+  return null;
+}
+
 export const PING = "ping";
 export const PONG = "pong";
 export const PING_EVERY_MS = 30_000;

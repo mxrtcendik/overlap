@@ -1,6 +1,6 @@
 import assert from "node:assert/strict";
 import { describe, it } from "node:test";
-import { isSameOrigin, livePollId, reconnectDelay } from "../src/lib/live";
+import { EDITING, isSameOrigin, livePollId, parseLiveMessage, presenceMessage, reconnectDelay } from "../src/lib/live";
 
 const id = "AbCdEfGhIjKlMnOpQrStUv";
 
@@ -51,5 +51,19 @@ describe("reconnectDelay", () => {
   it("spreads retries by up to a fifth either way", () => {
     assert.equal(reconnectDelay(0, () => 0), 800);
     assert.equal(reconnectDelay(0, () => 1), 1200);
+  });
+});
+
+describe("parseLiveMessage", () => {
+  it("reads the three messages the room sends", () => {
+    assert.deepEqual(parseLiveMessage(JSON.stringify({ type: "changed" })), { type: "changed" });
+    assert.deepEqual(parseLiveMessage(EDITING), { type: "editing" });
+    assert.deepEqual(parseLiveMessage(presenceMessage(3)), { type: "presence", here: 3 });
+  });
+
+  it("ignores anything else", () => {
+    for (const data of ["pong", "{", JSON.stringify({ type: "presence", here: -1 }), JSON.stringify({ type: "presence", here: 1.5 }), JSON.stringify({ type: "other" }), 42, "x".repeat(300)]) {
+      assert.equal(parseLiveMessage(data), null);
+    }
   });
 });

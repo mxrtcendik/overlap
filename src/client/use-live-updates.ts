@@ -1,9 +1,12 @@
 "use client";
 
-import { startTransition, useEffect } from "react";
+import { startTransition, useCallback, useEffect, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 import {
-  CHANGED,
+  EDITING,
+  EDITING_EVERY_MS,
+  EDITING_SHOWN_MS,
+  parseLiveMessage,
   PING,
   PING_EVERY_MS,
   POLL_EVERY_MS,
@@ -13,8 +16,31 @@ import {
   STALE_AFTER_HIDDEN_MS,
 } from "../lib/live";
 
-export function useLiveUpdates(pollId: string, enabled = true) {
+export type Presence = {
+  /** Open pages for this poll, including this one. Null until the live room answers. */
+  here: number | null;
+  /** Someone on another page is marking times right now. */
+  othersEditing: boolean;
+  /** Call while this visitor edits; throttled, and a no-op without a live connection. */
+  announceEditing: () => void;
+};
+
+export function useLiveUpdates(pollId: string, enabled = true): Presence {
   const router = useRouter();
+  const [here, setHere] = useState<number | null>(null);
+  const [othersEditing, setOthersEditing] = useState(false);
+  const socketRef = useRef<WebSocket | null>(null);
+  const lastAnnounced = useRef(0);
+
+  const announceEditing = useCallback(() => {
+    const socket = socketRef.current;
+    const now = Date.now();
+    if (!socket || socket.readyState !== WebSocket.OPEN || now - lastAnnounced.current < EDITING_EVERY_MS) return;
+    lastAnnounced.current = now;
+    try {
+      socket.send(EDITING);
+    } catch {}
+  }, []);
 
   useEffect(() => {
     if (!enabled) return;
@@ -28,6 +54,7 @@ export function useLiveUpdates(pollId: string, enabled = true) {
     let hiddenAt: number | null = document.hidden ? Date.now() : null;
     let refreshTimer: ReturnType<typeof setTimeout> | undefined;
     let reconnectTimer: ReturnType<typeof setTimeout> | undefined;
+    let editingTimer: ReturnType<typeof setTimeout> | undefined;
 
     function refresh() {
       clearTimeout(refreshTimer);
@@ -55,6 +82,7 @@ export function useLiveUpdates(pollId: string, enabled = true) {
         return;
       }
       socket = opened;
+      socketRef.current = opened;
       opened.onopen = () => {
         connected = true;
         lastHeard = Date.now();
@@ -64,11 +92,22 @@ export function useLiveUpdates(pollId: string, enabled = true) {
       };
       opened.onmessage = (event) => {
         lastHeard = Date.now();
-        if (event.data === CHANGED) refresh();
+        const message = parseLiveMessage(event.data);
+        if (!message) return;
+        if (message.type === "changed") refresh();
+        if (message.type === "presence") setHere(message.here);
+        if (message.type === "editing") {
+          setOthersEditing(true);
+          clearTimeout(editingTimer);
+          editingTimer = setTimeout(() => setOthersEditing(false), EDITING_SHOWN_MS);
+        }
       };
       opened.onclose = () => {
         if (socket === opened) socket = null;
+        if (socketRef.current === opened) socketRef.current = null;
         connected = false;
+        setHere(null);
+        setOthersEditing(false);
         scheduleReconnect();
       };
       opened.onerror = () => {};
@@ -117,11 +156,15 @@ export function useLiveUpdates(pollId: string, enabled = true) {
       clearInterval(ticker);
       clearTimeout(refreshTimer);
       clearTimeout(reconnectTimer);
+      clearTimeout(editingTimer);
       document.removeEventListener("visibilitychange", onVisibility);
       socket?.close(1000);
       socket = null;
+      socketRef.current = null;
     };
   }, [pollId, enabled, router]);
+
+  return { here, othersEditing, announceEditing };
 }
 
 const MAX_TIMER_MS = 2 ** 31 - 1;

@@ -1,5 +1,7 @@
 import { DurableObject } from "cloudflare:workers";
-import { CHANGED, MAX_SOCKETS, PING, PONG } from "../lib/live";
+import { CHANGED, EDITING, EDITING_EVERY_MS, MAX_SOCKETS, PING, PONG, presenceMessage } from "../lib/live";
+
+type Attachment = { editedAt?: number };
 
 export class PollRoom extends DurableObject<CloudflareEnv> {
   constructor(ctx: DurableObjectState, env: CloudflareEnv) {
@@ -16,7 +18,19 @@ export class PollRoom extends DurableObject<CloudflareEnv> {
     }
     const { 0: client, 1: server } = new WebSocketPair();
     this.ctx.acceptWebSocket(server);
+    this.broadcastPresence();
     return new Response(null, { status: 101, webSocket: client });
+  }
+
+  /** Tells every open page how many pages are open. Carries no poll data. */
+  private broadcastPresence(leaving?: WebSocket) {
+    const open = this.ctx.getWebSockets().filter((socket) => socket !== leaving && socket.readyState === WebSocket.OPEN);
+    const message = presenceMessage(open.length);
+    for (const socket of open) {
+      try {
+        socket.send(message);
+      } catch {}
+    }
   }
 
   async notify(): Promise<number> {
@@ -31,13 +45,26 @@ export class PollRoom extends DurableObject<CloudflareEnv> {
     return sent;
   }
 
-  async webSocketMessage() {}
+  async webSocketMessage(socket: WebSocket, message: string | ArrayBuffer) {
+    if (message !== EDITING) return;
+    const now = Date.now();
+    const attachment = (socket.deserializeAttachment() ?? {}) as Attachment;
+    if (attachment.editedAt && now - attachment.editedAt < EDITING_EVERY_MS) return;
+    socket.serializeAttachment({ ...attachment, editedAt: now } satisfies Attachment);
+    for (const other of this.ctx.getWebSockets()) {
+      if (other === socket) continue;
+      try {
+        other.send(EDITING);
+      } catch {}
+    }
+  }
 
   async webSocketClose(socket: WebSocket, code: number) {
     try {
       socket.close(code === 1005 || code === 1006 ? 1000 : code);
     } catch {
     }
+    this.broadcastPresence(socket);
   }
 
   async webSocketError(socket: WebSocket) {
@@ -45,5 +72,6 @@ export class PollRoom extends DurableObject<CloudflareEnv> {
       socket.close(1011);
     } catch {
     }
+    this.broadcastPresence(socket);
   }
 }

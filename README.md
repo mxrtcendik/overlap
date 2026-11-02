@@ -35,7 +35,7 @@ There are no accounts. Creating a poll gives you two links: a public one to shar
 - **Weekly polls.** Ask about days of the week instead of dates when something repeats. The answer then reads "Mondays 6:00–7:00 PM".
 - **Set times.** Instead of a grid, offer a few specific times, like "Thursday 7–9 PM", and everyone answers yes, if needed or no to each.
 - **A final time.** The owner picks one of the best times, or drags any stretch on the grid. Everyone can add it to their calendar, and re-importing after a change updates the event instead of duplicating it.
-- **Live.** New answers and the owner's changes show up on every open page without a reload.
+- **Live.** New answers and the owner's changes show up on every open page without a reload. The page also says how many other people have it open, and when someone is marking times right now.
 - **Deadlines.** The owner can close voting, set a deadline, or reopen it. An open page goes read-only the moment voting closes.
 - **Small conveniences.** A QR code for sharing the public link in person, a one-click copy of a poll for a later week, and a light or dark theme that can override the system.
 - **Link previews.** Pasting a poll link in a chat shows the title, how many people answered and a small heatmap. Poll pages are never indexed.
@@ -64,7 +64,7 @@ flowchart LR
 The whole app runs on a single Cloudflare Worker. A few decisions I'd point out:
 
 - **The secret link is never stored.** The database keeps a SHA-256 hash of it, so a copy of the data can't be used to edit or delete anything. Voters are identified by a cookie, and the owner page refers to answers by a hash of that cookie, never the cookie itself.
-- **Live updates carry no data.** After a write, the poll's Durable Object tells open pages "changed", and each page re-renders on the server for its own viewer. Sockets use the hibernation API, so an idle poll costs nothing. If a socket drops, the page checks every 20 seconds until it reconnects.
+- **Live updates carry no data.** After a write, the poll's Durable Object tells open pages "changed", and each page re-renders on the server for its own viewer. Presence works the same way: the room counts its own sockets and relays a bare "editing" signal, throttled per socket, so no names or answers pass through it. Sockets use the hibernation API, so an idle poll costs nothing. If a socket drops, the page checks every 20 seconds until it reconnects.
 - **Typed queries with Drizzle.** The schema lives in `src/db/schema.ts`. A poll loads with its voters and their marks in one query, and a vote is saved as one D1 batch, so it's all or nothing. Marks go in through `json_each`, because D1 allows only 100 bound values per statement and a poll can have hundreds of slots.
 - **Weekly polls reuse everything.** Their times are stored as one real reference week, so the grid, the ranking and timezone conversion work exactly as for dates. Only the labels change. The poll also remembers its own timezone, so pages show this week's real times and calendar events keep their local time across daylight-saving changes.
 - **Abuse protection without accounts.** Creating a poll and answering one for the first time are checked with Turnstile, which stays invisible unless it needs a click and only loads once its form is on screen. Later edits are tied to the voter's cookie, so they skip the check. Writes are rate limited per network with Cloudflare's rate limiter, keyed by a hash of the address.

@@ -19,6 +19,7 @@ import type { Brush } from "./poll-grid";
 import { SentenceBlock, Status } from "./poll-summary";
 import { Segmented } from "../ui/segmented";
 import { appear, button, card, cn, field, heading, link } from "@/components/ui/styles";
+import { PresenceLine } from "./presence";
 
 type Answer = { slots: string[]; maybe: string[] };
 
@@ -31,7 +32,7 @@ export function PollView({ poll: stored, canEmail = false }: { poll: PollViewDat
     [stored.kind, stored.zone, stored.slots, now],
   );
   const poll = useMemo(() => projectPoll(stored, projection), [stored, projection]);
-  useLiveUpdates(poll.id);
+  const presence = useLiveUpdates(poll.id);
   const viewerZone = useTimeZone();
   const weekly = poll.kind === "weekly";
   useRefreshAt(poll.closed ? null : poll.closesAt);
@@ -141,6 +142,7 @@ export function PollView({ poll: stored, canEmail = false }: { poll: PollViewDat
 
   function change(slots: string[], maybe: string[]) {
     if (poll.closed) return;
+    presence.announceEditing();
     if (saved && !nameRef.current.trim()) {
       setError("Enter your name first.");
       return;
@@ -206,6 +208,7 @@ export function PollView({ poll: stored, canEmail = false }: { poll: PollViewDat
         options={poll.options}
         emptyText="No answers yet. Be the first."
       />
+      <PresenceLine presence={presence} className="mt-3" />
 
       {poll.closed ? null : (
         <form onSubmit={onSubmit} className="mt-8 flex flex-wrap items-end gap-3">
