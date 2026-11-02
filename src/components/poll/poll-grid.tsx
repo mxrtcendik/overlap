@@ -1,6 +1,15 @@
 "use client";
 
-import { useEffect, useMemo, useRef, useState, useSyncExternalStore, type KeyboardEvent, type PointerEvent } from "react";
+import {
+  useEffect,
+  useEffectEvent,
+  useMemo,
+  useRef,
+  useState,
+  useSyncExternalStore,
+  type KeyboardEvent,
+  type PointerEvent,
+} from "react";
 import { usePrefs, useTimeZone } from "@/client/browser";
 import { SLOT_MS } from "@/lib/constants";
 import { clockTime, localParts, type Clock } from "@/lib/time/format";
@@ -252,6 +261,22 @@ export function PollGrid({
       window.removeEventListener("pointercancel", cancel);
     };
   }, [drag, preview, onChange, slots]);
+
+  // Ctrl+Z / Cmd+Z runs "Undo last mark", unless the visitor is typing in a field.
+  const undoFromKeyboard = useEffectEvent(() => undoLast());
+  const canUndo = !readOnly && undo !== null;
+  useEffect(() => {
+    if (!canUndo) return;
+    function onKeyDown(event: globalThis.KeyboardEvent) {
+      if (!(event.ctrlKey || event.metaKey) || event.shiftKey || event.altKey || event.key.toLowerCase() !== "z") return;
+      const target = event.target as HTMLElement | null;
+      if (target?.closest("input, textarea, select, [contenteditable='true']")) return;
+      event.preventDefault();
+      undoFromKeyboard();
+    }
+    window.addEventListener("keydown", onKeyDown);
+    return () => window.removeEventListener("keydown", onKeyDown);
+  }, [canUndo]);
 
   if (!timeZone || !layout) return <div className="min-h-40" />;
 
@@ -514,9 +539,12 @@ export function PollGrid({
       />
       {!readOnly && undo ? (
         <p className="mt-3">
-          <button type="button" className={cn(link(), appear)} onClick={undoLast}>
+          <button type="button" className={cn(link(), appear)} onClick={undoLast} aria-keyshortcuts="Control+Z Meta+Z">
             Undo last mark
           </button>
+          <span className="ml-2 text-xs text-muted" aria-hidden="true">
+            {/Mac|iPhone|iPad/.test(navigator.userAgent) ? "⌘Z" : "Ctrl+Z"}
+          </span>
         </p>
       ) : null}
     </div>
