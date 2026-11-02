@@ -29,6 +29,7 @@ There are no accounts. Creating a poll gives you two links: a public one to shar
 - **Fill in from your calendar.** Pick an `.ics` export from Google Calendar, Outlook or Apple Calendar and every time it leaves free gets marked. The file is read in the browser and never uploaded.
 - **Meeting length.** Say the meeting takes 90 minutes, and the best times are stretches everyone can stay for the whole of it.
 - **People who must be there.** The owner can mark someone as required, and the best times only include stretches when they're free.
+- **Undo.** Ctrl+Z (or ⌘Z) steps back through your last grid edits, outside text fields, and saves the result like any other change.
 - **Notes.** A short line next to your name, like "Remote only".
 - **Export.** The owner can download every answer as a CSV, with times in their own timezone.
 - **Email, only if you ask.** The owner can be told about new answers, and anyone who answered can get the final time with a calendar file attached. Addresses are deleted with the poll, and the owner never sees voters' addresses.
