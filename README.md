@@ -1,16 +1,27 @@
 # overlap
 
-Pick a few days, send one link, and see which time works for everyone.
+Find the time everyone can make. Pick a few days, send one link, and see which time works, in everyone's own timezone.
 
-![Answers arrive one by one on an example poll, then a visitor drags down Wednesday to add themselves](docs/screenshots/demo-light.gif)
+<picture>
+  <source media="(prefers-color-scheme: dark)" srcset="docs/screenshots/answer-dark.gif">
+  <img alt="A visitor types their name, drags down Thursday on a poll's grid and saves; the best times update" src="docs/screenshots/answer-light.gif">
+</picture>
 
 Overlap is a small scheduling poll. You choose some days and a window of hours, share the link, and everyone drags across the times they can make. The page then tells you the answer in one sentence, like *"Tue 11:30 AM–1:00 PM works for everyone"*, shown in each person's own timezone.
 
 There are no accounts. Creating a poll gives you two links: a public one to share, and a secret one that's the only way to edit or delete the poll. You can email both to yourself; the address is used once and never stored.
 
+<picture>
+  <source media="(prefers-color-scheme: dark)" srcset="docs/screenshots/home-dark.png">
+  <img alt="The landing page: “Find the time everyone can make”, with one hour shown on six city clocks" src="docs/screenshots/home-light.png">
+</picture>
+
 ## What it does
 
-![A poll with five answers, the overlap sentence, and who is free at the hovered time](docs/screenshots/poll-light.png)
+<picture>
+  <source media="(prefers-color-scheme: dark)" srcset="docs/screenshots/poll-dark.png">
+  <img alt="A poll with four answers, the overlap sentence, and who is free at the hovered time" src="docs/screenshots/poll-light.png">
+</picture>
 
 - **Timezones done properly.** Everyone sees the grid in their own zone, with their own 12- or 24-hour clock and first day of the week. If you're planning from another city, you can switch the zone next to the times.
 - **"If needed" answers.** Mark a time as one you can make, or one you'd rather not but could. The best time is the one most people can make, and among those, the one the fewest only "could".
@@ -58,7 +69,7 @@ The whole app runs on a single Cloudflare Worker. A few decisions I'd point out:
 - **Abuse protection without accounts.** Creating a poll and answering one for the first time are checked with Turnstile, which stays invisible unless it needs a click and only loads once its form is on screen. Later edits are tied to the voter's cookie, so they skip the check. Writes are rate limited per network with Cloudflare's rate limiter, keyed by a hash of the address.
 - **Locked down by default.** Every response has a Content Security Policy, HSTS and anti-framing headers.
 
-Built with Next.js 16, React 19, Tailwind CSS 4, TypeScript 7, Drizzle ORM, Cloudflare Workers, D1, Durable Objects and Turnstile. Bun runs the installs and the tests.
+Built with Next.js 16, React 19, Tailwind CSS 4, TypeScript 7, Drizzle ORM, Cloudflare Workers, D1, Durable Objects and Turnstile. Styling is Tailwind utilities only: shared variants live in `src/components/ui/styles.ts` (class-variance-authority), and toggles use Base UI for keyboard and pressed-state handling. Bun runs the installs and the tests.
 
 ## Project layout
 
@@ -69,6 +80,7 @@ src/
     home/       the landing page and the create form
     poll/       the poll page and the owner page
     common/     the site shell and pieces both use
+    ui/         shared styles (buttons, fields, links, cards) and the segmented toggle
   server/       runs only on the Worker: queries, rate limits, Turnstile, the live room
   client/       runs only in the browser: hooks, local storage, requests
   lib/          plain logic shared by both, covered by the unit tests
@@ -142,7 +154,7 @@ The days and hours can change while nobody has answered yet. People can remove t
 Overlap was built with help from Claude Code, an AI coding agent. These are my contributions:
 
 - The idea and its limits: no accounts, one public link and one secret link, nothing to install.
-- The visual direction: a warm paper background, ink-coloured text, hairline borders and a single green accent.
+- The design: warm paper and ink, hairline borders, Newsreader italics for the answers, and a single rust accent kept for the one action and for density on the grid. I designed the current look by hand after trying and rejecting a few generated directions.
 - The stack choices: Bun, Drizzle instead of hand-written SQL, Turnstile and Cloudflare's rate limiter.
 - Which features to build and in what order, and the name and domain.
 
