@@ -24,6 +24,7 @@ There are no accounts. Creating a poll gives you two links: a public one to shar
 </picture>
 
 - **Timezones done properly.** Everyone sees the grid in their own zone, with their own 12- or 24-hour clock and first day of the week. If you're planning from another city, you can switch the zone next to the times.
+- **Fair to every timezone.** Each answer remembers the voter's device timezone. When times are otherwise tied, the one that falls between 08:00 and 21:00 for the most people wins, and the answer says who it's early or late for: *"Wed 3:00–4:00 PM works for everyone, though it's 11:00 PM for Aiko."* Anyone who can see the poll can work out that hour, so the form says the timezone is saved.
 - **"If needed" answers.** Mark a time as one you can make, or one you'd rather not but could. The best time is the one most people can make, and among those, the one the fewest only "could".
 - **Fill in from your calendar.** Pick an `.ics` export from Google Calendar, Outlook or Apple Calendar and every time it leaves free gets marked. The file is read in the browser and never uploaded.
 - **Meeting length.** Say the meeting takes 90 minutes, and the best times are stretches everyone can stay for the whole of it.

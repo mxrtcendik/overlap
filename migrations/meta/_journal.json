@@ -71,6 +71,13 @@
       "when": 1793542323491,
       "tag": "20261101141203_option_polls",
       "breakpoints": true
+    },
+    {
+      "idx": 10,
+      "version": "6",
+      "when": 1793613096341,
+      "tag": "20261102095136_voter_zone",
+      "breakpoints": true
     }
   ]
 }

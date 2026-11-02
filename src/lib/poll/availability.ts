@@ -1,6 +1,7 @@
 import { SLOT_MS } from "../constants";
+import { oddHoursFor } from "./fairness";
 
-type Answer = { slots: string[]; maybe?: string[]; required?: boolean };
+type Answer = { slots: string[]; maybe?: string[]; required?: boolean; zone?: string | null };
 
 export function requiredOf(voters: Answer[]): number[] {
   return voters.flatMap((voter, index) => (voter.required ? [index] : []));
@@ -14,6 +15,8 @@ export type Segment = {
   slots: string[];
   people: number[];
   maybe: number[];
+  /** People for whom this stretch is early or late in their own timezone. */
+  odd: number[];
 };
 
 export function topSegments(
@@ -26,8 +29,8 @@ export function topSegments(
   const sets = voters.map((voter) => new Set(voter.slots));
   const maybeSets = voters.map((voter) => new Set(voter.maybe ?? []));
   const ordered = [...slots].sort((a, b) => Date.parse(a) - Date.parse(b));
-  const segments: (Segment & { key: string })[] = [];
-  let current: (Segment & { key: string }) | null = null;
+  const segments: (Omit<Segment, "odd"> & { key: string })[] = [];
+  let current: (Omit<Segment, "odd"> & { key: string }) | null = null;
 
   for (const slot of ordered) {
     const time = Date.parse(slot);
@@ -46,15 +49,23 @@ export function topSegments(
   const required = requiredOf(voters);
   return segments
     .filter((segment) => segment.people.length > 0 && coversRequired(segment.people, required))
+    .map(({ start, end, slots: segmentSlots, people, maybe }) => ({
+      start,
+      end,
+      slots: segmentSlots,
+      people,
+      maybe,
+      odd: oddHoursFor(start, end, voters, people),
+    }))
     .sort(
       (a, b) =>
         b.people.length - a.people.length ||
         a.maybe.length - b.maybe.length ||
+        a.odd.length - b.odd.length ||
         b.end - b.start - (a.end - a.start) ||
         a.start - b.start,
     )
-    .slice(0, limit)
-    .map(({ start, end, slots: segmentSlots, people, maybe }) => ({ start, end, slots: segmentSlots, people, maybe }));
+    .slice(0, limit);
 }
 
 export function slotsIn(slots: string[], start: number, end: number): string[] {
@@ -83,10 +94,18 @@ export function windowsOf(slots: string[], voters: Answer[], minutes: number): S
       people.push(index);
       if (span.some((slot) => !yes[index].has(slot))) soft.push(index);
     });
-    if (people.length > 0 && coversRequired(people, required)) windows.push({ start: times[first], end: times[last] + SLOT_MS, slots: span, people, maybe: soft });
+    if (people.length > 0 && coversRequired(people, required)) {
+      const start = times[first];
+      const end = times[last] + SLOT_MS;
+      windows.push({ start, end, slots: span, people, maybe: soft, odd: oddHoursFor(start, end, voters, people) });
+    }
   }
   return windows.sort(
-    (a, b) => b.people.length - a.people.length || a.maybe.length - b.maybe.length || a.start - b.start,
+    (a, b) =>
+      b.people.length - a.people.length ||
+      a.maybe.length - b.maybe.length ||
+      a.odd.length - b.odd.length ||
+      a.start - b.start,
   );
 }
 

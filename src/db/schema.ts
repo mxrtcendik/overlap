@@ -36,6 +36,8 @@ export const voters = sqliteTable(
     required: integer("required", { mode: "boolean" }).notNull().default(false),
     email: text("email"),
     emailZone: text("email_zone"),
+    /** The voter's device timezone, so the ranking can avoid their night hours. */
+    zone: text("zone"),
   },
   (table) => [index("voters_poll_id").on(table.pollId, table.createdAt)],
 );

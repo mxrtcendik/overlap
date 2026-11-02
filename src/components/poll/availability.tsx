@@ -6,10 +6,16 @@ import { usePrefs, useTimeZone } from "@/client/browser";
 import { SLOT_MS } from "@/lib/constants";
 import { describeRun, rangeLabel, type Clock } from "@/lib/time/format";
 import type { VoterView } from "@/lib/types";
+import { oddHoursLabels } from "@/lib/poll/fairness";
+import { nameList } from "@/lib/poll/sentence";
 import { PollGrid, type Brush } from "./poll-grid";
 import { cn, link } from "@/components/ui/styles";
 
-type Voter = Pick<VoterView, "name" | "slots" | "maybe" | "yours"> & { note?: string | null; required?: boolean };
+type Voter = Pick<VoterView, "name" | "slots" | "maybe" | "yours"> & {
+  note?: string | null;
+  required?: boolean;
+  zone?: string | null;
+};
 
 export function Availability({
   slots,
@@ -149,12 +155,22 @@ function BestTimes({
                 </button>
               ) : null}
             </div>
+            {segment.odd.length > 0 ? (
+              <p className="mt-0.5 text-xs text-accent">{oddNote(segment, voters, clock)}</p>
+            ) : null}
           </li>
         ))}
       </ol>
       <p className="mt-3 text-xs text-muted [@media(hover:none)]:hidden">Hover over a time to see who’s free.</p>
     </section>
   );
+}
+
+/** "It’s 11:00 PM for Aiko" — who this stretch is early or late for, at their local start time. */
+function oddNote(segment: Segment, voters: Voter[], clock: Clock): string {
+  const odd = oddHoursLabels(segment.start, segment.end, voters, segment.odd, clock);
+  if (odd.length <= 2) return `It’s ${nameList(odd.map((item) => `${item.time} for ${item.name}`))}`;
+  return `Early or late for ${nameList(odd.map((item) => item.name))}`;
 }
 
 function whoLine(segment: Segment, voters: Voter[]): string {

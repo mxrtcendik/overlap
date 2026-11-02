@@ -56,7 +56,7 @@ export async function createPoll(
 
 export async function vote(
   pollId: string,
-  answer: { name: string; slots: string[]; maybe?: string[]; note?: string },
+  answer: { name: string; slots: string[]; maybe?: string[]; note?: string; zone?: string },
 ): Promise<void> {
   const voter = await playwrightRequest.newContext({
     baseURL: `http://localhost:${process.env.E2E_PORT ?? (process.env.E2E_TARGET === "worker" ? 8787 : 3000)}`,

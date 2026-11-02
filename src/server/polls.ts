@@ -25,6 +25,7 @@ export type StoredVoter = {
   required: boolean;
   email: string | null;
   emailZone: string | null;
+  zone: string | null;
   slots: string[];
   maybe: string[];
 };
@@ -80,6 +81,7 @@ export function toPollView(poll: StoredPoll, voterId: string | null, options: { 
       name: voter.name,
       note: voter.note,
       required: voter.required,
+      zone: voter.zone,
       ...(voterId !== null && voter.id === voterId ? { email: voter.email } : {}),
       slots: voter.slots,
       maybe: voter.maybe,
@@ -111,7 +113,7 @@ async function findPoll(match: SQL): Promise<StoredPoll | null> {
     },
     with: {
       voters: {
-        columns: { id: true, name: true, note: true, required: true, email: true, emailZone: true },
+        columns: { id: true, name: true, note: true, required: true, email: true, emailZone: true, zone: true },
         orderBy: [asc(voters.createdAt), asc(voters.id)],
         with: { marks: { columns: { slot: true, level: true } } },
       },
@@ -145,6 +147,7 @@ async function findPoll(match: SQL): Promise<StoredPoll | null> {
         required: voter.required,
         email: voter.email,
         emailZone: voter.emailZone,
+        zone: voter.zone,
         slots: voter.marks.filter((mark) => mark.level === LEVEL.yes).map((mark) => mark.slot),
         maybe: voter.marks.filter((mark) => mark.level === LEVEL.ifNeeded).map((mark) => mark.slot),
       })),
@@ -270,6 +273,7 @@ export async function saveVote(
   const noteResult = parseNote((body as { note?: unknown }).note, MAX_NOTE);
   if (!noteResult.ok) return { ok: false, status: 400, error: `Notes can be up to ${MAX_NOTE} characters.` };
   const note = noteResult.note;
+  const zone = parseZone((body as { zone?: unknown }).zone);
   const chosen = subset(poll.slots, (body as { slots?: unknown }).slots);
   const maybeInput = (body as { maybe?: unknown }).maybe;
   const maybe = maybeInput === undefined ? [] : subset(poll.slots, maybeInput);
@@ -282,7 +286,7 @@ export async function saveVote(
 
   if (known) {
     await db.batch([
-      db.update(voters).set(note === undefined ? { name } : { name, note }).where(and(eq(voters.id, known.id), eq(voters.pollId, poll.id))),
+      db.update(voters).set({ name, ...(note === undefined ? {} : { note }), ...(zone ? { zone } : {}) }).where(and(eq(voters.id, known.id), eq(voters.pollId, poll.id))),
       db.delete(marks).where(eq(marks.voterId, known.id)),
       insertMarks(db, known.id, LEVEL.yes, chosen),
       insertMarks(db, known.id, LEVEL.ifNeeded, maybe),
@@ -296,7 +300,7 @@ export async function saveVote(
   const nextId = randomToken(16);
   const [inserted] = await db.batch([
     db.insert(voters).select(
-      sql`SELECT ${nextId}, ${poll.id}, ${name}, ${Date.now()}, ${note ?? null}, ${false}, ${null}, ${null}
+      sql`SELECT ${nextId}, ${poll.id}, ${name}, ${Date.now()}, ${note ?? null}, ${false}, ${null}, ${null}, ${zone}
         WHERE (SELECT COUNT(*) FROM ${voters} WHERE ${voters.pollId} = ${poll.id}) < ${MAX_VOTERS}`,
     ),
     insertMarks(db, nextId, LEVEL.yes, chosen),

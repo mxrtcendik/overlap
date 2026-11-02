@@ -43,7 +43,7 @@ describe("meeting length", () => {
       overlapSentence({ slots, votes, timeZone: "UTC", duration: 90 }),
       "Mon 10:30 AM–12:00 PM works for everyone, 1 if needed.",
     );
-    assert.deepEqual(bestTime(slots, votes, 60), { start: Date.parse(slot(10, 30)), end: Date.parse(slot(11, 30)), yes: 3, maybe: 0 });
+    assert.deepEqual(bestTime(slots, votes, 60), { start: Date.parse(slot(10, 30)), end: Date.parse(slot(11, 30)), yes: 3, maybe: 0, odd: [] });
   });
 
   it("finds nothing when the meeting is longer than anyone's free time", () => {

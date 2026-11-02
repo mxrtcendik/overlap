@@ -2,6 +2,7 @@ export type VoterView = {
   name: string;
   note: string | null;
   required: boolean;
+  zone: string | null;
   email?: string | null;
   slots: string[];
   maybe: string[];

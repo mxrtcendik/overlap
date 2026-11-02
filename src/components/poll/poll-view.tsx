@@ -84,6 +84,7 @@ export function PollView({ poll: stored, canEmail = false }: { poll: PollViewDat
       name: nextName,
       note: nextNote || null,
       required: current?.required ?? false,
+      zone: deviceTimeZone(),
       slots: next.slots,
       maybe: next.maybe,
       yours: true,
@@ -116,6 +117,7 @@ export function PollView({ poll: stored, canEmail = false }: { poll: PollViewDat
               note: nextNote,
               slots: next.slots.map(projection.toStored),
               maybe: next.maybe.map(projection.toStored),
+              zone: deviceTimeZone(),
               "cf-turnstile-response": token ?? undefined,
             }),
           });
@@ -267,7 +269,7 @@ export function PollView({ poll: stored, canEmail = false }: { poll: PollViewDat
           ) : (
             poll.options
               ? "Enter your name, answer each time, then save your answer."
-              : "Enter your name, drag across the times you can make, then save your answer."
+              : "Enter your name, drag across the times you can make, then save your answer. Your timezone is saved with it, so the best time can avoid your night hours."
           )}
         </p>
       )}
