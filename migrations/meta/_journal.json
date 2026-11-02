@@ -78,6 +78,13 @@
       "when": 1793613096341,
       "tag": "20261102095136_voter_zone",
       "breakpoints": true
+    },
+    {
+      "idx": 11,
+      "version": "6",
+      "when": 1793613660974,
+      "tag": "20261102100100_final_place",
+      "breakpoints": true
     }
   ]
 }

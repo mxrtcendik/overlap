@@ -19,6 +19,8 @@ export const polls = sqliteTable(
     deleteAt: integer("delete_at").notNull(),
     finalStart: integer("final_start"),
     finalEnd: integer("final_end"),
+    /** Where the final time happens: a room, an address or a call link. */
+    place: text("place"),
   },
   (table) => [index("polls_delete_at").on(table.deleteAt)],
 );

@@ -26,5 +26,6 @@ export type PollView = {
   notifyEmail?: string | null;
   lastEnd: string;
   final: FinalTime | null;
+  place: string | null;
   voters: VoterView[];
 };

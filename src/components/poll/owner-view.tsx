@@ -260,7 +260,12 @@ export function OwnerView({
           pending={pending}
           weekly={weekly}
           zone={poll.zone}
+          place={poll.place}
           onClear={() => void setFinal(null)}
+          onPlace={async (place) => {
+            await send("PATCH", { place });
+            router.refresh();
+          }}
         />
       ) : null}
       <SentenceBlock

@@ -8,6 +8,7 @@ import {
   updateFinal,
   updateNotify,
   updateOptions,
+  updatePlace,
   updateSlots,
   updateTitle,
   type StoredPoll,
@@ -39,7 +40,14 @@ export async function PATCH(request: Request, { params }: Params) {
       duration?: unknown;
       notify?: unknown;
       options?: unknown;
+      place?: unknown;
     };
+    if ("place" in record) {
+      const result = await updatePlace(token, record.place);
+      if (!result.ok) return jsonError(result.error, result.status);
+      await announceChange(result.id);
+      return NextResponse.json({ ok: true });
+    }
     if ("options" in record) {
       const result = await updateOptions(token, record.options);
       if (!result.ok) return jsonError(result.error, result.status);
@@ -123,6 +131,7 @@ async function emailFinalTime(
     stamp: Date.now(),
     weekly,
     zone: poll.zone,
+    location: poll.place,
   });
   const messages = poll.voters
     .filter((voter) => voter.email)
@@ -131,7 +140,7 @@ async function emailFinalTime(
       const zoneNote = voter.emailZone ? "" : " (UTC)";
       return {
         to: voter.email!,
-        ...finalTimeEmail({ title: poll.title, day: label.day, time: `${label.time}${zoneNote}`, pollUrl }),
+        ...finalTimeEmail({ title: poll.title, day: label.day, time: `${label.time}${zoneNote}`, pollUrl, place: poll.place }),
         attachments: [{ filename: icsFileName(poll.title), type: "text/calendar", content: ics }],
       };
     });

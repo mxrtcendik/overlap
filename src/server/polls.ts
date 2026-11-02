@@ -14,6 +14,7 @@ import { isToken, randomToken, sha256 } from "../lib/tokens";
 import type { FinalTime, PollView, VoterView } from "../lib/types";
 import { WEEK_MS, WEEKLY_OPEN_MS, type PollKind } from "../lib/time/weekly";
 import { isTimeZone } from "../lib/time/format";
+import { parsePlace } from "../lib/poll/place";
 
 export type { FinalTime, PollView, VoterView };
 
@@ -44,6 +45,7 @@ export type StoredPoll = {
   notifyEmail: string | null;
   lastEnd: number;
   final: FinalTime | null;
+  place: string | null;
   voters: StoredVoter[];
 };
 
@@ -77,6 +79,7 @@ export function toPollView(poll: StoredPoll, voterId: string | null, options: { 
     ...(options.owner ? { notifyEmail: poll.notifyEmail } : {}),
     lastEnd: new Date(poll.lastEnd).toISOString(),
     final: poll.final,
+    place: poll.place,
     voters: poll.voters.map((voter) => ({
       name: voter.name,
       note: voter.note,
@@ -110,6 +113,7 @@ async function findPoll(match: SQL): Promise<StoredPoll | null> {
       deadline: true,
       finalStart: true,
       finalEnd: true,
+      place: true,
     },
     with: {
       voters: {
@@ -138,6 +142,7 @@ async function findPoll(match: SQL): Promise<StoredPoll | null> {
       poll.finalStart !== null && poll.finalEnd !== null
         ? { start: new Date(poll.finalStart).toISOString(), end: new Date(poll.finalEnd).toISOString() }
         : null,
+    place: poll.place,
     voters: await Promise.all(
       poll.voters.map(async (voter) => ({
         id: voter.id,
@@ -474,6 +479,16 @@ export async function updateFinal(
     .set({ finalStart: parsed.final?.start ?? null, finalEnd: parsed.final?.end ?? null })
     .where(eq(polls.id, poll.id));
   return { ok: true, id: poll.id, poll, final: parsed.final ?? null };
+}
+
+export async function updatePlace(token: string, input: unknown): Promise<Done | Failure> {
+  const poll = await getPollByOwnerToken(token);
+  if (!poll) return NOT_FOUND;
+  const parsed = parsePlace(input);
+  if (!parsed.ok) return { ok: false, status: 400, error: parsed.error };
+  const db = await getDb();
+  await db.update(polls).set({ place: parsed.place }).where(eq(polls.id, poll.id));
+  return { ok: true, id: poll.id };
 }
 
 export async function deleteOwned(token: string): Promise<Done | Failure> {

@@ -72,10 +72,14 @@ export function newAnswerEmail(input: { title: string; name: string; count: numb
   };
 }
 
-export function finalTimeEmail(input: { title: string; day: string; time: string; pollUrl: string }) {
+export function finalTimeEmail(input: { title: string; day: string; time: string; pollUrl: string; place?: string | null }) {
   const subject = `“${input.title}” is set for ${input.day}`;
   const when = `${input.day}, ${input.time}`;
-  const body = [`The time for “${input.title}” is ${when}.`, "The calendar file attached adds it to your calendar."];
+  const body = [
+    `The time for “${input.title}” is ${when}.`,
+    ...(input.place ? [`Where: ${input.place}`] : []),
+    "The calendar file attached adds it to your calendar.",
+  ];
   const footer = "You get this because you asked for the final time when you answered. Overlap deletes your address with the poll.";
   return {
     subject,

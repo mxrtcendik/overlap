@@ -196,7 +196,7 @@ export function PollView({ poll: stored, canEmail = false }: { poll: PollViewDat
   return (
     <>
       <h1 className={heading.page}>{poll.title}</h1>
-      {poll.final ? <FinalTime pollId={poll.id} title={poll.title} final={poll.final} weekly={weekly} zone={poll.zone} /> : null}
+      {poll.final ? <FinalTime pollId={poll.id} title={poll.title} final={poll.final} place={poll.place} weekly={weekly} zone={poll.zone} /> : null}
       <SentenceBlock
         slots={poll.slots}
         votes={voters}

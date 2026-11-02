@@ -19,6 +19,7 @@ export async function GET(request: Request, { params }: Params) {
     stamp: Date.now(),
     weekly: poll.kind === "weekly",
     zone: poll.zone,
+    location: poll.place,
   });
 
   return new Response(body, {

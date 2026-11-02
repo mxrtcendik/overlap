@@ -34,7 +34,7 @@ There are no accounts. Creating a poll gives you two links: a public one to shar
 - **Email, only if you ask.** The owner can be told about new answers, and anyone who answered can get the final time with a calendar file attached. Addresses are deleted with the poll, and the owner never sees voters' addresses.
 - **Weekly polls.** Ask about days of the week instead of dates when something repeats. The answer then reads "Mondays 6:00–7:00 PM".
 - **Set times.** Instead of a grid, offer a few specific times, like "Thursday 7–9 PM", and everyone answers yes, if needed or no to each.
-- **A final time.** The owner picks one of the best times, or drags any stretch on the grid. Everyone can add it to their calendar, and re-importing after a change updates the event instead of duplicating it.
+- **A final time.** The owner picks one of the best times, or drags any stretch on the grid. Everyone can add it to their calendar, and re-importing after a change updates the event instead of duplicating it. The owner can add a room or a video link, which shows as a Join link and goes into the calendar file and the email.
 - **Live.** New answers and the owner's changes show up on every open page without a reload. The page also says how many other people have it open, and when someone is marking times right now.
 - **Deadlines.** The owner can close voting, set a deadline, or reopen it. An open page goes read-only the moment voting closes.
 - **Small conveniences.** A QR code for sharing the public link in person, a one-click copy of a poll for a later week, and a light or dark theme that can override the system.
