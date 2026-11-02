@@ -1,107 +1,70 @@
 import { CreateForm } from "@/components/home/create-form";
-import { Demo } from "@/components/home/demo";
-import { MyPolls } from "@/components/home/my-polls";
+import { Features } from "@/components/home/features";
+import { HowItWorks } from "@/components/home/how-it-works";
+import { Clocks } from "@/components/home/zone-strip";
 import { Analytics } from "@/components/common/analytics";
-import { Shell } from "@/components/common/shell";
-
-const STEPS = [
-  {
-    title: "Pick days and hours",
-    body: "Choose up to 14 days and a window of hours. No sign-up, no app to install.",
-  },
-  {
-    title: "Send the public link",
-    body: "Everyone types a name and drags across the times that work. Each person sees their own timezone.",
-  },
-  {
-    title: "Read the answer",
-    body: "The page names the time that works for the most people. Set it as the final time and everyone can add it to their calendar.",
-  },
-];
-
-const FEATURES = [
-  {
-    title: "Your own timezone",
-    body: "Times show in each person’s zone and clock. Planning from another city? Switch the zone next to the times.",
-  },
-  {
-    title: "Can make, or only if needed",
-    body: "Mark the times that are fine and the ones you’d rather avoid. The answer prefers times nobody has to stretch for.",
-  },
-  {
-    title: "Filled in from your calendar",
-    body: "Pick an .ics export and your free times are marked for you. The file never leaves your device.",
-  },
-  {
-    title: "The right length, the right people",
-    body: "Say how long the meeting is and who must be there, and the best times follow both.",
-  },
-  {
-    title: "Every week, not just this one",
-    body: "Ask about days of the week for things that repeat. The final time goes into calendars as a weekly event.",
-  },
-  {
-    title: "Into everyone’s calendar",
-    body: "Settle on a time and everyone can add it to their calendar, shown in their own timezone.",
-  },
-];
+import { SiteFooter, SiteHeader } from "@/components/common/shell";
+import { button } from "@/components/ui/styles";
 
 export default function Home() {
   return (
-    <Shell wide>
-      <section className="grid items-center gap-12 lg:grid-cols-[1fr_28rem] lg:gap-16">
-        <div className="max-w-lg">
-          <h1 className="text-[2.25rem] leading-[1.15] tracking-[-0.025em] text-balance sm:text-[2.75rem]">
-            Pick a few days. Send one link.
-          </h1>
-          <p className="mt-5 text-lg leading-7 text-muted text-pretty">
-            Everyone marks when they’re free, in their own timezone. The page tells you which time works, in one
-            sentence.
-          </p>
-          <a href="#new" className="btn mt-8">
-            Create a poll
-          </a>
-          <p className="mt-3 text-sm text-muted">Free. No accounts, no ads, nothing to install.</p>
+    <div className="flex min-h-dvh flex-col">
+      <SiteHeader nav />
+      <main className="flex-1">
+        <div className="mx-auto w-full max-w-5xl px-4 pt-16 sm:px-6 sm:pt-24">
+          <section className="grid items-start gap-16 lg:grid-cols-[minmax(0,34rem)_17rem] lg:justify-between lg:gap-20">
+            <div>
+              <h1 className="font-display text-[2.6rem] leading-[1.02] font-medium tracking-[-0.03em] text-balance sm:text-6xl sm:leading-[0.98] lg:text-[4.25rem]">
+                Find the time
+                <br />
+                <span className="font-normal italic">everyone</span> can make.
+              </h1>
+              <p className="mt-6 max-w-md text-[15px] leading-7 text-pretty text-muted">
+                Pick a few days, send one link. People mark the hours that work, each in their own timezone, and the page
+                names the overlap.
+              </p>
+              <div className="mt-8">
+                <a href="#new" className={button({ variant: "accent", size: "lg" })}>
+                  Create a poll
+                </a>
+              </div>
+              <p className="mt-6 max-w-md text-sm leading-6 text-muted">
+                No account. Your timezone, and theirs. Deleted 30 days after the last day.
+              </p>
+            </div>
+            <Clocks />
+          </section>
+
+          <section id="how" aria-labelledby="how-heading" className="mt-24 scroll-mt-20 border-t border-line pt-12 sm:mt-28">
+            <h2 id="how-heading" className="font-display text-3xl font-medium tracking-[-0.02em] sm:text-4xl">
+              How it works
+            </h2>
+            <p className="mt-3 max-w-md text-sm leading-6 text-pretty text-muted">
+              You send one link. Everyone answers once, in their own timezone.
+            </p>
+            <HowItWorks />
+          </section>
+
+          <section id="features" aria-labelledby="features-heading" className="mt-24 scroll-mt-20 border-t border-line pt-12 sm:mt-28">
+            <h2 id="features-heading" className="font-display text-3xl font-medium tracking-[-0.02em] sm:text-4xl">
+              What it handles
+            </h2>
+            <p className="mt-3 max-w-md text-sm leading-6 text-pretty text-muted">
+              The details that usually turn into another thread of messages.
+            </p>
+            <Features />
+          </section>
+
+          <section id="new" aria-label="New poll" className="mt-24 scroll-mt-20 border-t border-line pt-12 sm:mt-28">
+            <div className="max-w-xl">
+              <CreateForm />
+            </div>
+          </section>
         </div>
-        <Demo />
-      </section>
-
-      <MyPolls />
-
-      <section aria-labelledby="how-heading" className="mt-24 border-t border-line pt-10">
-        <h2 id="how-heading" className="text-sm text-muted">
-          How it works
-        </h2>
-        <ol className="mt-6 grid gap-8 sm:grid-cols-3 sm:gap-10">
-          {STEPS.map((step, index) => (
-            <li key={step.title}>
-              <span className="font-mono text-xs text-muted tabular-nums">{String(index + 1).padStart(2, "0")}</span>
-              <h3 className="mt-2 font-medium">{step.title}</h3>
-              <p className="mt-1.5 text-sm leading-6 text-muted text-pretty">{step.body}</p>
-            </li>
-          ))}
-        </ol>
-      </section>
-
-      <section aria-labelledby="features-heading" className="mt-24 border-t border-line pt-10">
-        <h2 id="features-heading" className="text-sm text-muted">
-          What it does
-        </h2>
-        <ul className="mt-6 grid gap-x-10 gap-y-8 sm:grid-cols-2 lg:grid-cols-3">
-          {FEATURES.map((feature, index) => (
-            <li key={feature.title}>
-              <span className="font-mono text-xs text-muted tabular-nums">{String(index + 1).padStart(2, "0")}</span>
-              <h3 className="mt-2 font-medium">{feature.title}</h3>
-              <p className="mt-1.5 text-sm leading-6 text-muted text-pretty">{feature.body}</p>
-            </li>
-          ))}
-        </ul>
-      </section>
-
-      <section id="new" className="mt-24 max-w-xl scroll-mt-10 border-t border-line pt-10">
-        <CreateForm />
-      </section>
+        <div className="h-24 sm:h-32" />
+      </main>
+      <SiteFooter />
       <Analytics />
-    </Shell>
+    </div>
   );
 }
