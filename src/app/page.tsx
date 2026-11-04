@@ -1,7 +1,7 @@
 import { CreateForm } from "@/components/home/create-form";
 import { Features } from "@/components/home/features";
 import { HowItWorks } from "@/components/home/how-it-works";
-import { Clocks } from "@/components/home/zone-strip";
+import { Clocks } from "@/components/home/clocks";
 import { Analytics } from "@/components/common/analytics";
 import { SiteFooter, SiteHeader } from "@/components/common/shell";
 import { button } from "@/components/ui/styles";

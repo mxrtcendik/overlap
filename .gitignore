@@ -45,3 +45,6 @@ skills-lock.json
 
 # lighthouse ci
 /.lighthouseci/
+
+# written by next dev when an AI agent runs it
+AGENTS.md
