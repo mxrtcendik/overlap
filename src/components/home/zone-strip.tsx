@@ -72,21 +72,6 @@ export function Clocks() {
           </div>
         ))}
       </dl>
-      <ul className="mt-4 flex flex-wrap gap-x-4 gap-y-2 text-xs text-muted">
-        <li className="inline-flex items-center gap-2">
-          <span className="inline-block size-3 bg-foreground" />
-          Can make
-        </li>
-        <li className="inline-flex items-center gap-2">
-          <span className="hatch inline-block size-3 border border-foreground" />
-          If needed
-        </li>
-        <li className="inline-flex items-center gap-2">
-          <span className="inline-block size-3 border border-line bg-paper" />
-          Can’t
-        </li>
-      </ul>
-      <p className="mt-3 text-xs text-muted">Follows the clock at the bottom of the page.</p>
     </aside>
   );
 }
