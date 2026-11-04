@@ -32,7 +32,7 @@ There are no accounts. Creating a poll gives you two links: a public one to shar
 - **Undo.** "Undo last mark" takes back your last stroke on the grid, and Ctrl+Z (or ⌘Z) does the same outside text fields.
 - **Notes.** A short line next to your name, like "Remote only".
 - **Export.** The owner can download every answer as a CSV, with times in their own timezone.
-- **Email, only if you ask.** The owner can be told about new answers, and anyone who answered can get the final time with a calendar file attached. Addresses are deleted with the poll, and the owner never sees voters' addresses.
+- **Email, only if you ask.** The owner can be told about new answers, and anyone who answered can get the final time with a calendar file attached, then one reminder the day before. Addresses are deleted with the poll, and the owner never sees voters' addresses.
 - **Weekly polls.** Ask about days of the week instead of dates when something repeats. The answer then reads "Mondays 6:00–7:00 PM".
 - **Set times.** Instead of a grid, offer a few specific times, like "Thursday 7–9 PM", and everyone answers yes, if needed or no to each.
 - **A final time.** The owner picks one of the best times, or drags any stretch on the grid. Everyone can add it to their calendar, and re-importing after a change updates the event instead of duplicating it. The owner can add a room or a video link, which shows as a Join link and goes into the calendar file and the email.
@@ -59,7 +59,7 @@ flowchart LR
   worker -- "after each write" --> room
   room -. "“changed” over WebSocket" .-> browser
   worker -- "verify token on create" --> turnstile
-  cron -- "delete expired polls" --> worker
+  cron -- "delete expired polls, send reminders" --> worker
 ```
 
 The whole app runs on a single Cloudflare Worker. A few decisions I'd point out:
@@ -67,6 +67,7 @@ The whole app runs on a single Cloudflare Worker. A few decisions I'd point out:
 - **The secret link is never stored.** The database keeps a SHA-256 hash of it, so a copy of the data can't be used to edit or delete anything. Voters are identified by a cookie, and the owner page refers to answers by a hash of that cookie, never the cookie itself.
 - **Live updates carry no data.** After a write, the poll's Durable Object tells open pages "changed", and each page re-renders on the server for its own viewer. Presence works the same way: the room counts its own sockets and relays a bare "editing" signal, throttled per socket, so no names or answers pass through it. Sockets use the hibernation API, so an idle poll costs nothing. If a socket drops, the page checks every 20 seconds until it reconnects.
 - **Typed queries with Drizzle.** The schema lives in `src/db/schema.ts`. A poll loads with its voters and their marks in one query, and a vote is saved as one D1 batch, so it's all or nothing. Marks go in through `json_each`, because D1 allows only 100 bound values per statement and a poll can have hundreds of slots.
+- **Reminders keep earlier promises.** The hourly cron claims each poll whose final time is under a day away (it sets `reminded_at` first, so overlapping runs can't send twice), then emails voters in their own timezone. Only people who subscribed after reminders existed get one; earlier subscribers were promised a single email. A final time set less than a day ahead, or a weekly one, gets no reminder.
 - **Weekly polls reuse everything.** Their times are stored as one real reference week, so the grid, the ranking and timezone conversion work exactly as for dates. Only the labels change. The poll also remembers its own timezone, so pages show this week's real times and calendar events keep their local time across daylight-saving changes.
 - **Abuse protection without accounts.** Creating a poll and answering one for the first time are checked with Turnstile, which stays invisible unless it needs a click and only loads once its form is on screen. Later edits are tied to the voter's cookie, so they skip the check. Writes are rate limited per network with Cloudflare's rate limiter, keyed by a hash of the address.
 - **Locked down by default.** Every response has a Content Security Policy, HSTS and anti-framing headers.
@@ -130,7 +131,7 @@ GitHub Actions runs the checks, both builds, the browser tests, the Worker tests
 Deployment settings live in two places, so nothing about a particular deployment is hardcoded:
 
 - **Build time**, in `.env.production.local` (copy `.env.example`; it is ignored by git): `SITE_URL`, `NEXT_PUBLIC_TURNSTILE_SITE_KEY` and, optionally, `NEXT_PUBLIC_CF_WEB_ANALYTICS_TOKEN`. Without a site key the build falls back to Cloudflare's test key, which the production server refuses, and the build warns about it.
-- **Run time**, in `wrangler.jsonc`: the D1 database, `TURNSTILE_HOSTNAMES`, `EMAIL_FROM` and the email binding's allowed sender. The only secret is `TURNSTILE_SECRET`.
+- **Run time**, in `wrangler.jsonc`: the D1 database, `TURNSTILE_HOSTNAMES`, `EMAIL_FROM`, the email binding's allowed sender and `SITE_URL` again, for the links in reminders the hourly cron sends. The only secret is `TURNSTILE_SECRET`.
 
 Then:
 

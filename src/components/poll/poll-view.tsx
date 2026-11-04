@@ -286,14 +286,18 @@ export function PollView({ poll: stored, canEmail = false }: { poll: PollViewDat
           <EmailSubscription
             label="Email me the final time"
             current={you.email ?? null}
-            activeText={(address) => `The final time will be emailed to ${address}.`}
-            hint="Only that one email. Your address is deleted with the poll, and the owner never sees it."
+            activeText={(address) =>
+              you.remind
+                ? `The final time, and a reminder the day before, will be emailed to ${address}.`
+                : `The final time will be emailed to ${address}.`
+            }
+            hint="Two emails at most: the final time, and a reminder the day before. Your address is deleted with the poll, and the owner never sees it."
             onSave={async (email) => {
               await request(`/p/${poll.id}/notify`, {
                 method: "POST",
                 ...json({ email, zone: viewerZone ?? deviceTimeZone() }),
               });
-              setYou((current) => (current ? { ...current, email } : current));
+              setYou((current) => (current ? { ...current, email, remind: email !== null } : current));
             }}
           />
         </div>

@@ -72,7 +72,14 @@ export function newAnswerEmail(input: { title: string; name: string; count: numb
   };
 }
 
-export function finalTimeEmail(input: { title: string; day: string; time: string; pollUrl: string; place?: string | null }) {
+export function finalTimeEmail(input: {
+  title: string;
+  day: string;
+  time: string;
+  pollUrl: string;
+  place?: string | null;
+  remind?: boolean;
+}) {
   const subject = `“${input.title}” is set for ${input.day}`;
   const when = `${input.day}, ${input.time}`;
   const body = [
@@ -80,7 +87,25 @@ export function finalTimeEmail(input: { title: string; day: string; time: string
     ...(input.place ? [`Where: ${input.place}`] : []),
     "The calendar file attached adds it to your calendar.",
   ];
-  const footer = "You get this because you asked for the final time when you answered. Overlap deletes your address with the poll.";
+  const footer = input.remind
+    ? "You get this because you asked for the final time when you answered. One reminder follows the day before. Overlap deletes your address with the poll."
+    : "You get this because you asked for the final time when you answered. Overlap deletes your address with the poll.";
+  return {
+    subject,
+    text: [...body, "", input.pollUrl, "", footer].join("\n"),
+    html: shell({ heading: when, body, link: { label: "Open the poll", url: input.pollUrl }, footer }),
+  };
+}
+
+export function reminderEmail(input: { title: string; day: string; time: string; pollUrl: string; place?: string | null }) {
+  const when = `${input.day}, ${input.time}`;
+  const subject = `Reminder: “${input.title}” is ${input.day}`;
+  const body = [
+    `“${input.title}” is coming up: ${when}.`,
+    ...(input.place ? [`Where: ${input.place}`] : []),
+    "If you can’t make it any more, let the person who asked know.",
+  ];
+  const footer = "This is the reminder you asked for when you answered, and the last email you’ll get. Overlap deletes your address with the poll.";
   return {
     subject,
     text: [...body, "", input.pollUrl, "", footer].join("\n"),

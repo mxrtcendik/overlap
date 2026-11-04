@@ -23,9 +23,9 @@ test("a voter asks for the final time, and the owner never sees the address", as
 
   await page.getByLabel("Email me the final time").fill("ada@example.com");
   await page.getByRole("button", { name: "Save", exact: true }).click();
-  await expect(page.getByText("The final time will be emailed to ada@example.com.")).toBeVisible();
+  await expect(page.getByText("The final time, and a reminder the day before, will be emailed to ada@example.com.")).toBeVisible();
   await page.reload();
-  await expect(page.getByText("The final time will be emailed to ada@example.com.")).toBeVisible();
+  await expect(page.getByText("The final time, and a reminder the day before, will be emailed to ada@example.com.")).toBeVisible();
 
   const owner = await (await request.get(`/o/${ownerToken}`)).text();
   expect(owner).not.toContain("ada@example.com");

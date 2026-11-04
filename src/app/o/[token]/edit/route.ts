@@ -15,6 +15,7 @@ import {
 } from "@/server/polls";
 import { sendLater } from "@/server/mail";
 import { finalTimeEmail } from "@/lib/email";
+import { REMIND_BEFORE } from "@/lib/poll/reminder";
 import { icsFileName, toIcs } from "@/lib/calendar/export";
 import { rangeLabel } from "@/lib/time/format";
 import { allowWrite } from "@/server/rate-limit";
@@ -140,7 +141,14 @@ async function emailFinalTime(
       const zoneNote = voter.emailZone ? "" : " (UTC)";
       return {
         to: voter.email!,
-        ...finalTimeEmail({ title: poll.title, day: label.day, time: `${label.time}${zoneNote}`, pollUrl, place: poll.place }),
+        ...finalTimeEmail({
+          title: poll.title,
+          day: label.day,
+          time: `${label.time}${zoneNote}`,
+          pollUrl,
+          place: poll.place,
+          remind: voter.remind && !weekly && final.start - Date.now() > REMIND_BEFORE,
+        }),
         attachments: [{ filename: icsFileName(poll.title), type: "text/calendar", content: ics }],
       };
     });

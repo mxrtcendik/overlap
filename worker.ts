@@ -6,6 +6,7 @@ import { createDb } from "./src/db";
 import { polls } from "./src/db/schema";
 import { isSameOrigin, livePollId } from "./src/lib/live";
 import { purgeExpired } from "./src/server/purge";
+import { sendReminders } from "./src/server/reminders";
 
 export { PollRoom } from "./src/server/poll-room";
 
@@ -35,8 +36,12 @@ export default {
   },
 
   async scheduled(_controller, env, ctx) {
+    const db = createDb(env.DB);
+    ctx.waitUntil(purgeExpired(db).then((removed) => console.log(JSON.stringify({ event: "purge", ...removed }))));
     ctx.waitUntil(
-      purgeExpired(createDb(env.DB)).then((removed) => console.log(JSON.stringify({ event: "purge", ...removed }))),
+      sendReminders(db, { mailer: env.EMAIL, sender: env.EMAIL_FROM, origin: env.SITE_URL }).then((result) =>
+        console.log(JSON.stringify({ event: "reminders", ...result })),
+      ),
     );
   },
 } satisfies ExportedHandler<CloudflareEnv>;

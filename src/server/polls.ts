@@ -15,6 +15,7 @@ import type { FinalTime, PollView, VoterView } from "../lib/types";
 import { WEEK_MS, WEEKLY_OPEN_MS, type PollKind } from "../lib/time/weekly";
 import { isTimeZone } from "../lib/time/format";
 import { parsePlace } from "../lib/poll/place";
+import { remindedAtFor } from "../lib/poll/reminder";
 
 export type { FinalTime, PollView, VoterView };
 
@@ -26,6 +27,7 @@ export type StoredVoter = {
   required: boolean;
   email: string | null;
   emailZone: string | null;
+  remind: boolean;
   zone: string | null;
   slots: string[];
   maybe: string[];
@@ -85,7 +87,7 @@ export function toPollView(poll: StoredPoll, voterId: string | null, options: { 
       note: voter.note,
       required: voter.required,
       zone: voter.zone,
-      ...(voterId !== null && voter.id === voterId ? { email: voter.email } : {}),
+      ...(voterId !== null && voter.id === voterId ? { email: voter.email, remind: voter.remind } : {}),
       slots: voter.slots,
       maybe: voter.maybe,
       yours: voterId !== null && voter.id === voterId,
@@ -117,7 +119,7 @@ async function findPoll(match: SQL): Promise<StoredPoll | null> {
     },
     with: {
       voters: {
-        columns: { id: true, name: true, note: true, required: true, email: true, emailZone: true, zone: true },
+        columns: { id: true, name: true, note: true, required: true, email: true, emailZone: true, remind: true, zone: true },
         orderBy: [asc(voters.createdAt), asc(voters.id)],
         with: { marks: { columns: { slot: true, level: true } } },
       },
@@ -152,6 +154,7 @@ async function findPoll(match: SQL): Promise<StoredPoll | null> {
         required: voter.required,
         email: voter.email,
         emailZone: voter.emailZone,
+        remind: voter.remind,
         zone: voter.zone,
         slots: voter.marks.filter((mark) => mark.level === LEVEL.yes).map((mark) => mark.slot),
         maybe: voter.marks.filter((mark) => mark.level === LEVEL.ifNeeded).map((mark) => mark.slot),
@@ -305,7 +308,7 @@ export async function saveVote(
   const nextId = randomToken(16);
   const [inserted] = await db.batch([
     db.insert(voters).select(
-      sql`SELECT ${nextId}, ${poll.id}, ${name}, ${Date.now()}, ${note ?? null}, ${false}, ${null}, ${null}, ${zone}
+      sql`SELECT ${nextId}, ${poll.id}, ${name}, ${Date.now()}, ${note ?? null}, ${false}, ${null}, ${null}, ${zone}, ${false}
         WHERE (SELECT COUNT(*) FROM ${voters} WHERE ${voters.pollId} = ${poll.id}) < ${MAX_VOTERS}`,
     ),
     insertMarks(db, nextId, LEVEL.yes, chosen),
@@ -341,7 +344,7 @@ export async function setVoterEmail(pollId: string, voterId: string | null, inpu
   const db = await getDb();
   await db
     .update(voters)
-    .set({ email, emailZone: email ? parseZone(zoneInput) : null })
+    .set({ email, emailZone: email ? parseZone(zoneInput) : null, remind: email !== null })
     .where(and(eq(voters.id, known.id), eq(voters.pollId, poll.id)));
   return { ok: true, id: poll.id };
 }
@@ -384,6 +387,7 @@ export async function updateOptions(token: string, input: unknown): Promise<Done
       deleteAt: closes + RETAIN_MS,
       finalStart: null,
       finalEnd: null,
+      remindedAt: null,
     })
     .where(and(eq(polls.id, current.id), notExists(db.select({ id: voters.id }).from(voters).where(eq(voters.pollId, polls.id)))));
   return { ok: true, id: current.id };
@@ -439,6 +443,7 @@ export async function updateSlots(token: string, slotsInput: unknown, zoneInput?
       deleteAt: closes + RETAIN_MS,
       finalStart: null,
       finalEnd: null,
+      remindedAt: null,
     })
     .where(
       and(
@@ -476,7 +481,11 @@ export async function updateFinal(
   const db = await getDb();
   await db
     .update(polls)
-    .set({ finalStart: parsed.final?.start ?? null, finalEnd: parsed.final?.end ?? null })
+    .set({
+      finalStart: parsed.final?.start ?? null,
+      finalEnd: parsed.final?.end ?? null,
+      remindedAt: remindedAtFor(parsed.final ?? null, Date.now()),
+    })
     .where(eq(polls.id, poll.id));
   return { ok: true, id: poll.id, poll, final: parsed.final ?? null };
 }

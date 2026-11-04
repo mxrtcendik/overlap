@@ -21,6 +21,8 @@ export const polls = sqliteTable(
     finalEnd: integer("final_end"),
     /** Where the final time happens: a room, an address or a call link. */
     place: text("place"),
+    /** When the day-before reminder went out, or was skipped because the final time was set less than a day ahead. */
+    remindedAt: integer("reminded_at"),
   },
   (table) => [index("polls_delete_at").on(table.deleteAt)],
 );
@@ -40,6 +42,8 @@ export const voters = sqliteTable(
     emailZone: text("email_zone"),
     /** The voter's device timezone, so the ranking can avoid their night hours. */
     zone: text("zone"),
+    /** Agreed to a reminder the day before. Older subscriptions were promised one email only. */
+    remind: integer("remind", { mode: "boolean" }).notNull().default(false),
   },
   (table) => [index("voters_poll_id").on(table.pollId, table.createdAt)],
 );
