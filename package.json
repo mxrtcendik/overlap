@@ -23,7 +23,7 @@
   },
   "dependencies": {
     "@base-ui/react": "1.9.0",
-    "@opennextjs/cloudflare": "^1.20.15",
+    "@opennextjs/cloudflare": "^1.20.16",
     "class-variance-authority": "0.7.1",
     "clsx": "2.1.1",
     "drizzle-orm": "^0.45.4",
@@ -45,8 +45,8 @@
     "drizzle-kit": "^0.31.11",
     "eslint": "^10.14.0",
     "eslint-config-next": "16.4.3",
-    "tailwindcss": "^4.3.3",
+    "tailwindcss": "^4.3.4",
     "typescript": "npm:@typescript/typescript6@^6.0.2",
-    "wrangler": "^4.156.1"
+    "wrangler": "^4.157.0"
   }
 }
