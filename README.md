@@ -139,14 +139,14 @@ GitHub Actions runs the checks, both builds, the browser tests, the Worker tests
 Deployment settings live in two places, so nothing about a particular deployment is hardcoded:
 
 - **Build time**, in `.env.production.local` (copy `.env.example`; it is ignored by git): `SITE_URL`, `NEXT_PUBLIC_TURNSTILE_SITE_KEY` and, optionally, `NEXT_PUBLIC_CF_WEB_ANALYTICS_TOKEN`. Without a site key the build falls back to Cloudflare's test key, which the production server refuses, and the build warns about it.
-- **Run time**, in `wrangler.jsonc`: the D1 database, `TURNSTILE_HOSTNAMES`, `EMAIL_FROM`, the email binding's allowed sender and `SITE_URL` again, for the links in reminders the hourly cron sends. The only secret is `TURNSTILE_SECRET`.
+- **Run time**, in `wrangler.jsonc`: the D1 database, the custom domain, `TURNSTILE_HOSTNAMES` and `SITE_URL` again, for the links in reminders the hourly cron sends. The only secret is `TURNSTILE_SECRET`.
 
 Then:
 
 1. Create a D1 database called `overlap` and put its id in `wrangler.jsonc`.
 2. Apply the migrations: `bunx wrangler d1 migrations apply overlap --remote`.
 3. Store the Turnstile secret: `bunx wrangler secret put TURNSTILE_SECRET`.
-4. For link emails, set up Cloudflare Email Sending for your domain and make `EMAIL_FROM` one of its addresses. Without it the email form stays hidden.
+4. Email is optional and off by default, since Cloudflare Email Sending needs the Workers Paid plan. To turn it on, verify a sender address in Email Sending, then add it to `wrangler.jsonc` as `"vars": { "EMAIL_FROM": "…" }` and `"send_email": [{ "name": "EMAIL", "allowed_sender_addresses": ["…"] }]`. Without them every email form stays hidden and no reminders are sent.
 5. `bun run deploy`.
 
 Web Analytics is cookieless and only runs on the home page and public poll pages, never on secret links.
