@@ -2,7 +2,6 @@ import { clsx, type ClassValue } from "clsx";
 import { cva, type VariantProps } from "class-variance-authority";
 import { twMerge } from "tailwind-merge";
 
-/** Joins class names and lets later Tailwind classes override earlier ones. */
 export function cn(...inputs: ClassValue[]): string {
   return twMerge(clsx(inputs));
 }
@@ -78,15 +77,12 @@ export const label = "text-[13px] font-medium text-foreground";
 
 export const hint = "text-xs text-muted";
 
-/** Closed select, drawn like the other fields instead of the browser's own control. */
 export const selectChrome =
   "cursor-pointer appearance-none bg-[length:0.7rem] bg-[position:right_0.65rem_center] bg-no-repeat [background-image:var(--select-chevron)]";
 
-/** Enter animation for content that appears in place (alerts, confirmations, swapped forms). */
 export const appear =
   "transition-[opacity,translate] duration-[180ms] ease-ui starting:translate-y-1 starting:opacity-0 motion-reduce:transition-opacity motion-reduce:duration-[120ms] motion-reduce:starting:translate-y-0";
 
-/** A slightly longer arrival for a rare, first-time moment. */
 export const arrive =
   "transition-[opacity,translate] duration-[240ms] ease-ui starting:translate-y-1.5 starting:opacity-0 motion-reduce:transition-opacity motion-reduce:duration-150 motion-reduce:starting:translate-y-0";
 

@@ -7,11 +7,6 @@ import { rangeLabel } from "../lib/time/format";
 
 type Mailer = { send: SendEmail["send"] };
 
-/**
- * Sends the day-before reminder for every poll whose final time is less than a day away.
- * Each poll is claimed (reminded_at set) before anything is sent, so overlapping runs never send twice,
- * and a failed send is logged rather than retried: a late reminder is worse than none.
- */
 export async function sendReminders(
   db: Database,
   mail: { mailer: Mailer | undefined; sender: string | undefined; origin: string | undefined },

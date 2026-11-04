@@ -166,7 +166,6 @@ function BestTimes({
   );
 }
 
-/** "It’s 11:00 PM for Aiko" — who this stretch is early or late for, at their local start time. */
 function oddNote(segment: Segment, voters: Voter[], clock: Clock): string {
   const odd = oddHoursLabels(segment.start, segment.end, voters, segment.odd, clock);
   if (odd.length <= 2) return `It’s ${nameList(odd.map((item) => `${item.time} for ${item.name}`))}`;

@@ -1,5 +1,3 @@
-// eslint-disable-next-line @typescript-eslint/ban-ts-comment
-// @ts-ignore
 import { default as nextHandler } from "./.open-next/worker.js";
 import { and, eq, gt } from "drizzle-orm";
 import { createDb } from "./src/db";

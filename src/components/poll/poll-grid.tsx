@@ -153,7 +153,6 @@ export function PollGrid({
   weekly?: boolean;
   duration?: number | null;
   dayView?: boolean;
-  /** Stretch the columns to fill the available width. */
   fill?: boolean;
   onChange?: (next: string[], nextMaybe: string[]) => void;
   onInspect?: (iso: string | null) => void;
@@ -262,7 +261,6 @@ export function PollGrid({
     };
   }, [drag, preview, onChange, slots]);
 
-  // Ctrl+Z / Cmd+Z runs "Undo last mark", unless the visitor is typing in a field.
   const undoFromKeyboard = useEffectEvent(() => undoLast());
   const canUndo = !readOnly && undo !== null;
   useEffect(() => {

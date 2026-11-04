@@ -8,7 +8,6 @@ import { appear, cn, link } from "@/components/ui/styles";
 
 const created = (ms: number) => new Date(ms).toLocaleDateString("en-US", { month: "short", day: "numeric" });
 
-/** Saved polls live in the header, not on the page. Hidden until this browser has one. */
 export function PollsMenu() {
   const polls = useMyPolls();
   const [confirming, setConfirming] = useState<string | null>(null);

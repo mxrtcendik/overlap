@@ -22,7 +22,6 @@ export class PollRoom extends DurableObject<CloudflareEnv> {
     return new Response(null, { status: 101, webSocket: client });
   }
 
-  /** Tells every open page how many pages are open. Carries no poll data. */
   private broadcastPresence(leaving?: WebSocket) {
     const open = this.ctx.getWebSockets().filter((socket) => socket !== leaving && socket.readyState === WebSocket.OPEN);
     const message = presenceMessage(open.length);

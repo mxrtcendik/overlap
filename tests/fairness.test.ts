@@ -4,7 +4,6 @@ import { topSegments, topWindows } from "../src/lib/poll/availability";
 import { oddHoursFor, outsideDay } from "../src/lib/poll/fairness";
 import { bestTime, oddClause, overlapSentence } from "../src/lib/poll/sentence";
 
-// Monday 2 November 2026, in UTC.
 const at = (hour: number, minute = 0) => new Date(Date.UTC(2026, 10, 2, hour, minute)).toISOString();
 const range = (from: number, to: number) => {
   const out: string[] = [];
@@ -14,10 +13,8 @@ const range = (from: number, to: number) => {
 
 describe("outsideDay", () => {
   it("flags any part of the stretch before 08:00 or from 21:00 on", () => {
-    // 14:00 UTC is 23:00 in Tokyo and 09:00 in New York.
     assert.equal(outsideDay(Date.parse(at(14)), Date.parse(at(15)), "Asia/Tokyo"), true);
     assert.equal(outsideDay(Date.parse(at(14)), Date.parse(at(15)), "America/New_York"), false);
-    // 11:30–12:30 UTC is 20:30–21:30 in Tokyo: the second half is late.
     assert.equal(outsideDay(Date.parse(at(11, 30)), Date.parse(at(12, 30)), "Asia/Tokyo"), true);
   });
 
@@ -28,8 +25,6 @@ describe("outsideDay", () => {
 });
 
 describe("fair ranking", () => {
-  // Two equally good stretches for both people: 06:00–07:00 and 14:00–15:00 UTC.
-  // In Tokyo that's 15:00 and 23:00; in Berlin 07:00 and 15:00.
   const slots = [...range(6, 7), ...range(14, 15)];
   const both = { slots };
 
@@ -45,7 +40,6 @@ describe("fair ranking", () => {
       { name: "Ben", zone: "Europe/Berlin", slots },
       { name: "Cleo", zone: "Europe/Berlin", slots },
     ];
-    // 06:00 UTC is 07:00 for both Berliners; 14:00 UTC is 23:00 for Aiko only.
     const best = bestTime(slots, votes);
     assert.equal(best?.start, Date.parse(at(14)));
     assert.deepEqual(best?.odd, [0]);
@@ -56,7 +50,6 @@ describe("fair ranking", () => {
       { name: "Aiko", zone: "Asia/Tokyo", slots },
       { name: "Ben", zone: "Europe/Berlin", slots: range(14, 15) },
     ];
-    // Only 14:00 has both, even though it's 23:00 for Aiko.
     assert.equal(bestTime(slots, votes)?.start, Date.parse(at(14)));
   });
 
@@ -65,7 +58,6 @@ describe("fair ranking", () => {
       { zone: "Asia/Tokyo", slots },
       { zone: "Asia/Tokyo", slots },
     ];
-    // For Tokyo, 06:00 UTC is 15:00 (fine) and 14:00 UTC is 23:00 (late).
     const [segment] = topSegments(slots, votes, 1);
     assert.equal(segment.start, Date.parse(at(6)));
     const [window] = topWindows(slots, votes, 60, 1);

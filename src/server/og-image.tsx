@@ -2,7 +2,6 @@ import { ImageResponse } from "next/og";
 
 export const OG_SIZE = { width: 1200, height: 630 };
 
-// Hex copies of the light theme in globals.css (ImageResponse can't read CSS variables).
 const BACKGROUND = "#f6f3ee";
 const HEAT_LOW = [0xf3, 0xea, 0xdd];
 const HEAT_HIGH = [0x77, 0x2e, 0x11];

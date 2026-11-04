@@ -17,11 +17,8 @@ import {
 } from "../lib/live";
 
 export type Presence = {
-  /** Open pages for this poll, including this one. Null until the live room answers. */
   here: number | null;
-  /** Someone on another page is marking times right now. */
   othersEditing: boolean;
-  /** Call while this visitor edits; throttled, and a no-op without a live connection. */
   announceEditing: () => void;
 };
 

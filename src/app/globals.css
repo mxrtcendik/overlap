@@ -1,9 +1,5 @@
 @import "tailwindcss";
 
-/*
- * Dark mode follows the system unless the theme switch pins it
- * (<html data-theme="light|dark">, set before paint by THEME_SCRIPT).
- */
 @custom-variant dark {
   &:where([data-theme="dark"], [data-theme="dark"] *) {
     @slot;
@@ -15,10 +11,6 @@
   }
 }
 
-/*
- * Warm paper and ink. The oxide accent is for the one action and for
- * density on the grid — not for decoration.
- */
 :root {
   --background: oklch(0.965 0.008 85);
   --paper: oklch(0.992 0.004 85);
@@ -106,7 +98,6 @@
   --ease-ui: cubic-bezier(0.23, 1, 0.32, 1);
 }
 
-/* Diagonal lines that mark "if needed". */
 @utility hatch {
   background-color: var(--paper);
   background-image: repeating-linear-gradient(135deg, var(--foreground) 0 1px, transparent 1px 4px);
@@ -121,7 +112,6 @@
   );
 }
 
-/* Heat-map fill driven by the --heat custom property (0–100%). */
 @utility heat {
   background-color: color-mix(in oklab, var(--heat-high) var(--heat), var(--heat-low));
 }

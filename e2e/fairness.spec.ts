@@ -1,7 +1,6 @@
 import { test, expect, createPoll, vote } from "./fixtures";
 
 test("says who the best time is late for, from each voter's timezone", async ({ page, request }) => {
-  // Slots run 09:00–12:00 UTC tomorrow: 12:00–15:00 in Istanbul, 22:00–01:00 in Auckland.
   const poll = await createPoll(request, { days: [1], from: 9, to: 12 });
   const firstHour = poll.slots.slice(0, 2);
   await vote(poll.id, { name: "Kai", slots: firstHour, zone: "Pacific/Auckland" });

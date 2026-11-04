@@ -3,10 +3,6 @@
 import type { Presence } from "@/client/use-live-updates";
 import { appear, cn } from "@/components/ui/styles";
 
-/**
- * "3 people here · Someone is marking times…". Hidden when the live room
- * isn't connected (as under next dev) or when the visitor is alone.
- */
 export function PresenceLine({ presence, className }: { presence: Presence; className?: string }) {
   const { here, othersEditing } = presence;
   const others = here === null ? 0 : here - 1;

@@ -1,8 +1,5 @@
 name: Update visual baselines
 
-# Screenshot baselines depend on the platform's font rendering, so CI keeps a
-# Linux set next to any local ones. Run this by hand after an intended design
-# change; it regenerates the Linux screenshots and commits them to the branch.
 on:
   workflow_dispatch:
 

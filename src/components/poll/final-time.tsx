@@ -27,7 +27,6 @@ export function FinalTime({
   weekly?: boolean;
   zone?: string | null;
   onClear?: () => void;
-  /** Owner only: save a new place, or null to remove it. */
   onPlace?: (place: string | null) => Promise<void>;
   pending?: boolean;
 }) {

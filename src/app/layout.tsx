@@ -3,7 +3,6 @@ import { IBM_Plex_Mono, IBM_Plex_Sans, Newsreader } from "next/font/google";
 import "./globals.css";
 import { THEME_SCRIPT } from "@/components/common/theme-toggle";
 
-// Variable fonts, so each style is one file whatever the weight. Interface and prose share Plex Sans.
 const sans = IBM_Plex_Sans({
   variable: "--font-plex",
   subsets: ["latin"],
@@ -17,7 +16,6 @@ const display = Newsreader({
   display: "swap",
 });
 
-// Only times and links use mono, never the first screen's largest text, so it isn't preloaded.
 const mono = IBM_Plex_Mono({
   variable: "--font-plex-mono",
   subsets: ["latin"],

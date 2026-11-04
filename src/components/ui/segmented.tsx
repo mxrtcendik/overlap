@@ -7,10 +7,6 @@ import { cn } from "./styles";
 
 type Option<Value extends string> = { value: Value; label: ReactNode; title?: string };
 
-/**
- * A single-choice toggle row. Base UI handles pressed state and arrow-key
- * focus. The pressed option is filled ink; the rest stay quiet.
- */
 export function Segmented<Value extends string>({
   value,
   options,
@@ -24,7 +20,6 @@ export function Segmented<Value extends string>({
   options: Option<Value>[];
   onChange: (value: Value) => void;
   size?: "sm" | "md";
-  /** Stretch to the container width on phones. */
   fill?: boolean;
   className?: string;
   "aria-label"?: string;

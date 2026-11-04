@@ -18,14 +18,12 @@ function cityName(zone: string): string {
   return city.replaceAll("_", " ");
 }
 
-/** Next 15:00 UTC, so the list shows one shared hour in many clocks. */
 function meetingTime(): number {
   const now = new Date();
   const at = Date.UTC(now.getUTCFullYear(), now.getUTCMonth(), now.getUTCDate(), 15);
   return at > now.getTime() ? at : at + 86_400_000;
 }
 
-/** The product's answer, in the visitor's zone and clock, with that hour in other cities. */
 export function Clocks() {
   const prefs = usePrefs();
   const zone = useTimeZone();

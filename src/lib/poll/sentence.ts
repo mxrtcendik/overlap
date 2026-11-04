@@ -31,10 +31,6 @@ export function slotScore(tally: Tally): number {
 
 export type Run = { start: number; end: number; score: number };
 
-/**
- * The longest stretch of slots that all have the top count. With `penalty`,
- * stretches with a lower penalty win before longer ones.
- */
 export function bestRun(
   slots: string[],
   counts: Map<string, number>,
@@ -169,7 +165,6 @@ export function nameList(names: string[]): string {
 
 const ifNeeded = (maybe: number) => (maybe > 0 ? `, ${maybe} if needed` : "");
 
-/** ", though it’s 11:00 PM for Priya": who this time is early or late for. */
 export function oddClause(odd: OddHour[] = []): string {
   if (odd.length === 0) return "";
   if (odd.length <= 2) return `, though it’s ${nameList(odd.map((item) => `${item.time} for ${item.name}`))}`;

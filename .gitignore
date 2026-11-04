@@ -43,8 +43,6 @@ skills-lock.json
 /playwright-report/
 /test-results/
 
-# lighthouse ci
 /.lighthouseci/
 
-# written by next dev when an AI agent runs it
 AGENTS.md

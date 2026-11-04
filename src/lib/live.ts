@@ -2,7 +2,6 @@ import { isToken } from "./tokens";
 
 export const CHANGED = JSON.stringify({ type: "changed" });
 
-/** Sent by a page while its visitor drags on the grid; relayed to the other pages. */
 export const EDITING = JSON.stringify({ type: "editing" });
 export const EDITING_EVERY_MS = 2_500;
 export const EDITING_SHOWN_MS = 4_000;
@@ -13,7 +12,6 @@ export function presenceMessage(here: number): string {
 
 export type LiveMessage = { type: "changed" } | { type: "editing" } | { type: "presence"; here: number };
 
-/** Reads a message from the room. Anything unexpected is ignored. */
 export function parseLiveMessage(data: unknown): LiveMessage | null {
   if (typeof data !== "string" || data.length > 200) return null;
   try {

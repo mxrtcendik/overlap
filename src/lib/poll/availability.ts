@@ -15,7 +15,6 @@ export type Segment = {
   slots: string[];
   people: number[];
   maybe: number[];
-  /** People for whom this stretch is early or late in their own timezone. */
   odd: number[];
 };
 
