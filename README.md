@@ -61,7 +61,7 @@ flowchart LR
   worker -- "Drizzle" --> d1
   worker -- "after each write" --> room
   room -. "“changed” over WebSocket" .-> browser
-  worker -- "verify token on create" --> turnstile
+  worker -- "check new polls and first answers" --> turnstile
   cron -- "delete expired polls, send reminders" --> worker
 ```
 
@@ -96,7 +96,7 @@ migrations/     SQL migrations, applied by Wrangler
 tests/          unit tests (bun test)
 e2e/            browser tests (Playwright)
 docs/           README screenshots
-worker.ts       the Worker entry: app, WebSockets and the hourly purge
+worker.ts       the Worker entry: app, WebSockets and the hourly cron
 ```
 
 ## Running it locally
@@ -120,7 +120,7 @@ Then open http://localhost:3000. The database is a local D1 that Wrangler keeps 
 | --- | --- |
 | `bun run check` | Typecheck, lint and unit tests |
 | `bun run test` | Unit tests only |
-| `bun run test:e2e` | Browser tests with Playwright, including axe accessibility scans and screenshot comparisons in light and dark mode |
+| `bun run test:e2e` | Browser tests with Playwright, including axe accessibility scans and screenshot comparisons in light and dark mode. Run `bunx playwright install chromium` once first |
 | `bun run test:worker` | Builds the real Worker and checks live updates over WebSockets |
 | `bun run db:generate` | Write a migration after changing `src/db/schema.ts` |
 | `bun run db:migrate` | Apply migrations to the local database |
@@ -160,19 +160,20 @@ Web Analytics is cookieless and only runs on the home page and public poll pages
 | New polls | 5 a minute per network |
 | Link emails | 3 a minute per network |
 | Saved answers | 60 a minute per network |
+| Owner changes | 30 a minute per network |
 
 The days and hours can change while nobody has answered yet. People can remove their own answer until voting ends, and the owner can remove any answer at any time.
 
 ## How I built this
 
-Overlap was built with help from Claude Code, an AI coding agent. These are my contributions:
+Overlap was built with help from Claude Code. These are my contributions:
 
 - The idea and its limits: no accounts, one public link and one secret link, nothing to install.
 - The design: warm paper and ink, hairline borders, Newsreader italics for the answers, and a single rust accent kept for the one action and for density on the grid. I designed the current look by hand after trying and rejecting a few generated directions.
 - The stack choices: Bun, Drizzle instead of hand-written SQL, Turnstile and Cloudflare's rate limiter.
 - Which features to build and in what order, and the name and domain.
 
-The parts I found most interesting were the ones where a constraint shaped the design: D1's limit on bound values deciding how answers are inserted, Durable Objects that only ever say "changed", and weekly polls stored as a real week so nothing else had to change.
+The parts I enjoyed most came from working around limits. The database accepts at most 100 values per query, so each person's answers are saved as a single JSON value. Live updates only say "something changed" and never carry anyone's answers. And weekly polls are stored as one real week, so the rest of the app didn't need to know they were weekly.
 
 ## Contributing
 
