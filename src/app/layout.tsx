@@ -1,17 +1,11 @@
 import type { Metadata, Viewport } from "next";
-import { IBM_Plex_Mono, IBM_Plex_Sans, Inter, Newsreader } from "next/font/google";
+import { IBM_Plex_Mono, IBM_Plex_Sans, Newsreader } from "next/font/google";
 import "./globals.css";
 import { THEME_SCRIPT } from "@/components/common/theme-toggle";
 
+// Variable fonts, so each style is one file whatever the weight. Interface and prose share Plex Sans.
 const sans = IBM_Plex_Sans({
   variable: "--font-plex",
-  subsets: ["latin"],
-  weight: ["400", "500", "600"],
-  display: "swap",
-});
-
-const body = Inter({
-  variable: "--font-inter",
   subsets: ["latin"],
   display: "swap",
 });
@@ -20,15 +14,16 @@ const display = Newsreader({
   variable: "--font-newsreader",
   subsets: ["latin"],
   style: ["normal", "italic"],
-  weight: ["400", "500"],
   display: "swap",
 });
 
+// Only times and links use mono, never the first screen's largest text, so it isn't preloaded.
 const mono = IBM_Plex_Mono({
   variable: "--font-plex-mono",
   subsets: ["latin"],
-  weight: ["400", "500"],
+  weight: "400",
   display: "swap",
+  preload: false,
 });
 
 const description = "Find a time that works for everyone. Send one link, see the overlap in your own timezone. No accounts.";
@@ -53,7 +48,7 @@ export default function RootLayout({ children }: Readonly<{ children: React.Reac
     <html
       lang="en"
       data-scroll-behavior="smooth"
-      className={`${sans.variable} ${body.variable} ${display.variable} ${mono.variable} h-full antialiased`}
+      className={`${sans.variable} ${display.variable} ${mono.variable} h-full antialiased`}
       suppressHydrationWarning
     >
       <head>

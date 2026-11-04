@@ -28,7 +28,7 @@ export default function Home() {
                   Create a poll
                 </a>
               </div>
-              <p className="mt-6 max-w-md text-sm leading-6 text-muted">
+              <p className="mt-6 max-w-md text-sm leading-6 text-pretty text-muted">
                 No account. Your timezone, and theirs. Deleted 30 days after the last day.
               </p>
             </div>
