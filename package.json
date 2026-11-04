@@ -24,7 +24,7 @@
     "cf-typegen": "wrangler types --env-interface CloudflareEnv cloudflare-env.d.ts",
     "db:generate": "drizzle-kit generate",
     "db:check": "drizzle-kit check",
-    "db:migrate": "wrangler d1 migrations apply overlap --local",
+    "db:migrate": "wrangler d1 migrations apply overlap --local && wrangler d1 migrations apply overlap --local -c wrangler.dev.jsonc",
     "test:e2e": "playwright test",
     "test:worker": "E2E_TARGET=worker playwright test"
   },
