@@ -75,7 +75,7 @@ The whole app runs on a single Cloudflare Worker. A few decisions I'd point out:
 - **Abuse protection without accounts.** Creating a poll and answering one for the first time are checked with Turnstile, which stays invisible unless it needs a click and only loads once its form is on screen. Later edits are tied to the voter's cookie, so they skip the check. Writes are rate limited per network with Cloudflare's rate limiter, keyed by a hash of the address.
 - **Locked down by default.** Every response has a Content Security Policy, HSTS and anti-framing headers.
 
-Built with Next.js 16, React 19, Tailwind CSS 4, TypeScript 7, Drizzle ORM, Cloudflare Workers, D1, Durable Objects and Turnstile. Styling is Tailwind utilities only: shared variants live in `src/components/ui/styles.ts` (class-variance-authority), and toggles use Base UI for keyboard and pressed-state handling. Bun runs the installs and the tests.
+Built with Next.js 16, React 19, Tailwind CSS 4, TypeScript 6, Drizzle ORM, Cloudflare Workers, D1, Durable Objects and Turnstile. Styling is Tailwind utilities only: shared variants live in `src/components/ui/styles.ts` (class-variance-authority), and toggles use Base UI for keyboard and pressed-state handling. Bun runs the installs and the tests.
 
 ## Project layout
 
