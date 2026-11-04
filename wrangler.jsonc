@@ -5,6 +5,8 @@
   "compatibility_date": "2026-10-30",
   "compatibility_flags": ["nodejs_compat", "global_fetch_strictly_public"],
   "upload_source_maps": true,
+  "routes": [{ "pattern": "overlap.cendik.dev", "custom_domain": true }],
+  "workers_dev": false,
   "triggers": {
     "crons": ["17 * * * *"]
   },
@@ -27,7 +29,7 @@
     {
       "binding": "DB",
       "database_name": "overlap",
-      "database_id": "00000000-0000-0000-0000-000000000001",
+      "database_id": "141b1174-ae1f-4295-8056-80c09c0cbcf8",
       "migrations_dir": "migrations"
     }
   ],
