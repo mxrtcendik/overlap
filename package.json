@@ -2,7 +2,14 @@
   "name": "overlap",
   "version": "0.1.0",
   "private": true,
+  "description": "Find the time everyone can make. Scheduling polls in everyone's own timezone.",
   "license": "MIT",
+  "author": "Mert Cendik",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/mxrtcendik/overlap.git"
+  },
+  "bugs": "https://github.com/mxrtcendik/overlap/issues",
   "packageManager": "bun@1.4.4",
   "scripts": {
     "dev": "next dev",

@@ -1,5 +1,8 @@
 # overlap
 
+[![CI](https://github.com/mxrtcendik/overlap/actions/workflows/ci.yml/badge.svg)](https://github.com/mxrtcendik/overlap/actions/workflows/ci.yml)
+[![MIT license](https://img.shields.io/badge/license-MIT-blue)](LICENSE)
+
 Find the time everyone can make. Pick a few days, send one link, and see which time works, in everyone's own timezone.
 
 <picture>
@@ -92,6 +95,7 @@ src/
 migrations/     SQL migrations, applied by Wrangler
 tests/          unit tests (bun test)
 e2e/            browser tests (Playwright)
+docs/           README screenshots
 worker.ts       the Worker entry: app, WebSockets and the hourly purge
 ```
 
@@ -100,6 +104,8 @@ worker.ts       the Worker entry: app, WebSockets and the hourly purge
 You'll need [Bun](https://bun.sh).
 
 ```sh
+git clone https://github.com/mxrtcendik/overlap.git
+cd overlap
 bun install
 cp .dev.vars.example .dev.vars
 bun run db:migrate
@@ -168,6 +174,10 @@ Overlap was built with help from Claude Code, an AI coding agent. These are my c
 
 The parts I found most interesting were the ones where a constraint shaped the design: D1's limit on bound values deciding how answers are inserted, Durable Objects that only ever say "changed", and weekly polls stored as a real week so nothing else had to change.
 
+## Contributing
+
+Issues and pull requests are welcome. [CONTRIBUTING.md](CONTRIBUTING.md) covers setup and what to check before opening a pull request, and [SECURITY.md](SECURITY.md) explains how to report a security problem privately.
+
 ## License
 
-MIT
+[MIT](LICENSE)

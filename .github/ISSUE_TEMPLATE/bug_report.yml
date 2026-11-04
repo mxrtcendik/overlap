@@ -1,0 +1,29 @@
+name: Bug report
+description: Something doesn't work as it should
+labels: [bug]
+body:
+  - type: textarea
+    id: what
+    attributes:
+      label: What happened?
+      description: What you did, what you expected, and what happened instead.
+    validations:
+      required: true
+  - type: textarea
+    id: steps
+    attributes:
+      label: Steps to reproduce
+      placeholder: |
+        1. Create a poll with…
+        2. Open it in…
+  - type: input
+    id: browser
+    attributes:
+      label: Browser and device
+      placeholder: Firefox 140 on Windows
+  - type: input
+    id: zone
+    attributes:
+      label: Your timezone
+      description: Many bugs only show up in some zones.
+      placeholder: Europe/Berlin
