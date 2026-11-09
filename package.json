@@ -35,7 +35,7 @@
     "clsx": "2.1.1",
     "drizzle-orm": "^0.45.4",
     "ical.js": "^2.2.1",
-    "next": "16.4.3",
+    "next": "16.4.5",
     "react": "19.3.1",
     "react-dom": "19.3.1",
     "tailwind-merge": "3.7.0",
@@ -43,17 +43,17 @@
   },
   "devDependencies": {
     "@axe-core/playwright": "^4.14.0",
-    "@playwright/test": "^1.64.1",
-    "@tailwindcss/postcss": "4.3.3",
+    "@playwright/test": "^1.65.0",
+    "@tailwindcss/postcss": "4.3.4",
     "@types/node": "^26.6.6",
     "@types/react": "^19.3.0",
     "@types/react-dom": "^19.3.0",
     "@typescript/native": "npm:typescript@^7.0.2",
     "drizzle-kit": "^0.31.11",
     "eslint": "^10.14.0",
-    "eslint-config-next": "16.4.3",
+    "eslint-config-next": "16.4.5",
     "tailwindcss": "^4.3.4",
     "typescript": "npm:@typescript/typescript6@^6.0.2",
-    "wrangler": "^4.157.0"
+    "wrangler": "^4.158.0"
   }
 }
